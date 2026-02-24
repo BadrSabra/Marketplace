@@ -133,6 +133,17 @@ export async function registerRoutes(
     return walletController.approveDeposit(req, res);
   });
 
+  // --- DELIVERY MODULE ---
+  app.post("/api/delivery/otp/generate", authenticate, authorizeRole(["ADMIN", "DRIVER"]), async (req, res) => {
+    const { deliveryOtpController } = await import("./modules/delivery/deliveryOtp.controller");
+    return deliveryOtpController.generate(req, res);
+  });
+
+  app.post("/api/delivery/otp/verify", authenticate, authorizeRole(["CUSTOMER"]), async (req, res) => {
+    const { deliveryOtpController } = await import("./modules/delivery/deliveryOtp.controller");
+    return deliveryOtpController.verify(req, res);
+  });
+
   // Seed data function
   async function seedDatabase() {
     try {

@@ -115,6 +115,17 @@ export const ratings = pgTable("ratings", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// DELIVERY_OTPS
+export const deliveryOtps = pgTable("delivery_otps", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orderId: uuid("order_id").notNull().references(() => orders.id),
+  subOrderId: uuid("sub_order_id").references(() => subOrders.id),
+  otpCode: text("otp_code").notNull(),
+  status: text("status", { enum: ["PENDING", "VERIFIED"] }).notNull().default("PENDING"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // ZOD SCHEMAS
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertWalletSchema = createInsertSchema(wallets).omit({ id: true, createdAt: true, updatedAt: true });
@@ -125,6 +136,7 @@ export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, cre
 export const insertSubOrderSchema = createInsertSchema(subOrders).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertDeliveryOfferSchema = createInsertSchema(deliveryOffers).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertRatingSchema = createInsertSchema(ratings).omit({ id: true, createdAt: true });
+export const insertDeliveryOtpSchema = createInsertSchema(deliveryOtps).omit({ id: true, createdAt: true, updatedAt: true });
 
 // AUTH SCHEMAS
 export const loginSchema = z.object({
@@ -142,6 +154,7 @@ export type Order = typeof orders.$inferSelect;
 export type SubOrder = typeof subOrders.$inferSelect;
 export type DeliveryOffer = typeof deliveryOffers.$inferSelect;
 export type Rating = typeof ratings.$inferSelect;
+export type DeliveryOtp = typeof deliveryOtps.$inferSelect;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertWallet = z.infer<typeof insertWalletSchema>;
@@ -152,5 +165,6 @@ export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type InsertSubOrder = z.infer<typeof insertSubOrderSchema>;
 export type InsertDeliveryOffer = z.infer<typeof insertDeliveryOfferSchema>;
 export type InsertRating = z.infer<typeof insertRatingSchema>;
+export type InsertDeliveryOtp = z.infer<typeof insertDeliveryOtpSchema>;
 
 export type AuthResponse = { token: string; user: Omit<User, "password"> };

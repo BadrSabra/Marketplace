@@ -1,0 +1,94 @@
+You are a senior backend engineer.
+
+We are building **Step 2.4 — Delivery OTP + Commission Workflow** for the hyperlocal marketplace platform (Mit Gaber village). 
+
+**Context from previous phases:**
+- Phase 1: Node.js + Express, PostgreSQL (Drizzle ORM), JWT Auth, Users/Stores/Products/Orders/SubOrders/DeliveryOffers/Wallet
+- Step 2.1: Wallet Module implemented (GET /wallet, POST /wallet/deposit)
+- Step 2.2: Ledger Module implemented (WalletTransaction + LedgerService)
+- Step 2.3: Admin Deposit Approval + Email Notifications implemented
+
+**Goal of this Step:**
+Implement backend workflow to verify deliveries using OTPs and distribute commissions to Customer, Store, Driver, and Platform. Fully integrate with Wallet and Ledger modules.
+
+---
+
+### TASKS — Step-by-Step
+
+### 1️⃣ Delivery OTP System
+- Create `server/modules/delivery/deliveryOtp.model.ts`:
+  - id (uuid)
+  - orderId (relation to Orders table)
+  - subOrderId (relation to SubOrders table)
+  - otpCode (string, 6 digits)
+  - status (PENDING, VERIFIED)
+  - createdAt, updatedAt
+- Create `deliveryOtp.service.ts` with functions:
+  - generateOtp(orderId, subOrderId)
+  - verifyOtp(orderId, subOrderId, otpCode)
+- Create endpoints in `deliveryOtp.controller.ts`:
+  - POST /delivery/otp/generate → generate OTP (Admin/Driver)
+  - POST /delivery/otp/verify → verify OTP (Customer)
+- OTP verification marks delivery as completed for SubOrder
+
+---
+
+### 2️⃣ Commission System
+- Implement commission logic in `ledger.service.ts`:
+  - After OTP verification:
+    - Calculate 1% commission for Customer, Store, Driver
+    - Update Wallet balances accordingly
+    - Create Ledger Transactions for each transfer
+- Ensure atomic transactions: all balances updated or none
+- Prepare structure for multi-store orders:
+  - Each SubOrder can have independent commission
+
+---
+
+### 3️⃣ Integration
+- Use existing WalletService and LedgerService
+- Link SubOrders and Orders to WalletTransaction for transparency
+- Keep placeholders for DeliveryOffers and future multi-driver bids
+- Ensure OTP verification triggers automatic commission distribution
+
+---
+
+### 4️⃣ Notifications
+- Send email notifications using Notifications module:
+  - OTP Generated → Driver notified (optional)
+  - Delivery Verified → Customer, Store, Driver notified
+- Use async email sending with logging
+
+---
+
+### 5️⃣ Validation & Error Handling
+- Validate OTP code (6 digits, numeric)
+- Only authorized Customer can verify OTP
+- Ensure LedgerService handles decimal values correctly
+- Log all errors and failed attempts
+
+---
+
+### 6️⃣ Testing Checklist
+- Generate OTP for a SubOrder → OTP saved correctly
+- Verify OTP as Customer → delivery marked complete
+- Ledger transactions created for commissions
+- Wallet balances updated correctly for all parties
+- Emails sent appropriately
+
+---
+
+### 7️⃣ Code Quality
+- TypeScript types everywhere
+- Modular structure: `server/modules/delivery/` and `server/modules/ledger/`
+- Input validation (Joi/Zod)
+- Proper error handling and logging
+- API-first backend — no frontend changes
+
+---
+
+**IMPORTANT**
+- Fully compatible with Step 2.1–2.3
+- Ready for Phase 3 (Multi-Store Orders + Delivery Offers)
+- All IDs UUID, decimals for all monetary values
+- Atomicity required for commission payouts
