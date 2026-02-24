@@ -1,0 +1,67 @@
+You are a senior backend engineer.
+
+We are building **Step 2.3 — Admin Deposit Approval + Email Notifications** for the hyperlocal marketplace platform serving Mit Gaber village and nearby areas.
+
+**Context from previous phases:**
+- Phase 1: Node.js + Express backend, PostgreSQL (Drizzle ORM), JWT Authentication, Users/Stores/Products/Orders/SubOrders/DeliveryOffers/Wallet models, Modular architecture
+- Step 2.1: Wallet Module implemented (GET /wallet, POST /wallet/deposit, initial wallets seeded)
+- Step 2.2: Ledger Module implemented (WalletTransaction model + LedgerService with holdFunds, releaseFunds, addCommission, refundFunds using atomic transactions)
+
+**Goal of this Step:**
+Implement Admin workflow to approve customer deposits and send email notifications, fully integrated with Wallet and Ledger modules.
+
+---
+
+**TASKS — Step-by-Step**
+
+### 1️⃣ Admin Deposit Approval Endpoints
+- Create routes in `server/modules/wallet/wallet.controller.ts`:
+  - `GET /wallet/deposits` → list all PENDING deposits (Admin only)
+  - `POST /wallet/deposits/:id/approve` → approve deposit
+    - Update Customer Wallet balance
+    - Create Ledger Transaction (DEPOSIT, COMPLETED)
+    - Change deposit status to APPROVED
+- Protect endpoints using JWT + role-based middleware (Admin only)
+- Validate depositId exists and is PENDING
+
+---
+
+### 2️⃣ Email Notifications
+- Create `server/modules/notifications/`
+- Configure Gmail SMTP using environment variables
+- Create async email service
+- Send emails for:
+  - Deposit Submitted → Notify Customer PENDING
+  - Deposit Approved → Notify Customer APPROVED
+- Ensure proper logging of email events
+
+---
+
+### 3️⃣ Integration with existing modules
+- Use existing WalletService to update balances
+- Use existing LedgerService to record transactions
+- Maintain modular structure for future extensions (Delivery OTP, Commission payouts)
+
+---
+
+### 4️⃣ Testing Checklist
+- Customer submits deposit → status PENDING
+- Admin approves deposit → balance updated, Ledger transaction created, email sent
+- Verify atomicity: all updates succeed or none
+- Verify only Admin can approve deposits
+
+---
+
+### 5️⃣ Code Quality
+- Use TypeScript types throughout
+- Input validation using Joi or Zod
+- Proper error handling and logging
+- Modular folder structure maintained (`server/modules/wallet/`, `server/modules/notifications/`)
+
+---
+
+**IMPORTANT NOTES**
+- Do NOT integrate yet with Orders/SubOrders
+- Prepare system for next step: Step 2.4 — Delivery OTP + Commission workflow
+- API-first backend — no frontend changes in this step
+- Ensure full compatibility with Step 2.1 (Wallet) and Step 2.2 (Ledger)
