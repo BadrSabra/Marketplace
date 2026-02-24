@@ -1,18 +1,156 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, numeric, uuid, pgEnum } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// ENUMS
+export const roleEnum = pgEnum("role", ["ADMIN", "CUSTOMER", "STORE_OWNER", "DRIVER"]);
+export const transactionTypeEnum = pgEnum("transaction_type", ["DEPOSIT", "HOLD", "RELEASE", "REFUND", "COMMISSION"]);
+export const transactionStatusEnum = pgEnum("transaction_status", ["PENDING", "COMPLETED", "FAILED"]);
+export const orderStatusEnum = pgEnum("order_status", ["PENDING", "ACCEPTED", "IN_TRANSIT", "DELIVERED", "CANCELLED"]);
+export const deliveryStatusEnum = pgEnum("delivery_status", ["PENDING", "ASSIGNED", "PICKED_UP", "DELIVERED"]);
+export const paymentStatusEnum = pgEnum("payment_status", ["PENDING", "PAID", "REFUNDED", "FAILED"]);
+export const offerStatusEnum = pgEnum("offer_status", ["PENDING", "ACCEPTED", "REJECTED", "COUNTERED"]);
+
+// USERS
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
   password: text("password").notNull(),
+  phone: text("phone").notNull(),
+  role: roleEnum("role").notNull().default("CUSTOMER"),
+  isApproved: boolean("is_approved").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+// WALLETS
+export const wallets = pgTable("wallets", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  balance: numeric("balance", { precision: 12, scale: 2 }).notNull().default("0.00"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+// WALLET TRANSACTIONS
+export const walletTransactions = pgTable("wallet_transactions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  walletId: uuid("wallet_id").notNull().references(() => wallets.id),
+  type: transactionTypeEnum("type").notNull(),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  relatedOrderId: uuid("related_order_id"), // Nullable initially
+  status: transactionStatusEnum("status").notNull().default("PENDING"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// STORES
+export const stores = pgTable("stores", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ownerId: uuid("owner_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  locationText: text("location_text").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// PRODUCTS
+export const products = pgTable("products", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  storeId: uuid("store_id").notNull().references(() => stores.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+  stock: integer("stock").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ORDERS
+export const orders = pgTable("orders", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  customerId: uuid("customer_id").notNull().references(() => users.id),
+  overallStatus: orderStatusEnum("overall_status").notNull().default("PENDING"),
+  deliveryStatus: deliveryStatusEnum("delivery_status").notNull().default("PENDING"),
+  paymentStatus: paymentStatusEnum("payment_status").notNull().default("PENDING"),
+  proposedDeliveryFee: numeric("proposed_delivery_fee", { precision: 10, scale: 2 }).notNull(),
+  finalDeliveryFee: numeric("final_delivery_fee", { precision: 10, scale: 2 }),
+  otpCode: text("otp_code"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// SUB_ORDERS
+export const subOrders = pgTable("sub_orders", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orderId: uuid("order_id").notNull().references(() => orders.id),
+  storeId: uuid("store_id").notNull().references(() => stores.id),
+  status: orderStatusEnum("status").notNull().default("PENDING"),
+  subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// DELIVERY_OFFERS
+export const deliveryOffers = pgTable("delivery_offers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orderId: uuid("order_id").notNull().references(() => orders.id),
+  driverId: uuid("driver_id").notNull().references(() => users.id),
+  proposedFee: numeric("proposed_fee", { precision: 10, scale: 2 }).notNull(),
+  status: offerStatusEnum("status").notNull().default("PENDING"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// RATINGS
+export const ratings = pgTable("ratings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orderId: uuid("order_id").notNull().references(() => orders.id),
+  fromUserId: uuid("from_user_id").notNull().references(() => users.id),
+  toUserId: uuid("to_user_id").notNull().references(() => users.id),
+  rating: integer("rating").notNull(), // Should be 1-5
+  comment: text("comment"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ZOD SCHEMAS
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertWalletSchema = createInsertSchema(wallets).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertWalletTransactionSchema = createInsertSchema(walletTransactions).omit({ id: true, createdAt: true });
+export const insertStoreSchema = createInsertSchema(stores).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertProductSchema = createInsertSchema(products).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertSubOrderSchema = createInsertSchema(subOrders).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertDeliveryOfferSchema = createInsertSchema(deliveryOffers).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertRatingSchema = createInsertSchema(ratings).omit({ id: true, createdAt: true });
+
+// AUTH SCHEMAS
+export const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+});
+
+// API TYPES
+export type User = typeof users.$inferSelect;
+export type Wallet = typeof wallets.$inferSelect;
+export type WalletTransaction = typeof walletTransactions.$inferSelect;
+export type Store = typeof stores.$inferSelect;
+export type Product = typeof products.$inferSelect;
+export type Order = typeof orders.$inferSelect;
+export type SubOrder = typeof subOrders.$inferSelect;
+export type DeliveryOffer = typeof deliveryOffers.$inferSelect;
+export type Rating = typeof ratings.$inferSelect;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export type InsertWallet = z.infer<typeof insertWalletSchema>;
+export type InsertWalletTransaction = z.infer<typeof insertWalletTransactionSchema>;
+export type InsertStore = z.infer<typeof insertStoreSchema>;
+export type InsertProduct = z.infer<typeof insertProductSchema>;
+export type InsertOrder = z.infer<typeof insertOrderSchema>;
+export type InsertSubOrder = z.infer<typeof insertSubOrderSchema>;
+export type InsertDeliveryOffer = z.infer<typeof insertDeliveryOfferSchema>;
+export type InsertRating = z.infer<typeof insertRatingSchema>;
+
+export type AuthResponse = { token: string; user: Omit<User, "password"> };
