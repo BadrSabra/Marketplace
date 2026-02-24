@@ -112,17 +112,35 @@ export async function registerRoutes(
     res.json(orders);
   });
 
+  // --- WALLET MODULE ---
+  app.get("/api/wallet", authenticate, async (req, res) => {
+    const { walletController } = await import("./modules/wallet/wallet.controller");
+    return walletController.getBalance(req, res);
+  });
+
+  app.post("/api/wallet/deposit", authenticate, authorizeRole(["CUSTOMER"]), async (req, res) => {
+    const { walletController } = await import("./modules/wallet/wallet.controller");
+    return walletController.deposit(req, res);
+  });
+
   // Seed data function
   async function seedDatabase() {
     try {
       const users = await storage.getUsers();
       if (users.length === 0) {
         const hashedPassword = await bcrypt.hash("password123", 10);
-        await storage.createUser({ name: "Admin User", email: "admin@example.com", password: hashedPassword, phone: "123456789", role: "ADMIN", isApproved: true });
-        await storage.createUser({ name: "Normal Customer", email: "customer@example.com", password: hashedPassword, phone: "987654321", role: "CUSTOMER", isApproved: true });
+        const admin = await storage.createUser({ name: "Admin User", email: "admin@example.com", password: hashedPassword, phone: "123456789", role: "ADMIN", isApproved: true });
+        const customer = await storage.createUser({ name: "Normal Customer", email: "customer@example.com", password: hashedPassword, phone: "987654321", role: "CUSTOMER", isApproved: true });
         const storeOwner = await storage.createUser({ name: "Store Owner", email: "owner@example.com", password: hashedPassword, phone: "555555555", role: "STORE_OWNER", isApproved: true });
-        await storage.createUser({ name: "Delivery Driver", email: "driver@example.com", password: hashedPassword, phone: "444444444", role: "DRIVER", isApproved: true });
+        const driver = await storage.createUser({ name: "Delivery Driver", email: "driver@example.com", password: hashedPassword, phone: "444444444", role: "DRIVER", isApproved: true });
         
+        // Create wallets for seeded users
+        const { walletService } = await import("./modules/wallet/wallet.service");
+        await walletService.getOrCreateWallet(admin.id);
+        await walletService.getOrCreateWallet(customer.id);
+        await walletService.getOrCreateWallet(storeOwner.id);
+        await walletService.getOrCreateWallet(driver.id);
+
         const latestStoreOwner = await storage.getUserByEmail("owner@example.com");
         if(latestStoreOwner) {
           await storage.createStore({ ownerId: latestStoreOwner.id, name: "Gaber Market", locationText: "Mit Gaber Square", description: "The best local market" });
