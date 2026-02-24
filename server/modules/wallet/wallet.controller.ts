@@ -39,6 +39,25 @@ export class WalletController {
       res.status(500).json({ message: error.message });
     }
   }
+
+  async getPendingDeposits(req: Request, res: Response) {
+    try {
+      const deposits = await walletService.getPendingDeposits();
+      res.json(deposits);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  async approveDeposit(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const transaction = await walletService.approveDeposit(id);
+      res.json(transaction);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
 
 export const walletController = new WalletController();

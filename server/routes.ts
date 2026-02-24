@@ -123,6 +123,16 @@ export async function registerRoutes(
     return walletController.deposit(req, res);
   });
 
+  app.get("/api/wallet/deposits", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
+    const { walletController } = await import("./modules/wallet/wallet.controller");
+    return walletController.getPendingDeposits(req, res);
+  });
+
+  app.post("/api/wallet/deposits/:id/approve", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
+    const { walletController } = await import("./modules/wallet/wallet.controller");
+    return walletController.approveDeposit(req, res);
+  });
+
   // Seed data function
   async function seedDatabase() {
     try {
