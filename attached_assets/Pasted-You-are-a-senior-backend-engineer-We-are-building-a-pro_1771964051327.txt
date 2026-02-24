@@ -1,0 +1,173 @@
+You are a senior backend engineer.
+
+We are building a production-grade API-first backend for a hyperlocal marketplace platform serving Mit Gaber village in Egypt.
+
+Tech Stack:
+- Node.js
+- Express
+- PostgreSQL
+- Prisma ORM
+- JWT Authentication
+- Modular architecture
+- TypeScript
+
+Goal of THIS PHASE:
+Build the foundational backend architecture ONLY.
+Do NOT implement business logic yet (no wallet logic, no order flow, no delivery logic).
+Only build the structure and database models.
+
+--------------------------------------------------
+PROJECT STRUCTURE
+
+Create a clean modular architecture:
+
+src/
+ ├── modules/
+ │    ├── auth/
+ │    ├── users/
+ │    ├── stores/
+ │    ├── products/
+ │    ├── orders/
+ │    ├── wallet/
+ │    ├── delivery/
+ │    ├── ratings/
+ │    ├── notifications/
+ ├── middleware/
+ ├── config/
+ ├── utils/
+ ├── app.ts
+ └── server.ts
+
+--------------------------------------------------
+DATABASE DESIGN (IMPORTANT)
+
+Create full Prisma schema including the following models:
+
+User
+- id (uuid)
+- name
+- email (unique)
+- password
+- phone
+- role (ADMIN, CUSTOMER, STORE_OWNER, DRIVER)
+- isApproved (boolean)
+- createdAt
+- updatedAt
+
+Wallet
+- id (uuid)
+- userId (relation)
+- balance (decimal)
+- createdAt
+- updatedAt
+
+WalletTransaction
+- id (uuid)
+- walletId
+- type (DEPOSIT, HOLD, RELEASE, REFUND, COMMISSION)
+- amount (decimal)
+- relatedOrderId (nullable)
+- status (PENDING, COMPLETED, FAILED)
+- createdAt
+
+Store
+- id (uuid)
+- ownerId (User relation)
+- name
+- description
+- locationText
+- createdAt
+- updatedAt
+
+Product
+- id (uuid)
+- storeId
+- name
+- description
+- price (decimal)
+- stock (int)
+- createdAt
+- updatedAt
+
+Order
+- id (uuid)
+- customerId
+- overallStatus
+- deliveryStatus
+- paymentStatus
+- proposedDeliveryFee (decimal)
+- finalDeliveryFee (decimal, nullable)
+- otpCode (nullable)
+- createdAt
+- updatedAt
+
+SubOrder
+- id (uuid)
+- orderId
+- storeId
+- status
+- subtotal (decimal)
+- createdAt
+- updatedAt
+
+DeliveryOffer
+- id (uuid)
+- orderId
+- driverId
+- proposedFee (decimal)
+- status (PENDING, ACCEPTED, REJECTED, COUNTERED)
+- createdAt
+- updatedAt
+
+Rating
+- id (uuid)
+- orderId
+- fromUserId
+- toUserId
+- rating (1-5)
+- comment (nullable)
+- createdAt
+
+--------------------------------------------------
+
+AUTH SYSTEM
+
+Implement:
+- Register
+- Login
+- Password hashing
+- JWT token generation
+- Role-based middleware
+
+Create protected route examples for:
+- Admin only
+- Store owner only
+- Driver only
+- Customer only
+
+--------------------------------------------------
+
+OTHER REQUIREMENTS
+
+- Use environment variables
+- Add error handling middleware
+- Add input validation (Joi or Zod)
+- Seed script that creates:
+   - 1 Admin
+   - 1 Customer
+   - 1 Store Owner
+   - 1 Driver
+
+--------------------------------------------------
+
+IMPORTANT
+
+- Explain the architecture before writing code.
+- Ensure Prisma relations are correct.
+- Ensure UUIDs are used.
+- Ensure decimal types are handled properly.
+- Make the project ready to extend in next phase.
+
+Do not implement wallet business logic yet.
+Do not implement order lifecycle logic yet.
+Only structure and models.
