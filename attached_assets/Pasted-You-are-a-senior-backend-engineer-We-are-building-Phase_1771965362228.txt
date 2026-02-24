@@ -1,0 +1,127 @@
+You are a senior backend engineer.
+
+We are building **Phase 2** of a hyperlocal marketplace platform serving Mit Gaber village and nearby areas in Egypt. 
+Phase 1 (already completed) includes:
+
+- Node.js + Express backend
+- PostgreSQL database using Drizzle ORM
+- Modular architecture (`server/modules/...`)
+- JWT authentication with password hashing
+- Role-based middleware (Admin, Customer, Store Owner, Driver)
+- Models already created: Users, Stores, Products, Orders, SubOrders, DeliveryOffers, Ratings, Wallets (basic)
+
+Your task for Phase 2 is to implement the **full Wallet System with Ledger, Admin-approved deposit workflow, transaction tracking, commission handling, and email notifications**, **fully integrated with the Phase 1 backend**. This is backend-only (API-first) — no frontend work in this phase.
+
+--------------------------------------------------
+CONTEXT FOR REPLIT AGENT:
+- Multi-store order system will be implemented in Phase 3
+- Each order may have multiple sub-orders (one per store)
+- Delivery bidding system will be integrated later
+- Commission is 1% of each party (Customer, Store, Driver) after delivery completion
+- OTP delivery verification system will be added later
+- Emails must be sent via Gmail SMTP using environment variables
+
+--------------------------------------------------
+STEP-BY-STEP INSTRUCTIONS
+
+### Step 0 — Pre-setup
+1. Review Phase 1 models (Users, Wallets, Orders, SubOrders, DeliveryOffers, Ratings)
+2. Ensure Drizzle ORM setup and database connection is stable
+3. Use TypeScript with modular architecture
+
+---
+
+### Step 1 — Wallet Module
+1. Create `server/modules/wallet/` folder
+2. Create `wallet.model.ts`:
+   - Fields: id (uuid), userId (relation), balance (decimal), createdAt, updatedAt
+3. Create `wallet.controller.ts` with endpoints:
+   - `GET /wallet` → return user wallet balance
+   - `POST /wallet/deposit` → upload receipt, create deposit with status = PENDING
+4. Create `wallet.service.ts` with functions:
+   - getBalance(userId)
+   - createDeposit(userId, amount, receipt)
+   - approveDeposit(adminId, depositId)
+5. Input validation: amount > 0, valid file type for receipt
+6. Add error handling and logging
+
+---
+
+### Step 2 — Ledger Module
+1. Create `server/modules/ledger/` folder
+2. Create `walletTransaction.model.ts`:
+   - Fields: id (uuid), walletId, type (DEPOSIT, HOLD, RELEASE, REFUND, COMMISSION), amount (decimal), relatedOrderId (nullable), status (PENDING, COMPLETED, FAILED), createdAt
+3. Create `ledger.service.ts` with functions:
+   - holdFunds(walletId, amount)
+   - releaseFunds(walletId, amount)
+   - addCommission(walletId, amount)
+   - refundFunds(walletId, amount)
+4. Ledger must link to Orders/SubOrders when applicable
+5. Ensure all transactions are **atomic and logged**
+
+---
+
+### Step 3 — Admin Deposit Approval
+1. Endpoints:
+   - `GET /wallet/deposits` → list all pending deposits
+   - `POST /wallet/deposits/:id/approve` → approve deposit
+2. Upon approval:
+   - Update Wallet balance
+   - Create Ledger Transaction (DEPOSIT, COMPLETED)
+   - Send email notification to Customer (Deposit Approved)
+3. Emails should also trigger when deposit is submitted (status = PENDING)
+
+---
+
+### Step 4 — Placeholder for Orders & OTP
+1. Prepare endpoints and service placeholders for future integration with Orders/SubOrders
+2. Associate future Ledger transactions with orders
+3. Maintain architecture ready for HOLD → RELEASE → COMMISSION workflow
+
+---
+
+### Step 5 — Notifications Module
+1. Create `server/modules/notifications/`
+2. Setup Gmail SMTP using environment variables
+3. Create email templates:
+   - Deposit Submitted
+   - Deposit Approved
+   - Delivery OTP (placeholder)
+   - Delivery Completed (placeholder)
+4. Ensure emails are sent **asynchronously** with logging
+
+---
+
+### Step 6 — Seed Script Update
+1. Add initial Wallets for:
+   - Admin, Customer, Store Owner, Driver
+2. Initial balance = 0
+3. Seed Ledger table as empty (transactions to be created later)
+
+---
+
+### Step 7 — Testing Checklist
+1. `GET /wallet` returns correct balance
+2. Deposit flow: upload receipt → PENDING → Admin approve → balance updated
+3. Ledger logs all transactions correctly
+4. Emails sent for deposit submission and approval
+5. Prepare system for Phase 3 (Orders, Multi-Store, Delivery Offers)
+
+---
+
+### Step 8 — Code Quality
+- Use TypeScript types everywhere
+- Modular code structure
+- Input validation with Joi or Zod
+- Error handling and logging
+- Fully extendable for next phases
+
+---
+
+IMPORTANT NOTES FOR REPLIT AGENT
+- Explain each module briefly before writing code
+- Maintain full compatibility with Phase 1 database and modular structure
+- API-first backend — no frontend changes
+- Make sure all IDs are UUID
+- Ensure decimals are used correctly for all monetary values
+- System must be ready for future multi-store order logic and delivery bidding
