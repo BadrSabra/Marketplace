@@ -1,0 +1,79 @@
+
+
+You are a senior backend engineer.
+
+The PostgreSQL database for the hyperlocal marketplace platform (Mit Gaber village) is currently empty. Before seeding the database, your task is to **interactively gather all required information** from the user to create accounts and wallets.
+
+---
+
+### Step 1: Gather Information
+
+Ask the user for the following information for each user type:
+
+1️⃣ **Admin**
+- Name
+- Email
+- Password
+
+2️⃣ **Drivers** (multiple)
+- Name
+- Email
+- Password
+
+3️⃣ **Store Owners** (multiple)
+- Name
+- Email
+- Password
+
+4️⃣ **Customers** (multiple)
+- Name
+- Email
+- Password
+
+5️⃣ **Additional options**
+- Default Wallet balance (suggest 0)
+- Currency / decimal precision if needed
+
+> Ensure that you validate each input:
+> - Emails must be valid
+> - Passwords must meet minimum security criteria
+> - Names cannot be empty
+
+---
+
+### Step 2: Confirm Inputs
+
+- Display a summary table of all users with their roles, emails, and wallet balances
+- Ask the user to confirm before creating accounts in the database
+
+---
+
+### Step 3: Execute Creation
+
+Once confirmed:
+
+- Create each user with **UUID** for user ID
+- Hash all passwords using **bcrypt**
+- Create a Wallet for each user linked to their user ID, with the default balance
+- Ensure **idempotency**: do not create duplicates if an email already exists
+- Log success messages for each user and wallet:
+
+User & Wallet created successfully! Name: <name>, Email: <email>, Role: <role>, Wallet balance: <balance>
+
+---
+
+### Step 4: Ready for Use
+
+- All users can now log in via `POST /auth/login` using their email/password
+- Wallets are ready for deposits, commission distribution, and refunds
+- System prepared for all Phases: Wallet, Ledger, OTP, Commission, Multi-Store Orders
+
+---
+
+### Notes
+
+- Code must be **TypeScript**, modular (`server/modules/auth/`, `server/modules/wallet/`)  
+- Ensure atomic creation: user + wallet must succeed together  
+- Console logs should clearly show what was created successfully  
+- Prepare for future extensions: HOLD, RELEASE, COMMISSION
+
