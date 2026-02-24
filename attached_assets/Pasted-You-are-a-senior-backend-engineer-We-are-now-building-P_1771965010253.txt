@@ -1,0 +1,75 @@
+You are a senior backend engineer.
+
+We are now building **Phase 2** of our hyperlocal marketplace platform for Mit Gaber village: the **Wallet System + Ledger + Notifications**.
+
+Tech Stack:
+- Node.js + Express
+- PostgreSQL
+- Drizzle ORM (already used in Phase 1)
+- JWT Authentication (existing)
+- Modular architecture
+- TypeScript
+
+Goal of THIS PHASE:
+Implement the **full wallet and transaction system**, with admin-reviewed deposit, ledger tracking, commission handling, and email notifications. Integrate this with the existing database models from Phase 1.
+
+--------------------------------------------------
+REQUIREMENTS
+
+1️⃣ Wallet System
+- 4 types of wallets: Customer, Store, Driver, Platform
+- Users have balances
+- All money movements go through WalletTransaction ledger
+- Transaction types: DEPOSIT, HOLD, RELEASE, REFUND, COMMISSION
+- Admin approves deposits manually
+- Emails sent to customer when deposit submitted & approved
+- Balances updated automatically after transactions
+
+2️⃣ Ledger & Order Integration
+- When an order is created, relevant amounts go on HOLD in the Customer wallet
+- Upon OTP-confirmed delivery:
+   - RELEASE Customer HOLD
+   - Add Store earnings (minus 1% commission)
+   - Add Driver earnings (minus 1% commission)
+   - Add Platform commission (1% each)
+- Refund logic for cancelled orders
+
+3️⃣ Notifications
+- Use Gmail SMTP for sending emails
+- Templates:
+   - Deposit Submitted
+   - Deposit Approved
+   - Delivery OTP sent
+   - Delivery Completed
+
+4️⃣ API Endpoints (Backend-only)
+- Customer:
+   - POST /wallet/deposit → upload receipt, pending
+   - GET /wallet → view balance
+- Admin:
+   - GET /wallet/deposits → list pending
+   - POST /wallet/deposits/:id/approve → approve deposit
+- Driver / Store:
+   - GET /wallet → view balance
+
+5️⃣ Integrations with existing models
+- Wallet linked to Users
+- WalletTransaction linked to Orders
+- Ledger reflects all movements for transparency
+- OTP and SubOrder integration placeholders for next phase
+
+6️⃣ Other Requirements
+- Maintain modular structure (server/modules/wallet, server/modules/ledger, server/modules/notifications)
+- Use TypeScript types
+- Add validation (Joi or Zod)
+- Use environment variables for email credentials
+- Handle all errors gracefully
+- Seed script updates: add initial balances (optional)
+
+--------------------------------------------------
+IMPORTANT
+- Explain the architecture before writing code
+- Ensure all relations are correct
+- Maintain compatibility with Phase 1
+- Make system ready to extend for full Order + Multi-Store + Delivery logic next
+- Focus on **API-first backend**, no frontend changes yet
