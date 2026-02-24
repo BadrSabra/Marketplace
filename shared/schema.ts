@@ -75,9 +75,7 @@ export const orders = pgTable("orders", {
   overallStatus: orderStatusEnum("overall_status").notNull().default("PENDING"),
   deliveryStatus: deliveryStatusEnum("delivery_status").notNull().default("PENDING"),
   paymentStatus: paymentStatusEnum("payment_status").notNull().default("PENDING"),
-  proposedDeliveryFee: numeric("proposed_delivery_fee", { precision: 10, scale: 2 }).notNull(),
-  finalDeliveryFee: numeric("final_delivery_fee", { precision: 10, scale: 2 }),
-  otpCode: text("otp_code"),
+  totalPrice: numeric("total_price", { precision: 12, scale: 2 }).notNull().default("0.00"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -89,16 +87,26 @@ export const subOrders = pgTable("sub_orders", {
   storeId: uuid("store_id").notNull().references(() => stores.id),
   status: orderStatusEnum("status").notNull().default("PENDING"),
   subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull(),
+  expectedDeliveryFee: numeric("expected_delivery_fee", { precision: 10, scale: 2 }).notNull().default("0.00"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ORDER_ITEMS
+export const orderItems = pgTable("order_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  subOrderId: uuid("sub_order_id").notNull().references(() => subOrders.id),
+  productId: uuid("product_id").notNull().references(() => products.id),
+  quantity: integer("quantity").notNull(),
+  priceAtOrder: numeric("price_at_order", { precision: 10, scale: 2 }).notNull(),
 });
 
 // DELIVERY_OFFERS
 export const deliveryOffers = pgTable("delivery_offers", {
   id: uuid("id").primaryKey().defaultRandom(),
-  orderId: uuid("order_id").notNull().references(() => orders.id),
+  subOrderId: uuid("sub_order_id").notNull().references(() => subOrders.id),
   driverId: uuid("driver_id").notNull().references(() => users.id),
-  proposedFee: numeric("proposed_fee", { precision: 10, scale: 2 }).notNull(),
+  offeredFee: numeric("offered_fee", { precision: 10, scale: 2 }).notNull(),
   status: offerStatusEnum("status").notNull().default("PENDING"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

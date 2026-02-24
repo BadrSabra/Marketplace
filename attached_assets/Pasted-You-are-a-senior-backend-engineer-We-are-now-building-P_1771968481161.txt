@@ -1,0 +1,108 @@
+You are a senior backend engineer.
+
+We are now building **Phase 3 — Multi-Store Orders, Delivery Offers, and Refunds** for the hyperlocal marketplace platform (Mit Gaber village).
+
+**Context from previous phases:**
+- Phase 1: Node.js + Express, PostgreSQL (Drizzle ORM), JWT Auth, Users/Stores/Products/Orders/SubOrders/DeliveryOffers/Wallet
+- Phase 2: 
+  - Wallet Module ✅
+  - Ledger Module ✅
+  - Admin Deposit Approval + Email Notifications ✅
+  - Delivery OTP + Commission Workflow ✅
+
+**Goal of Phase 3:**
+- Allow customers to place **orders containing products from multiple stores** in a single request.
+- Allow **drivers to make delivery offers** for available orders.
+- Handle **partial or full refunds** safely.
+- Integrate fully with Wallet, Ledger, Delivery OTP, and Commission systems.
+
+---
+
+### TASKS — Step-by-Step
+
+### 1️⃣ Multi-Store Orders
+- Update `orders.model.ts` and `subOrders.model.ts` to support multiple stores per order.
+- Each `SubOrder` belongs to a single store but is linked to a single parent `Order`.
+- Customer can:
+  - Add products from multiple stores
+  - Checkout once → generates multiple `SubOrders` automatically
+- Endpoints:
+  - POST /orders → create multi-store order
+  - GET /orders/:id → fetch full order with sub-orders
+- Calculate total price and expected delivery fees for each SubOrder.
+
+---
+
+### 2️⃣ Delivery Offers (Driver Bidding)
+- Create `deliveryOffers.model.ts` (if not already present):
+  - id (uuid)
+  - subOrderId
+  - driverId
+  - offeredFee (decimal)
+  - status (PENDING, ACCEPTED, REJECTED)
+  - createdAt, updatedAt
+- Drivers can see all available sub-orders and submit offers.
+- Customer can accept one offer → automatically reject others.
+- Update LedgerService to **hold delivery fee** upon offer acceptance.
+
+---
+
+### 3️⃣ Refunds / Cancellations
+- Customer can cancel:
+  - Full Order (if no sub-order delivered yet)
+  - Single SubOrder (if not delivered)
+- Refund workflow:
+  - Update Wallet balances
+  - Create Ledger Transactions (REFUND)
+  - Reverse any HOLD or COMMISSION entries if necessary
+- Ensure atomic transactions to avoid inconsistent balances.
+
+---
+
+### 4️⃣ Integration with Wallet, Ledger, OTP, and Commission
+- SubOrder completion triggers:
+  - OTP verification
+  - Commission distribution (1% per party)
+- Refunds update Wallets and Ledger correctly.
+- Delivery fee workflow integrated with driver wallet.
+
+---
+
+### 5️⃣ Notifications
+- Send email notifications:
+  - New Delivery Offer → Driver notified
+  - Offer Accepted → Driver & Customer notified
+  - Refund Processed → Customer notified
+- Use existing Notifications module.
+
+---
+
+### 6️⃣ Validation & Error Handling
+- Ensure only authorized users can place, cancel, or accept offers
+- Validate amounts, orderId, subOrderId
+- Log errors and failed transactions
+
+---
+
+### 7️⃣ Testing Checklist
+- Place multi-store order → SubOrders created correctly
+- Drivers submit offers → Accept/reject workflow works
+- Delivery OTP verification → triggers commission distribution
+- Refunds → Wallet & Ledger updated correctly
+- Emails sent for all events
+
+---
+
+### 8️⃣ Code Quality
+- TypeScript types throughout
+- Modular folder structure (`server/modules/orders/`, `server/modules/delivery/`, `server/modules/ledger/`)
+- API-first backend
+- Fully extendable for future analytics and reporting
+
+---
+
+**IMPORTANT**
+- Maintain compatibility with Phase 1 & Phase 2 modules
+- Use atomic transactions for all financial operations
+- Decimal types for all monetary values
+- Multi-store workflow must work seamlessly with delivery offers and commission logic

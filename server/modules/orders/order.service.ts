@@ -1,0 +1,110 @@
+import { db } from "../../db";
+import { orders, subOrders, orderItems, products, wallets, walletTransactions } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
+
+export class OrderService {
+  async createMultiStoreOrder(customerId: string, items: { productId: string, quantity: number }[]) {
+    return await db.transaction(async (tx) => {
+      // 1. Group items by store
+      const productDetails = await Promise.all(
+        items.map(async (item) => {
+          const [product] = await tx.select().from(products).where(eq(products.id, item.productId));
+          if (!product) throw new Error(`Product ${item.productId} not found`);
+          return { ...item, product };
+        })
+      );
+
+      const storeGroups = productDetails.reduce((acc, item) => {
+        const storeId = item.product.storeId;
+        if (!acc[storeId]) acc[storeId] = [];
+        acc[storeId].push(item);
+        return acc;
+      }, {} as Record<string, typeof productDetails>);
+
+      const totalPrice = productDetails.reduce((sum, item) => 
+        sum + (parseFloat(item.product.price) * item.quantity), 0
+      );
+
+      // 2. Create parent order
+      const [order] = await tx.insert(orders).values({
+        customerId,
+        totalPrice: totalPrice.toFixed(2),
+        overallStatus: "PENDING",
+        paymentStatus: "PENDING"
+      }).returning();
+
+      // 3. Create sub-orders and items
+      for (const [storeId, storeItems] of Object.entries(storeGroups)) {
+        const subtotal = storeItems.reduce((sum, item) => 
+          sum + (parseFloat(item.product.price) * item.quantity), 0
+        );
+
+        const [subOrder] = await tx.insert(subOrders).values({
+          orderId: order.id,
+          storeId,
+          subtotal: subtotal.toFixed(2),
+          status: "PENDING",
+          expectedDeliveryFee: "10.00" // Placeholder base fee
+        }).returning();
+
+        for (const item of storeItems) {
+          await tx.insert(orderItems).values({
+            subOrderId: subOrder.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            priceAtOrder: item.product.price
+          });
+        }
+      }
+
+      return order;
+    });
+  }
+
+  async getOrderWithSubOrders(orderId: string) {
+    const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+    if (!order) throw new Error("Order not found");
+
+    const subs = await db.select().from(subOrders).where(eq(subOrders.orderId, orderId));
+    
+    const subsWithItems = await Promise.all(subs.map(async (sub) => {
+      const items = await db.select().from(orderItems).where(eq(orderItems.subOrderId, sub.id));
+      return { ...sub, items };
+    }));
+
+    return { ...order, subOrders: subsWithItems };
+  }
+
+  async cancelSubOrder(subOrderId: string, userId: string) {
+    return await db.transaction(async (tx) => {
+      const [subOrder] = await tx.select().from(subOrders).where(eq(subOrders.id, subOrderId));
+      if (!subOrder) throw new Error("SubOrder not found");
+
+      const [order] = await tx.select().from(orders).where(eq(orders.id, subOrder.orderId));
+      if (order.customerId !== userId) throw new Error("Unauthorized");
+      if (subOrder.status === "DELIVERED") throw new Error("Cannot cancel delivered sub-order");
+
+      await tx.update(subOrders).set({ status: "CANCELLED" }).where(eq(subOrders.id, subOrderId));
+
+      // Refund logic if paid
+      if (order.paymentStatus === "PAID") {
+        const [wallet] = await tx.select().from(wallets).where(eq(wallets.userId, userId));
+        if (wallet) {
+          await tx.update(wallets)
+            .set({ balance: (parseFloat(wallet.balance) + parseFloat(subOrder.subtotal)).toFixed(2) })
+            .where(eq(wallets.id, wallet.id));
+          
+          await tx.insert(walletTransactions).values({
+            walletId: wallet.id,
+            type: "REFUND",
+            amount: subOrder.subtotal,
+            relatedOrderId: order.id,
+            status: "COMPLETED"
+          });
+        }
+      }
+    });
+  }
+}
+
+export const orderService = new OrderService();

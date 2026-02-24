@@ -140,8 +140,35 @@ export async function registerRoutes(
   });
 
   app.post("/api/delivery/otp/verify", authenticate, authorizeRole(["CUSTOMER"]), async (req, res) => {
-    const { deliveryOtpController } = await import("./modules/delivery/deliveryOtp.controller");
+    const { deliveryOtpController } = await import("./delivery/deliveryOtp.controller");
     return deliveryOtpController.verify(req, res);
+  });
+
+  // --- ORDERS MODULE ---
+  app.post("/api/orders", authenticate, authorizeRole(["CUSTOMER"]), async (req, res) => {
+    const { orderController } = await import("./modules/orders/order.controller");
+    return orderController.create(req, res);
+  });
+
+  app.get("/api/orders/:id", authenticate, async (req, res) => {
+    const { orderController } = await import("./modules/orders/order.controller");
+    return orderController.get(req, res);
+  });
+
+  app.post("/api/suborders/:id/cancel", authenticate, authorizeRole(["CUSTOMER"]), async (req, res) => {
+    const { orderController } = await import("./modules/orders/order.controller");
+    return orderController.cancelSubOrder(req, res);
+  });
+
+  // --- DELIVERY OFFERS ---
+  app.post("/api/delivery/offers", authenticate, authorizeRole(["DRIVER"]), async (req, res) => {
+    const { deliveryOfferController } = await import("./modules/delivery/deliveryOffer.controller");
+    return deliveryOfferController.submit(req, res);
+  });
+
+  app.post("/api/delivery/offers/:id/accept", authenticate, authorizeRole(["CUSTOMER"]), async (req, res) => {
+    const { deliveryOfferController } = await import("./modules/delivery/deliveryOffer.controller");
+    return deliveryOfferController.accept(req, res);
   });
 
   // Seed data function
