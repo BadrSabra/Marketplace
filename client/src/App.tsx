@@ -9,13 +9,22 @@ import { Spinner } from "@/components/ui/spinner";
 
 // Pages
 import LoginPage from "@/pages/auth/login";
-import Dashboard from "@/pages/admin/dashboard";
+import AdminDashboard from "@/pages/admin/dashboard";
+import CustomerDashboard from "@/pages/customer/dashboard";
+import StoreDashboard from "@/pages/store/dashboard";
+import DriverDashboard from "@/pages/driver/dashboard";
 import UsersPage from "@/pages/admin/users";
 import StoresPage from "@/pages/admin/stores";
 import ProductsPage from "@/pages/admin/products";
 import OrdersPage from "@/pages/admin/orders";
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+function ProtectedRoute({ 
+  component: Component, 
+  roles 
+}: { 
+  component: React.ComponentType;
+  roles?: string[];
+}) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -30,19 +39,43 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     return <Redirect to="/login" />;
   }
 
+  if (roles && !roles.includes(user.role)) {
+    return <Redirect to="/" />;
+  }
+
   return <Component />;
+}
+
+function RoleBasedDashboard() {
+  const { user } = useAuth();
+  
+  if (!user) return <Redirect to="/login" />;
+
+  switch (user.role) {
+    case "ADMIN":
+      return <AdminDashboard />;
+    case "STORE_OWNER":
+      return <StoreDashboard />;
+    case "DRIVER":
+      return <DriverDashboard />;
+    case "CUSTOMER":
+    default:
+      return <CustomerDashboard />;
+  }
 }
 
 function Router() {
   return (
     <Switch>
       <Route path="/login" component={LoginPage} />
-      <Route path="/">
-        {() => <ProtectedRoute component={Dashboard} />}
+      <Route path="/" component={RoleBasedDashboard} />
+      
+      {/* Admin Routes */}
+      <Route path="/admin/users">
+        {() => <ProtectedRoute component={UsersPage} roles={["ADMIN"]} />}
       </Route>
-      <Route path="/users">
-        {() => <ProtectedRoute component={UsersPage} />}
-      </Route>
+      
+      {/* Shared/Common Protected Routes */}
       <Route path="/stores">
         {() => <ProtectedRoute component={StoresPage} />}
       </Route>
@@ -52,6 +85,7 @@ function Router() {
       <Route path="/orders">
         {() => <ProtectedRoute component={OrdersPage} />}
       </Route>
+      
       <Route component={NotFound} />
     </Switch>
   );

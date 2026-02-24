@@ -1,7 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { roleEnum } from "@shared/schema";
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
+
+export type UserRole = (typeof roleEnum.enumValues)[number];
 
 export function authenticate(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
@@ -19,7 +22,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-export function authorizeRole(roles: string[]) {
+export function authorizeRole(roles: UserRole[]) {
   return (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
     if (!user || !roles.includes(user.role)) {
