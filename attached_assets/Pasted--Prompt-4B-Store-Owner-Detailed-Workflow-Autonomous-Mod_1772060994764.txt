@@ -1,0 +1,152 @@
+.
+
+
+---
+
+Prompt 4B – Store Owner Detailed Workflow (Autonomous Mode)
+
+Goal: Build a fully functional Store Owner Dashboard with the following sub-features:
+
+1. Incoming Orders Page
+
+Display all sub-orders assigned to the store.
+
+Support status transitions: PENDING → ACCEPTED → READY → PICKED_UP → DELIVERED.
+
+Enforce RBAC: STORE_OWNER can Accept/Ready/Cancel; DRIVER handles Pick Up; ADMIN can override all.
+
+Integrate atomic stock decrement when ACCEPTED.
+
+Add toast notifications for success/failure.
+
+
+
+2. Order Details Page
+
+Show detailed sub-order items, quantities, per-item prices, and subtotal.
+
+Show customer info and contact.
+
+Allow manual actions: Cancel, Accept, Mark Ready (based on current status).
+
+Integrate ledger/commission info (display commission earned per sub-order).
+
+Fetch live updates from /api/orders/:id and /api/ledger/transactions.
+
+
+
+3. Earnings Dashboard
+
+Show current balance (Wallet).
+
+Show total commissions earned.
+
+Display transaction history from /api/ledger/transactions.
+
+Highlight deposits, commissions, refunds, and pending approvals.
+
+
+
+4. Inventory Management Page
+
+CRUD for products: add/edit/delete items, update stock.
+
+Show real-time stock levels.
+
+Trigger validation: prevent accepting orders if stock insufficient.
+
+Integrate stock decrement automatically on ACCEPTED sub-orders.
+
+
+
+5. Navigation & Layout
+
+Update Store Owner Dashboard with links to: Incoming Orders, Order Details, Earnings, Inventory.
+
+Use Card/Badge/Table UI components consistently.
+
+Add loading indicators (Loader2) for API fetches.
+
+
+
+6. Backend Enhancements
+
+Ensure /api/suborders/:id/status handles atomic transactions with stock decrement.
+
+Add /api/products routes for CRUD.
+
+Expose /api/orders/my-store/:id for single order details.
+
+Integrate ledger/commission updates for accepted sub-orders.
+
+Add error handling: 403 Forbidden for RBAC violations, 409 Conflict for stock issues.
+
+
+
+7. Audit & Logging
+
+Add structured console logging for all critical actions.
+
+Prepare for centralized audit log integration later.
+
+
+
+8. Frontend-Backend Integration
+
+Use React Query for fetching and caching data.
+
+Integrate mutations for status updates, stock, and product management.
+
+Use toast notifications for feedback.
+
+Ensure all pages reactively update after mutations.
+
+
+
+9. Testing & Validation
+
+Validate form inputs using Zod.
+
+Validate RBAC enforcement.
+
+Ensure atomicity: no stock decrement if status update fails.
+
+
+
+
+
+---
+
+Instructions for Replit Agent (Autonomous Mode):
+
+1. Create/update all necessary frontend pages: store/orders.tsx, store/orderDetails.tsx, store/earnings.tsx, store/inventory.tsx.
+
+
+2. Create/update necessary backend services/controllers/routes: orders, suborders, products, ledger.
+
+
+3. Ensure all RBAC, atomic transactions, error handling, and audit placeholders are implemented.
+
+
+4. Integrate React Query, Cards/Tables/Badges/Toasts, and Loader2 where appropriate.
+
+
+5. After implementation, generate a summary JSON report:
+
+
+
+{
+  "pages": [
+    {"page": "Store Orders", "path": "/store/orders", "status": "functional"},
+    {"page": "Order Details", "path": "/store/orders/:id", "status": "functional"},
+    {"page": "Earnings Dashboard", "path": "/store/earnings", "status": "functional"},
+    {"page": "Inventory", "path": "/store/inventory", "status": "functional"}
+  ],
+  "recommendations": [
+    "Implement WebSocket or polling for real-time order updates",
+    "Integrate audit log centralization",
+    "Add additional UI refinements and responsive design"
+  ]
+}
+
+
