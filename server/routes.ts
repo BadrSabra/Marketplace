@@ -7,6 +7,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { eq } from "drizzle-orm";
 import { authenticate, authorizeRole } from "./middleware/auth";
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
@@ -237,6 +238,63 @@ export async function registerRoutes(
     return deliveryOfferController.accept(req, res);
   });
 
+  // Ensure Admin account is ready
+  async function ensureAdminAccount() {
+    const adminEmail = "admin@mitgaber.com";
+    const adminPassword = "Admin@123";
+    const report: any = {
+      adminExists: false,
+      passwordStatus: "unknown",
+      walletStatus: "unknown",
+      finalStatus: "Initializing..."
+    };
+
+    try {
+      let admin = await storage.getUserByEmail(adminEmail);
+      
+      if (!admin) {
+        const hashedPassword = await bcrypt.hash(adminPassword, 10);
+        admin = await storage.createUser({
+          name: "Admin",
+          email: adminEmail,
+          password: hashedPassword,
+          role: "ADMIN",
+          isApproved: true
+        });
+        report.adminExists = true;
+        report.passwordStatus = "created new admin";
+      } else {
+        report.adminExists = true;
+        const isBcrypt = admin.password.startsWith("$2");
+        if (!isBcrypt) {
+          const hashedPassword = await bcrypt.hash(adminPassword, 10);
+          await db.update(users).set({ password: hashedPassword }).where(eq(users.id, admin.id));
+          report.passwordStatus = "updated to bcrypt";
+          console.log("Admin password hash updated to bcrypt.");
+        } else {
+          report.passwordStatus = "hashed with bcrypt";
+        }
+      }
+
+      const wallet = await storage.getWalletByUserId(admin.id);
+      if (!wallet) {
+        await storage.createWallet({
+          userId: admin.id,
+          balance: "0.00"
+        });
+        report.walletStatus = "created";
+        console.log("Wallet created for Admin.");
+      } else {
+        report.walletStatus = "exists";
+      }
+
+      report.finalStatus = "Admin account ready for login";
+      console.log("Admin Health Report:", JSON.stringify(report, null, 2));
+    } catch (err) {
+      console.error("Failed to ensure admin account:", err);
+    }
+  }
+
   // Seed data function
   async function seedDatabase() {
     try {
@@ -267,6 +325,7 @@ export async function registerRoutes(
   }
 
   // Attempt to seed data
+  await ensureAdminAccount();
   seedDatabase();
 
   return httpServer;
