@@ -1,0 +1,145 @@
+Prompt 5 – Admin Dashboard Oversight & Audit Logs Integration
+Objective
+Build an Admin Oversight Dashboard that allows administrators to:
+Monitor all stores
+Review all orders and sub-orders
+View financial summaries (wallets + commissions)
+Access audit logs for status changes and financial transactions
+Override order statuses if needed
+The implementation must be incremental and compatible with Fast Mode (no Autonomous).
+Phase 1 – Admin Dashboard Layout (UI First)
+1️⃣ Create Admin Dashboard Page
+Route: /admin/dashboard
+File: client/src/pages/admin/dashboard.tsx
+Layout Sections (Cards + Tables)
+Create 4 main sections:
+Stores Overview
+Total Stores
+Active Stores
+Total Products
+Orders Overview
+Total Orders
+Pending Orders
+Cancelled Orders
+Delivered Orders
+Financial Overview
+Total Platform Commissions
+Total Store Earnings
+Total Driver Earnings
+Recent Activity Table
+Last 10 order status updates
+Last 10 ledger transactions
+Use:
+Card
+Table
+Badge
+Loader2
+React Query
+Phase 2 – Backend Integration (Read-Only First)
+Integrate the following endpoints:
+GET /api/admin/stats
+GET /api/admin/orders
+GET /api/admin/stores
+GET /api/ledger/transactions
+If some routes do not exist: Create lightweight read-only routes without modifying business logic.
+Phase 3 – Admin Order Oversight
+Add Admin Order Control Table
+Table columns:
+Order ID
+Store
+Customer
+Status
+Total
+Actions
+Actions:
+Override Status (ADMIN only)
+Cancel Order
+Force Deliver (Emergency override)
+Use:
+نسخ التعليمات البرمجية
+
+PATCH /api/suborders/:id/status
+Admin must bypass role restrictions.
+Phase 4 – Audit Logs Integration
+Create Audit Log Table
+Add:
+Route: /admin/audit
+File: client/src/pages/admin/audit.tsx
+Display:
+Action Type (ORDER_STATUS_CHANGE, STOCK_UPDATE, WALLET_UPDATE)
+User Role
+User ID
+Target Entity ID
+Timestamp
+Old Value
+New Value
+Backend:
+Create:
+نسخ التعليمات البرمجية
+
+GET /api/admin/audit
+If no audit system exists yet: Use structured console logs temporarily and mock in-memory logs.
+Phase 5 – Financial Oversight
+Add Financial Drill-Down:
+View store wallet balance
+View driver wallet balance
+View platform revenue
+Filter by:
+Date range
+Store
+Transaction type
+Use:
+نسخ التعليمات البرمجية
+
+GET /api/ledger/transactions?role=store
+GET /api/ledger/transactions?role=driver
+RBAC Requirements
+Strict enforcement:
+Only ADMIN can access:
+/admin/*
+Override actions
+Audit logs
+If non-admin tries: Return 403 Forbidden
+State Management
+Use React Query everywhere
+Invalidate relevant queries after admin overrides
+Ensure cross-dashboard consistency:
+Admin changes reflect in Store dashboard
+Wallet updates reflect in Earnings pages
+UI/UX Requirements
+Active sidebar navigation for:
+Dashboard
+Orders
+Stores
+Audit Logs
+Toast notifications for:
+Overrides
+Errors
+Responsive layout
+Clear badge coloring:
+COMPLETED → Green
+PENDING → Yellow
+FAILED → Red
+CANCELLED → Red
+Deliverables
+client/src/pages/admin/dashboard.tsx
+client/src/pages/admin/audit.tsx
+Admin read-only backend routes (if missing)
+admin_dashboard_report.json
+Report File
+Create:
+نسخ التعليمات البرمجية
+JSON
+{
+  "page": "Admin Dashboard",
+  "path": "/admin/dashboard",
+  "features": [
+    "Store Monitoring",
+    "Order Oversight",
+    "Financial Summary",
+    "Audit Logs",
+    "Admin Override Controls"
+  ],
+  "status": "functional",
+  "recommendations": "Next step: real-time monitoring via WebSockets and advanced financial analytics"
+}
