@@ -1,0 +1,61 @@
+You are a senior full-stack engineer. Your task is to **implement, debug, and verify the OTP verification flow for Customers** in the Mit Gaber Hyperlocal Marketplace, ensuring full end-to-end integration without breaking any existing code or data.
+
+Objectives:
+
+1️⃣ **Frontend – Customer OTP Input Flow**
+- Identify the page or component where Customers confirm deliveries.
+- Ensure there is a clear input field for OTP submission (numeric, 4–6 digits).
+- Add frontend validation:
+  - Required field, correct length, numeric only.
+- Map OTP input to the correct backend API endpoint.
+- Show immediate success/failure messages based on backend response.
+- Do not change other parts of the dashboard.
+- Use existing React/TanStack Query + Shadcn UI patterns.
+
+2️⃣ **Backend – OTP Verification**
+- Locate the backend endpoint handling OTP verification (likely POST /api/delivery/verify-otp or similar).
+- Confirm that the endpoint:
+  - Validates the OTP against the corresponding `sub_order` and `delivery_offer`.
+  - Checks OTP expiration (time limit, e.g., 5 minutes) and retry limits.
+  - Updates the `sub_order` status to "delivered" only on successful verification.
+  - Logs audit information (userId, sub_orderId, timestamp) without storing plaintext OTP.
+- Ensure **role-based access**: only the assigned Customer can submit OTP for their order.
+
+3️⃣ **Integration & Security Checks**
+- Confirm the frontend calls the correct API and sends necessary headers (JWT, role).
+- Check that OTP validation does **not bypass any existing security checks**.
+- Do not modify existing database records except marking the sub_order as delivered upon success.
+- Ensure all responses are structured JSON with proper HTTP status codes:
+  - 200 for success
+  - 400 for invalid OTP
+  - 403 for unauthorized user
+  - 410 for expired OTP
+
+4️⃣ **Testing & Logging**
+- Simulate:
+  - A driver generates an OTP for a sub_order.
+  - Customer inputs OTP via frontend.
+  - Backend validates OTP and updates sub_order status.
+- Log structured JSON report showing:
+  - OTP sent timestamp
+  - OTP verified timestamp
+  - sub_orderId, userId
+  - Success/failure
+  - Error type if failed
+- No sensitive data (actual OTP) should appear in logs.
+
+5️⃣ **Deliverables**
+- A detailed report of the OTP flow, including:
+  - Frontend component readiness and validation
+  - Backend endpoint functionality and security checks
+  - Any integration gaps or potential issues
+  - Suggestions for improvement, if any
+- Recommendations must not involve modifying other modules or database structures.
+
+Constraints:
+- Do not break existing functionality.
+- Do not expose OTPs or passwords in any logs.
+- Do not alter unrelated tables or users.
+- All changes must be idempotent and safe for repeated testing.
+
+Goal: After execution, the OTP verification flow for Customers should be fully functional, secure, and integrated with real-time delivery updates, ready for production testing.
