@@ -1,0 +1,148 @@
+Database Self-Healing Bootstrap System (Runs On Every Server Start)
+You are a senior backend engineer.
+Your task: Implement a Self-Healing Database Bootstrap System for the Mit Gaber Hyperlocal Marketplace.
+The system must run automatically every time the server starts.
+The goal:
+Detect missing tables
+Detect missing columns
+Detect missing ENUM values
+Auto-create default ADMIN if missing
+Print a structured database health report
+Never delete existing data
+Be idempotent (safe to run 100 times)
+🔹 STEP 1 — Create Bootstrap File
+Create:
+نسخ التعليمات البرمجية
+
+server/bootstrap/database.bootstrap.ts
+This file must export:
+نسخ التعليمات البرمجية
+
+async function initializeDatabase()
+This function must run at server startup.
+🔹 STEP 2 — Ensure Core Tables Exist
+Check existence of tables:
+users
+wallets
+stores
+Use PostgreSQL safe checks:
+نسخ التعليمات البرمجية
+
+SELECT to_regclass('public.users');
+If table does not exist → CREATE TABLE.
+Tables structure:
+users
+id UUID PK
+name VARCHAR NOT NULL
+email VARCHAR UNIQUE NOT NULL
+password VARCHAR NOT NULL
+role ENUM (ADMIN,CUSTOMER,STORE_OWNER,DRIVER)
+phone VARCHAR
+is_approved BOOLEAN DEFAULT false
+created_at TIMESTAMP DEFAULT NOW()
+updated_at TIMESTAMP DEFAULT NOW()
+wallets
+id UUID PK
+user_id UUID FK → users.id
+balance DECIMAL(12,2) DEFAULT 0
+created_at TIMESTAMP DEFAULT NOW()
+updated_at TIMESTAMP DEFAULT NOW()
+stores
+id UUID PK
+owner_id UUID FK → users.id
+name VARCHAR NOT NULL
+type VARCHAR NOT NULL
+created_at TIMESTAMP DEFAULT NOW()
+updated_at TIMESTAMP DEFAULT NOW()
+DO NOT drop tables. Only create if missing.
+🔹 STEP 3 — Ensure Missing Columns
+For each table:
+Check required columns using:
+نسخ التعليمات البرمجية
+
+information_schema.columns
+If a required column is missing:
+Use:
+نسخ التعليمات البرمجية
+
+ALTER TABLE ADD COLUMN
+Only add columns. Never modify existing types. Never drop columns.
+🔹 STEP 4 — Ensure ENUM Exists
+Check if ENUM type "user_roles" exists.
+If missing:
+Create it:
+نسخ التعليمات البرمجية
+
+CREATE TYPE user_roles AS ENUM ('ADMIN','CUSTOMER','STORE_OWNER','DRIVER');
+If exists → skip.
+Do not recreate.
+🔹 STEP 5 — Auto Create Default Admin If Missing
+Check:
+نسخ التعليمات البرمجية
+
+SELECT * FROM users WHERE role='ADMIN' LIMIT 1;
+If not found:
+Create default admin:
+Name: Admin
+Email: admin@mitgaber.com
+Password: Admin@123 (hash using bcrypt)
+Role: ADMIN
+is_approved: true
+Then create wallet:
+balance = 0
+Wrap in transaction.
+Log:
+"Default Admin created successfully"
+If exists:
+Log:
+"Admin already exists"
+🔹 STEP 6 — Database Health Report
+After all checks, print structured log:
+Example:
+نسخ التعليمات البرمجية
+
+DATABASE HEALTH REPORT
+----------------------
+Tables: OK
+Columns: OK
+Enums: OK
+Admin: CREATED | EXISTS
+Status: HEALTHY
+Also return JSON:
+نسخ التعليمات البرمجية
+
+{
+  tables: "OK",
+  columns: "OK",
+  enums: "OK",
+  admin: "CREATED | EXISTS",
+  status: "HEALTHY"
+}
+🔹 STEP 7 — Connect To Server Startup
+In:
+نسخ التعليمات البرمجية
+
+server/index.ts
+Before app.listen():
+Call:
+نسخ التعليمات البرمجية
+
+await initializeDatabase();
+Server must not start if critical DB connection fails.
+🔹 STEP 8 — Safety Rules
+Must be idempotent
+Must not delete data
+Must not overwrite passwords
+Must not recreate admin if exists
+Must run safely on every restart
+🔹 STEP 9 — Logging
+Use clear console logs:
+[DB] Checking tables... [DB] Checking columns... [DB] Checking enums... [DB] Checking admin... [DB] Database ready.
+🔹 FINAL RESULT
+After implementation:
+Restarting server auto-fixes missing DB structure
+Admin is always guaranteed to exist
+Tables always verified
+No manual migrations required
+Safe for development environment
+Do not implement dashboards. Do not modify existing business logic. Only implement bootstrap + self-healing DB system.
