@@ -1,0 +1,113 @@
+You are a senior backend engineer. Your task: Implement a complete role-based registration endpoint for Mit Gaber Hyperlocal Marketplace.
+1️⃣ Backend Endpoint
+Route: POST /auth/register
+Roles Supported: CUSTOMER, STORE_OWNER, DRIVER
+Role-Specific Fields:
+STORE_OWNER → storeName, storeType
+DRIVER → transportType
+2️⃣ Validation
+Email: valid and unique
+Password: min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
+Name: not empty
+Role-specific fields required
+3️⃣ Atomic Database Operation
+Wrap in a transaction:
+Generate UUID for user
+Hash password with bcrypt
+Insert user into users table
+Create wallet with balance = 0 in wallets
+If STORE_OWNER, create store entry in stores
+Rollback if any step fails
+4️⃣ TypeScript Implementation (Backend)
+نسخ التعليمات البرمجية
+TypeScript
+import { Request, Response } from "express";
+import { v4 as uuidv4 } from "uuid";
+import bcrypt from "bcryptjs";
+import { db } from "../db"; // your database client
+import { validateEmail, validatePassword } from "../utils/validators";
+
+export async function registerUser(req: Request, res: Response) {
+  const { name, email, password, role, extra } = req.body;
+
+  // Validation
+  if (!name) return res.status(400).json({ message: "Name is required" });
+  if (!validateEmail(email)) return res.status(400).json({ message: "Invalid email" });
+  if (!validatePassword(password)) return res.status(400).json({ message: "Weak password" });
+
+  if (role === "STORE_OWNER") {
+    if (!extra?.storeName || !extra?.storeType)
+      return res.status(400).json({ message: "Store name and type required" });
+  }
+
+  if (role === "DRIVER" && !extra?.transportType)
+    return res.status(400).json({ message: "Transport type required" });
+
+  const userId = uuidv4();
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  try {
+    await db.transaction(async (trx) => {
+      // Insert user
+      await trx.users.insert({
+        id: userId,
+        name,
+        email,
+        password: hashedPassword,
+        role,
+        is_approved: true,
+      });
+
+      // Create wallet
+      await trx.wallets.insert({
+        id: uuidv4(),
+        user_id: userId,
+        balance: 0,
+      });
+
+      // If store owner, create store
+      if (role === "STORE_OWNER") {
+        await trx.stores.insert({
+          id: uuidv4(),
+          owner_id: userId,
+          name: extra.storeName,
+          type: extra.storeType,
+        });
+      }
+    });
+
+    console.log(`User & Wallet created: ${name} (${role})`);
+    return res.status(201).json({
+      success: true,
+      message: "User registered successfully",
+      user: { id: userId, name, email, role, walletBalance: "0.00" },
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Registration failed" });
+  }
+}
+5️⃣ Frontend Notes
+Single registration form with:
+Name, Email, Password, Role (dropdown)
+Dynamically show role-specific fields
+On success, redirect to login
+6️⃣ Output JSON Example
+نسخ التعليمات البرمجية
+JSON
+{
+  "success": true,
+  "message": "User registered successfully",
+  "user": {
+    "id": "uuid",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "role": "CUSTOMER",
+    "walletBalance": "0.00"
+  }
+}
+✅ Outcome:
+Any user can self-register from login page
+Wallets are automatically created
+STORE_OWNER and DRIVER have their extra data stored
+All operations are atomic and secure
