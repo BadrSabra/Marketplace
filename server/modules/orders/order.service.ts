@@ -68,11 +68,29 @@ export class OrderService {
     const subs = await db.select().from(subOrders).where(eq(subOrders.orderId, orderId));
     
     const subsWithItems = await Promise.all(subs.map(async (sub) => {
-      const items = await db.select().from(orderItems).where(eq(orderItems.subOrderId, sub.id));
+      const items = await db.select({
+        id: orderItems.id,
+        subOrderId: orderItems.subOrderId,
+        productId: orderItems.productId,
+        quantity: orderItems.quantity,
+        priceAtOrder: orderItems.priceAtOrder,
+        product: products
+      })
+      .from(orderItems)
+      .leftJoin(products, eq(orderItems.productId, products.id))
+      .where(eq(orderItems.subOrderId, sub.id));
       return { ...sub, items };
     }));
 
     return { ...order, subOrders: subsWithItems };
+  }
+
+  async getCustomerOrders(customerId: string) {
+    const customerOrders = await db.select().from(orders).where(eq(orders.customerId, customerId));
+    
+    return await Promise.all(customerOrders.map(async (order) => {
+      return await this.getOrderWithSubOrders(order.id);
+    }));
   }
 
   async cancelSubOrder(subOrderId: string, userId: string) {

@@ -107,6 +107,11 @@ export async function registerRoutes(
   });
 
   // --- ORDERS MODULE ---
+  app.get("/api/orders/my-orders", authenticate, authorizeRole(["CUSTOMER"]), async (req, res) => {
+    const { orderController } = await import("./modules/orders/order.controller");
+    return orderController.getMyOrders(req, res);
+  });
+
   app.get(api.orders.list.path, authenticate, async (req, res) => {
     const orders = await storage.getOrders();
     res.json(orders);

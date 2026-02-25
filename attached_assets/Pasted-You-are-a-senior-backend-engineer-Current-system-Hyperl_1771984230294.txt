@@ -1,0 +1,75 @@
+You are a senior backend engineer.
+
+Current system: Hyperlocal Marketplace (Mit Gaber), with existing JWT authentication, role-based middleware, and modular backend. Database is seeded with users, stores, products, orders, sub_orders, wallet, wallet_transactions.
+
+Goal: Implement all missing endpoints for role-specific dashboards, one by one, with proper role protection and backend integration.
+
+---
+
+# 1️⃣ `/orders/my-orders` (GET)
+- Role: Customer
+- Function: Return all orders placed by the logged-in customer
+- Include: sub_orders and order_items
+- Protection: JWT + authorizeRole(["CUSTOMER"])
+- Output: JSON with orders, sub_orders, items, total_price, status
+
+# 2️⃣ `/orders/my-store` (GET)
+- Role: Store Owner
+- Function: Return all sub_orders for the store(s) owned by logged-in user
+- Include: order info, customer info, sub_order status
+- Protection: JWT + authorizeRole(["STORE_OWNER"])
+- Output: JSON list of sub_orders with parent order info
+
+# 3️⃣ `/suborders` (GET)
+- Role: Driver
+- Function: Return all available sub_orders for delivery
+- Filter: only sub_orders with status 'PENDING'
+- Protection: JWT + authorizeRole(["DRIVER"])
+- Output: JSON list of sub_orders with store info, items, and total_fee
+
+# 4️⃣ `/delivery-offers` (GET)
+- Role: Driver
+- Function: Return all delivery offers submitted by the logged-in driver
+- Include: sub_order info, offered_fee, status
+- Protection: JWT + authorizeRole(["DRIVER"])
+- Output: JSON list of offers
+
+# 5️⃣ `/stores/my/products` (GET)
+- Role: Store Owner
+- Function: Return all products belonging to stores owned by logged-in user
+- Include: product details (id, name, price, stock)
+- Protection: JWT + authorizeRole(["STORE_OWNER"])
+- Output: JSON list of products
+
+# 6️⃣ `/orders/:id/suborders` (GET)
+- Role: Customer/Admin
+- Function: Return all sub_orders belonging to a specific order
+- Protection: JWT + authorizeRole(["CUSTOMER","ADMIN"])
+- Validate: order belongs to logged-in customer if role=Customer
+- Output: JSON list of sub_orders with items and status
+
+# 7️⃣ `/orders/:id/status` (PATCH)
+- Role: Admin / Store Owner
+- Function: Update status of an order or sub_order
+- Input: { status: "ACCEPTED" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED" }
+- Validate: sub_order belongs to store if role=Store Owner
+- Protection: JWT + authorizeRole(["ADMIN","STORE_OWNER"])
+- Output: Updated order/sub_order JSON
+
+---
+
+# 🔹 Implementation Notes
+1. All routes must live in modular folders:
+   - `/server/modules/orders/`
+   - `/server/modules/suborders/`
+   - `/server/modules/stores/`
+2. Use TypeScript types for all inputs/outputs.
+3. Use database transactions when updating orders/sub_orders.
+4. Reuse existing services (OrderService, SubOrderService, StoreService).
+5. Ensure JSON responses are uniform for frontend consumption.
+6. Include proper error handling (404 for not found, 403 for unauthorized, 400 for invalid input).
+
+---
+
+# ✅ Task
+Implement each endpoint **one by one**, with role-based protection, DB queries, and JSON responses, then **stop** after each implementation to confirm before moving to the next.
