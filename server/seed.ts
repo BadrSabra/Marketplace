@@ -34,11 +34,24 @@ const initialUsers = [
   },
 ];
 
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
 async function seed() {
   console.log("Starting database seeding...");
 
   for (const userData of initialUsers) {
     try {
+      // Validation
+      if (!userData.name || userData.name.trim() === "") {
+        throw new Error(`Name cannot be empty for ${userData.email}`);
+      }
+      if (!userData.email.includes("@")) {
+        throw new Error(`Invalid email: ${userData.email}`);
+      }
+      if (!passwordRegex.test(userData.password)) {
+        throw new Error(`Password for ${userData.email} does not meet security requirements`);
+      }
+
       const existingUser = await storage.getUserByEmail(userData.email);
       if (existingUser) {
         console.log(`User already exists: ${userData.name} (${userData.role})`);
@@ -61,9 +74,7 @@ async function seed() {
           })
           .returning();
 
-        console.log(`User created: ${user.name} (${user.role})`);
-
-        const [wallet] = await tx
+        await tx
           .insert(wallets)
           .values({
             userId: user.id,
@@ -71,10 +82,10 @@ async function seed() {
           })
           .returning();
 
-        console.log(`Wallet created for: ${user.name} (${user.role}), balance: 0`);
+        console.log(`User & Wallet created: ${user.name} (${user.role})`);
       });
-    } catch (error) {
-      console.error(`Failed to seed user ${userData.name}:`, error);
+    } catch (error: any) {
+      console.error(`Failed to seed user ${userData.name}:`, error.message);
     }
   }
 
