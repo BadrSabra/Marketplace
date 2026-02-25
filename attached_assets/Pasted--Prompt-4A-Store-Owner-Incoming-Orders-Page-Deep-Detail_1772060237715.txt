@@ -1,0 +1,157 @@
+
+Prompt 4A – Store Owner Incoming Orders Page (Deep Detailed Prompt)
+
+Objective:
+Build the Store Owner Incoming Orders dashboard page that lists all sub-orders for the store, allows Accept, Mark Ready, and Cancel actions, integrates fully with backend services (Orders, SubOrders, Ledger, Wallet), enforces RBAC, uses atomic transactions, and triggers stock decrement logic. Include placeholders for future audit logging.
+
+
+---
+
+Frontend Requirements:
+
+1. Page Path: /store/dashboard/orders
+
+
+2. Components:
+
+Order Table: Columns: Sub-Order ID | Customer Name | Items Summary | Total Price | Status | Actions
+
+Actions Column: Buttons dynamically shown based on sub-order status:
+
+Accept → PENDING → ACCEPTED
+
+Mark Ready → ACCEPTED → READY
+
+Cancel → PENDING or ACCEPTED → CANCELLED
+
+
+Status Badge: Color-coded for PENDING, ACCEPTED, READY, CANCELLED
+
+
+
+3. Real-time Updates (Optional for now):
+
+Poll /api/orders/my-store every 30 seconds
+
+Placeholder for WebSocket integration
+
+
+
+4. API Integration:
+
+GET /api/orders/my-store → fetch all sub-orders for the store
+
+PATCH /api/suborders/:id/status → update sub-order status (Accept/Ready/Cancel)
+
+
+
+5. Form/UX Validation:
+
+Disable buttons while mutation is pending
+
+Show toast messages for success/failure
+
+
+
+6. Stock Validation:
+
+If status change fails due to insufficient stock, show a modal or toast with product names causing the conflict
+
+
+
+7. RBAC Enforcement:
+
+Only STORE_OWNER sees this page and buttons
+
+ADMIN override button visible if isAdmin=true
+
+
+
+
+
+---
+
+Backend Requirements:
+
+1. Endpoint: PATCH /api/suborders/:id/status (already created)
+
+
+2. Business Logic:
+
+Enforce allowed transitions: PENDING → ACCEPTED → READY → PICKED_UP → DELIVERED
+
+Stock decrement triggered only when transitioning PENDING → ACCEPTED
+
+Atomic transaction wraps:
+
+Fetch sub-order
+
+Check transition validity
+
+Check stock availability
+
+Update product stock counts
+
+Update sub-order status
+
+Trigger ledger/wallet commission calculation if applicable
+
+
+Return proper HTTP codes:
+
+200 OK → success
+
+409 Conflict → insufficient stock (list products)
+
+403 Forbidden → unauthorized user
+
+
+
+
+3. Audit Placeholder:
+
+Log structured console message for each status change:
+
+subOrderId, oldStatus, newStatus, userId, timestamp
+
+
+
+
+
+
+---
+
+Implementation Notes:
+
+Frontend: React + TypeScript, use react-query for queries/mutations, TailwindCSS for UI
+
+Backend: Node.js + Express + Drizzle ORM
+
+Transactions: Use DB transactions for atomicity
+
+Error Handling: All failures must display clear messages to store owner
+
+Testing: Include simple console logging for all API calls and button clicks
+
+
+
+---
+
+Deliverables for Replit Agent:
+
+1. client/src/pages/store/orders.tsx → Store Owner Incoming Orders page
+
+
+2. server/modules/orders/suborder.service.ts → Ensure stock decrement and atomic status update
+
+
+3. Updated PATCH /api/suborders/:id/status route
+
+
+4. Temporary audit log placeholders for future expansion
+
+
+5. Test data display for 2–3 sub-orders to verify UI
+
+
+
