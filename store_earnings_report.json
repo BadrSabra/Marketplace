@@ -1,0 +1,7 @@
+{
+  "page": "Store Owner Earnings",
+  "path": "/store/earnings",
+  "endpoints": ["GET /api/wallet", "GET /api/ledger/transactions"],
+  "status": "functional",
+  "recommendations": "Next: integrate Inventory tab and expand analytics (monthly revenue, top-selling products)"
+}
