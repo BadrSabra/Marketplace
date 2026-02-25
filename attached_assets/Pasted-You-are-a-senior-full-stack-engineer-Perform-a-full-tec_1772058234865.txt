@@ -1,0 +1,62 @@
+You are a senior full-stack engineer. Perform a full technical diagnostic of the Customer Dashboard module in the Mit Gaber Hyperlocal Marketplace project.
+
+1. **Component Inventory**
+   - List all pages and components under `client/src/pages/customer`.
+   - Include nested components if any exist under subfolders.
+
+2. **Backend Endpoint Mapping**
+   - For each component, identify the backend endpoints it calls.
+   - Specify the HTTP method (GET, POST, PATCH, etc.) and any role restrictions.
+   - Verify that endpoints correspond correctly with the database tables (orders, wallets, ledger, delivery, etc.).
+
+3. **Functional Status**
+   - For each component/page, classify as: Complete, Partial, or Placeholder.
+   - Indicate which features are fully working and which are missing.
+
+4. **Missing UI Features**
+   - Identify critical missing UI elements necessary for a functional Customer Dashboard, such as:
+     - Wallet page (balance display, deposit flow, pending holds)
+     - Order details view (sub-order items, prices, store contact info)
+     - Transaction history (ledger/wallet transactions)
+     - Profile settings (update phone number, delivery preferences)
+
+5. **Infrastructure Verification**
+   - Verify if TanStack Query is used correctly for data fetching and cache invalidation.
+   - Check JWT protection for role-based access.
+   - Confirm ProtectedRoute integration for customer-only access.
+
+6. **Technical Summary**
+   - Produce a detailed JSON report containing:
+     - Module name: Customer Dashboard
+     - Status (MVP-Lite, Partial, Complete)
+     - Security (JWT, RBAC, validation)
+     - Functional components list
+     - Missing UI components
+     - Backend readiness
+     - Recommendations for implementing missing features
+
+7. **Constraints**
+   - Do NOT make any changes to the code.
+   - Only report the current state.
+   - Use clear, structured JSON for the output.
+
+Output Example (JSON):
+{
+  "module": "Customer Dashboard",
+  "status": "MVP-Lite",
+  "security": {
+    "auth": "JWT via LocalStorage",
+    "rbac": "Enforced via ProtectedRoute",
+    "validation": "Zod-backed API responses"
+  },
+  "findings": {
+    "functional": ["Order listing", "OTP verification"],
+    "missing_ui": ["Wallet management", "Transaction ledger", "Profile settings", "Order drill-down"],
+    "backend_readiness": "Wallet/Ledger services are ready; UI needs to be built"
+  },
+  "recommendations": [
+    "Implement a 'Wallet' sidebar item with a deposit flow (linked to WalletService).",
+    "Add an 'Order Details' sheet to show specific products within a sub-order.",
+    "Create a 'Transaction History' table using the existing ledger endpoints."
+  ]
+}
