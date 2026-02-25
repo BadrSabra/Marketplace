@@ -1,0 +1,122 @@
+You are a senior full-stack engineer. Perform a full technical diagnostic of the Driver Dashboard module in the Mit Gaber Hyperlocal Marketplace project.
+
+Follow the steps carefully and produce a structured JSON report.
+
+------------------------------------------------------------
+1. Component Inventory
+------------------------------------------------------------
+- List all pages and components under:
+  `client/src/pages/driver`
+- Include nested folders and reusable components.
+- Identify if dashboard layout exists or is a placeholder.
+
+------------------------------------------------------------
+2. Backend Endpoint Mapping
+------------------------------------------------------------
+For each driver-related component, map the corresponding backend endpoints:
+
+Check for:
+- GET /api/delivery/offers
+- POST /api/delivery/offers
+- POST /api/delivery/offers/:id/accept
+- POST /api/delivery/otp/generate
+- POST /api/delivery/otp/verify
+- GET /api/wallet
+- Any driver-specific order endpoints
+
+For each endpoint specify:
+- HTTP method
+- Role restrictions (DRIVER / CUSTOMER / ADMIN)
+- Whether it is fully implemented in routes/controllers
+
+------------------------------------------------------------
+3. Delivery Flow Analysis
+------------------------------------------------------------
+Analyze the lifecycle for a Driver:
+
+- Viewing available sub-orders
+- Submitting an offer (bid)
+- Offer acceptance
+- Assignment to sub-order
+- Generating OTP upon arrival
+- Completing delivery
+- Wallet HOLD/RELEASE behavior
+- Commission calculation logic
+
+Identify:
+- Missing transitions
+- Missing backend hooks
+- Missing UI elements
+
+------------------------------------------------------------
+4. Wallet & Earnings Integration
+------------------------------------------------------------
+- Verify driver wallet integration.
+- Check if commission distribution via ledgerService.processCommissions exists.
+- Confirm atomic transaction usage.
+- Identify missing UI for:
+  - Earnings summary
+  - Transaction history
+  - Held funds
+
+------------------------------------------------------------
+5. Security & Infrastructure
+------------------------------------------------------------
+- Verify JWT protection for driver routes.
+- Confirm RBAC enforcement via ProtectedRoute.
+- Check TanStack Query usage (if present).
+- Identify any missing role guards.
+
+------------------------------------------------------------
+6. Functional Status Classification
+------------------------------------------------------------
+Classify Driver Dashboard as:
+- Complete
+- Partial
+- Placeholder
+
+Break down:
+- Functional features
+- Partial implementations
+- Missing UI
+- Backend readiness
+
+------------------------------------------------------------
+7. Output Requirements
+------------------------------------------------------------
+Return ONLY a structured JSON object in this format:
+
+{
+  "module": "Driver Dashboard",
+  "status": "",
+  "security": {
+    "auth": "",
+    "rbac": "",
+    "validation": ""
+  },
+  "delivery_flow": {
+    "implemented": [],
+    "partial": [],
+    "missing": []
+  },
+  "wallet_integration": {
+    "backend_ready": "",
+    "ui_status": "",
+    "atomic_transactions": ""
+  },
+  "findings": {
+    "functional": [],
+    "partial": [],
+    "missing_ui": [],
+    "backend_gaps": []
+  },
+  "recommendations": []
+}
+
+------------------------------------------------------------
+8. Constraints
+------------------------------------------------------------
+- Do NOT modify any code.
+- Do NOT suggest refactoring.
+- Only report the current state.
+- Be precise and technical.
