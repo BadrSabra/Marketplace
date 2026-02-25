@@ -1,0 +1,12 @@
+{
+  "page": "Store Owner Dashboard",
+  "path": "/store/dashboard",
+  "tabs": [
+    "Orders (/store/orders)",
+    "Order Details (/store/order/[id])",
+    "Earnings (/store/earnings)",
+    "Inventory (/store/inventory)"
+  ],
+  "status": "functional",
+  "recommendations": "Ensure cross-tab consistency and implement real-time updates via WebSockets for Wallet/Stock changes"
+}

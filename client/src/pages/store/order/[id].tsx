@@ -1,17 +1,26 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Check, Package, X, Clock, ArrowLeft, User, MapPin, Phone, Mail, CreditCard } from "lucide-react";
 import { format } from "date-fns";
+import { StoreLayout } from "@/components/layout/store-layout";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function StoreOrderDetails() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const { toast } = useToast();
+
+  const { data: stores } = useQuery<any[]>({
+    queryKey: ["/api/stores"],
+  });
+  
+  const myStore = stores?.find(s => s.ownerId === user?.id);
 
   const { data: order, isLoading } = useQuery<any>({
     queryKey: [`/api/orders/${id}`],
@@ -28,6 +37,9 @@ export default function StoreOrderDetails() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/orders/${id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/my-store"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products", { storeId: myStore?.id }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
       toast({ title: "Status Updated", description: "The order status has been updated successfully." });
     },
     onError: (error: any) => {
@@ -41,184 +53,232 @@ export default function StoreOrderDetails() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
+      <StoreLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </StoreLayout>
     );
   }
 
   if (!order) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="text-center py-12">
+      <StoreLayout>
+        <div className="text-center py-24">
+          <div className="bg-destructive/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <X className="h-8 w-8 text-destructive" />
+          </div>
           <h2 className="text-2xl font-bold">Order not found</h2>
+          <p className="text-muted-foreground mt-2">The order you're looking for doesn't exist or you don't have access.</p>
           <Link href="/store/dashboard/orders">
-            <Button variant="link">Back to Orders</Button>
+            <Button className="mt-6">Back to Orders</Button>
           </Link>
         </div>
-      </div>
+      </StoreLayout>
     );
   }
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
-      PENDING: "bg-yellow-100 text-yellow-800",
-      ACCEPTED: "bg-blue-100 text-blue-800",
-      READY: "bg-purple-100 text-purple-800",
-      PICKED_UP: "bg-cyan-100 text-cyan-800",
-      DELIVERED: "bg-green-100 text-green-800",
-      CANCELLED: "bg-red-100 text-red-800",
+      PENDING: "bg-yellow-100 text-yellow-800 border-yellow-200",
+      ACCEPTED: "bg-blue-100 text-blue-800 border-blue-200",
+      READY: "bg-purple-100 text-purple-800 border-purple-200",
+      PICKED_UP: "bg-cyan-100 text-cyan-800 border-cyan-200",
+      DELIVERED: "bg-green-100 text-green-800 border-green-200",
+      CANCELLED: "bg-red-100 text-red-800 border-red-200",
     };
-    return <Badge className={variants[status] || ""}>{status}</Badge>;
+    return <Badge variant="outline" className={variants[status] || ""}>{status}</Badge>;
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/store/dashboard/orders">
-          <Button variant="outline" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold">Order Details</h1>
-          <p className="text-muted-foreground">Order ID: {id}</p>
+    <StoreLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/store/dashboard/orders">
+              <Button variant="outline" size="icon" className="h-10 w-10">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Order Details</h1>
+              <p className="text-muted-foreground flex items-center gap-2">
+                Order <span className="font-mono text-primary font-bold">#{id.split("-")[0]}</span>
+                <span className="text-xs">•</span>
+                <span>{format(new Date(order.created_at || Date.now()), "MMM dd, yyyy HH:mm")}</span>
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Badge variant="secondary" className="px-4 py-1 text-sm">{order.overall_status}</Badge>
+          </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Sub-orders
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {order.sub_orders?.map((sub: any) => (
-              <div key={sub.sub_order_id} className="border rounded-lg p-4 space-y-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold text-lg">Sub-order #{sub.sub_order_id.split("-")[0]}</h3>
-                    <div className="flex gap-2 mt-1">
-                      {getStatusBadge(sub.status)}
-                      <Badge variant="outline">{order.payment_status}</Badge>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5 text-primary" />
+                  Order Items
+                </CardTitle>
+                <CardDescription>Breakdown of products in this order</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {order.sub_orders?.map((sub: any) => (
+                  <div key={sub.sub_order_id} className="border rounded-xl p-5 space-y-5 bg-card shadow-sm">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-3">
+                          <h3 className="font-bold text-lg">Sub-order #{sub.sub_order_id.split("-")[0]}</h3>
+                          {getStatusBadge(sub.status)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">Store ID: {sub.store_id}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground">Subtotal</p>
+                        <p className="text-2xl font-black text-primary">${sub.subtotal}</p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border overflow-hidden">
+                      <Table>
+                        <TableHeader className="bg-secondary/50">
+                          <TableRow>
+                            <TableHead className="w-[50%]">Product</TableHead>
+                            <TableHead className="text-center">Qty</TableHead>
+                            <TableHead className="text-right">Price</TableHead>
+                            <TableHead className="text-right">Total</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sub.items.map((item: any, idx: number) => (
+                            <TableRow key={idx}>
+                              <TableCell className="font-medium">{item.product_name}</TableCell>
+                              <TableCell className="text-center">{item.quantity}</TableCell>
+                              <TableCell className="text-right">${item.price_at_order}</TableCell>
+                              <TableCell className="text-right font-bold">${(item.quantity * parseFloat(item.price_at_order)).toFixed(2)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-2">
+                      {sub.status === "PENDING" && (
+                        <>
+                          <Button 
+                            variant="destructive"
+                            className="px-6"
+                            onClick={() => statusMutation.mutate({ subOrderId: sub.sub_order_id, status: "CANCELLED" })}
+                            disabled={statusMutation.isPending}
+                          >
+                            <X className="h-4 w-4 mr-2" /> Decline
+                          </Button>
+                          <Button 
+                            className="px-8"
+                            onClick={() => statusMutation.mutate({ subOrderId: sub.sub_order_id, status: "ACCEPTED" })}
+                            disabled={statusMutation.isPending}
+                          >
+                            <Check className="h-4 w-4 mr-2" /> Accept Order
+                          </Button>
+                        </>
+                      )}
+                      {sub.status === "ACCEPTED" && (
+                        <Button 
+                          className="bg-purple-600 hover:bg-purple-700 px-8"
+                          onClick={() => statusMutation.mutate({ subOrderId: sub.sub_order_id, status: "READY" })}
+                          disabled={statusMutation.isPending}
+                        >
+                          <Clock className="h-4 w-4 mr-2" /> Mark Ready for Pickup
+                        </Button>
+                      )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-muted-foreground">Subtotal</p>
-                    <p className="text-xl font-bold">${sub.subtotal}</p>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="space-y-6">
+            <Card className="border-primary/10 shadow-md">
+              <CardHeader className="bg-primary/[0.03] border-b">
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5 text-primary" />
+                  Customer Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-5">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-full bg-primary/10">
+                    <User className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Name</p>
+                    <p className="font-semibold text-lg">{order.customer_name}</p>
                   </div>
                 </div>
-
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Qty</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sub.items.map((item: any, idx: number) => (
-                      <TableRow key={idx}>
-                        <TableCell className="font-medium">{item.product_name}</TableCell>
-                        <TableCell>{item.quantity}</TableCell>
-                        <TableCell>${item.price_at_order}</TableCell>
-                        <TableCell className="text-right">${(item.quantity * parseFloat(item.price_at_order)).toFixed(2)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-
-                <div className="flex justify-end gap-2">
-                  {sub.status === "PENDING" && (
-                    <>
-                      <Button 
-                        size="sm" 
-                        onClick={() => statusMutation.mutate({ subOrderId: sub.sub_order_id, status: "ACCEPTED" })}
-                        disabled={statusMutation.isPending}
-                      >
-                        <Check className="h-4 w-4 mr-1" /> Accept
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="destructive"
-                        onClick={() => statusMutation.mutate({ subOrderId: sub.sub_order_id, status: "CANCELLED" })}
-                        disabled={statusMutation.isPending}
-                      >
-                        <X className="h-4 w-4 mr-1" /> Cancel
-                      </Button>
-                    </>
-                  )}
-                  {sub.status === "ACCEPTED" && (
-                    <Button 
-                      size="sm" 
-                      className="bg-purple-600 hover:bg-purple-700"
-                      onClick={() => statusMutation.mutate({ subOrderId: sub.sub_order_id, status: "READY" })}
-                      disabled={statusMutation.isPending}
-                    >
-                      <Clock className="h-4 w-4 mr-1" /> Mark Ready
-                    </Button>
-                  )}
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-full bg-blue-500/10">
+                    <Mail className="h-4 w-4 text-blue-500" />
+                  </div>
+                  <div className="overflow-hidden">
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Email</p>
+                    <p className="text-sm truncate">{order.customer_email || "Not available"}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-full bg-green-500/10">
+                    <Phone className="h-4 w-4 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Phone</p>
+                    <p className="text-sm">{order.customer_phone || "Not available"}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 pt-2 border-t">
+                  <div className="p-2 rounded-full bg-orange-500/10 mt-1">
+                    <MapPin className="h-4 w-4 text-orange-500" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Delivery Address</p>
+                    <p className="text-sm leading-relaxed">{order.delivery_address || "Pick up required"}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Customer Info
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">{order.customer_name}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <span>{order.customer_email || "No email provided"}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span>{order.customer_phone || "No phone provided"}</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <MapPin className="h-4 w-4 text-muted-foreground mt-1" />
-                <span>{order.delivery_address || "No address provided"}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Financial Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Order Total</span>
-                <span className="font-bold text-lg">${order.total_price}</span>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t">
-                <span className="text-muted-foreground">Wallet Balance</span>
-                <span className="font-mono text-green-600 font-bold">${wallet?.balance || "0.00"}</span>
-              </div>
-              <p className="text-xs text-muted-foreground italic">
-                Platform fees and commissions are calculated per sub-order.
-              </p>
-            </CardContent>
-          </Card>
+            <Card className="bg-secondary/20 border-border/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-muted-foreground" />
+                  Payment Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Payment Status</span>
+                  <Badge variant="outline" className="bg-white">{order.payment_status}</Badge>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Total Price</span>
+                  <span className="font-bold text-lg">${order.total_price}</span>
+                </div>
+                <div className="pt-4 border-t flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <Wallet className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium">Your Balance</span>
+                  </div>
+                  <span className="font-black text-green-600 font-mono">${wallet?.balance || "0.00"}</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground text-center italic bg-white/50 p-2 rounded">
+                  Funds are released to your wallet upon successful delivery.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
-    </div>
+    </StoreLayout>
   );
 }

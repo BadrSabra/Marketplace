@@ -1,0 +1,57 @@
+Prompt 4 – Full Store Owner Dashboard Navigation & Multi-Tab Integration
+Objective:
+Build a centralized Store Owner Dashboard that integrates all previously implemented sub-pages (Orders, Order Details, Earnings, Inventory) into a multi-tab navigation interface. Ensure smooth routing, RBAC, state management, and query invalidation across tabs.
+Requirements / Features:
+Dashboard Layout:
+Route: /store/dashboard
+Tabs / Sections:
+Orders → /store/orders
+Order Details → /store/order/[id] (linked from Orders)
+Earnings → /store/earnings
+Inventory → /store/inventory
+Navigation: Use a tab bar or sidebar for switching pages
+Show active tab highlight
+Routing & Integration:
+Use Next.js dynamic routing for Order Details ([id].tsx)
+Ensure query parameters or React Router state passes current store context
+Use ProtectedRoute to enforce STORE_OWNER role
+Ensure each tab loads its respective React Query data independently but shares cache where relevant (e.g., wallet/ledger queries)
+State Management & Query Invalidation:
+All sub-pages must use React Query for data fetching
+After any mutation (order status change, product update, stock adjustment, deposit), invalidate relevant queries to update UI automatically
+Ensure transactional consistency: if stock is decremented in Orders, reflect immediately in Inventory tab
+UI / UX Requirements:
+Header shows: Store Name + Current Wallet Balance
+Each tab displays a loading state with spinner (Loader2) while fetching
+Toast notifications for all mutations
+Responsive layout: Grid for cards, tables for lists, forms in modals or collapsible panels
+Integration Across Tabs:
+Orders → Order Details: Clicking an order opens details page in tab or modal
+Inventory → Orders: Low-stock products trigger a warning badge in Orders tab
+Earnings → Wallet: Reflect commission earned from Orders tab transactions
+Optional: Link Wallet/Transactions summary from each tab for quick reference
+Reporting / Documentation:
+Create JSON report: store_dashboard_report.json with:
+نسخ التعليمات البرمجية
+JSON
+{
+  "page": "Store Owner Dashboard",
+  "path": "/store/dashboard",
+  "tabs": [
+    "Orders (/store/orders)",
+    "Order Details (/store/order/[id])",
+    "Earnings (/store/earnings)",
+    "Inventory (/store/inventory)"
+  ],
+  "status": "functional",
+  "recommendations": "Ensure cross-tab consistency and implement real-time updates via WebSockets for Wallet/Stock changes"
+}
+Constraints:
+Incremental approach: Build tab layout → Orders → Order Details → Earnings → Inventory → Link Wallet/Transactions
+Use only existing shared UI components
+All mutations must trigger React Query invalidations for consistent data across tabs
+RBAC must be strictly enforced
+Deliverables:
+client/src/pages/store/dashboard.tsx with multi-tab navigation
+React Query integration for all sub-pages
+JSON report: store_dashboard_report.json
