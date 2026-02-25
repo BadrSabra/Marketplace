@@ -1,0 +1,69 @@
+You are a senior backend engineer.
+Your task: Diagnose why login fails for the default admin account even when correct credentials are used.
+Enable deep debug mode for the login process and generate a structured diagnostic report.
+🔎 STEP 1 — Add Debug Logging Inside Login Flow
+Inside the login handler:
+Log the following in order:
+Raw input email
+Normalized email (lowercased)
+Result of DB query (user object)
+Stored hashed password from DB
+Result of bcrypt.compare
+is_approved value
+role value
+JWT creation result (if reached)
+Example logs format:
+نسخ التعليمات البرمجية
+TypeScript
+console.log("[LOGIN DEBUG] Input Email:", email);
+console.log("[LOGIN DEBUG] Normalized Email:", normalizedEmail);
+console.log("[LOGIN DEBUG] User From DB:", user);
+console.log("[LOGIN DEBUG] Stored Hash:", user?.password);
+console.log("[LOGIN DEBUG] Password Match:", isMatch);
+console.log("[LOGIN DEBUG] is_approved:", user?.is_approved);
+console.log("[LOGIN DEBUG] role:", user?.role);
+🔎 STEP 2 — Validate Email Query Logic
+Ensure query uses case-insensitive comparison:
+PostgreSQL must use:
+LOWER(email) = LOWER(input)
+If not, fix it.
+🔎 STEP 3 — Validate Password Hash Integrity
+Check:
+Is password stored as bcrypt hash ($2b$...)
+Is bcrypt.compare returning true or false?
+Is salt round consistent?
+If password is not hashed → report critical error.
+🔎 STEP 4 — Check Approval Logic
+If login fails because:
+نسخ التعليمات البرمجية
+TypeScript
+if (!user.is_approved)
+Report:
+"Login blocked due to unapproved account"
+🔎 STEP 5 — JWT Verification
+If login succeeds but error occurs after:
+Validate JWT_SECRET exists
+Log token generation result
+Log verification result
+🔎 STEP 6 — Generate Structured Diagnostic Report
+At the end of login attempt, print:
+نسخ التعليمات البرمجية
+JSON
+{
+  "userFound": true | false,
+  "passwordMatch": true | false,
+  "approved": true | false,
+  "role": "ADMIN | ...",
+  "jwtGenerated": true | false,
+  "finalStatus": "SUCCESS | FAILED",
+  "failurePoint": "USER_NOT_FOUND | PASSWORD_MISMATCH | NOT_APPROVED | JWT_ERROR"
+}
+🔎 STEP 7 — Do NOT Modify Business Logic Yet
+Only diagnose and report. Do not change authentication flow. Do not change hashing logic. Only observe and report.
+🎯 Expected Outcome
+The system must clearly identify exactly where login fails:
+Email lookup
+Password mismatch
+Approval block
+Role mismatch
+JWT failure
