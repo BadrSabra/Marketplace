@@ -1,0 +1,175 @@
+
+
+Prompt 4B – Store Owner Order Details Page (Phase 1, Deep)
+
+Goal:
+Build a Store Owner Order Details Page that displays all sub-order data for a selected order, including items, per-item prices, customer info, status updates, and integration with Wallet / Ledger for financial operations (commissions, balance).
+
+
+---
+
+Frontend Requirements
+
+1. Page Location & Routing
+
+Path: /store/orders/:id
+
+Accessible from Store Dashboard navigation.
+
+
+
+2. Order Header Section
+
+Display:
+
+Order ID / Sub-order ID
+
+Customer Name, Email, Phone
+
+Delivery Address / Delivery Type
+
+
+Current sub-order status prominently displayed.
+
+Total sub-order amount and platform fees/commissions.
+
+
+
+3. Items Table
+
+Columns:
+
+Product Name
+
+Quantity Ordered
+
+Price at Order
+
+Item Status (if applicable)
+
+
+Total subtotal per sub-order.
+
+
+
+4. Action Buttons (State Updates)
+
+Allow status transitions with RBAC:
+
+STORE_OWNER: ACCEPTED → READY
+
+DRIVER: PICKED_UP → DELIVERED
+
+ADMIN: Full override
+
+
+Buttons should be dynamically enabled/disabled based on current status.
+
+Show confirmation toast on success or error toast on failure.
+
+
+
+5. Wallet & Ledger Integration
+
+Display Store’s current Wallet balance.
+
+Display ledger entries related to this order/sub-order:
+
+Commissions, fees, deposits, refunds.
+
+
+Include loading state while fetching financial data.
+
+
+
+6. UI/UX Considerations
+
+Loader/spinner while data is loading.
+
+Responsive table layout.
+
+Color-coded badges for each status (e.g., PENDING=yellow, ACCEPTED=blue, READY=purple, PICKED_UP=cyan, DELIVERED=green, CANCELLED=red).
+
+
+
+
+
+---
+
+Backend Integration Requirements
+
+1. API Calls
+
+GET /api/orders/:id → Fetch full order with sub-orders and items.
+
+PATCH /api/suborders/:id/status → Update sub-order status.
+
+GET /api/wallet → Fetch store wallet balance.
+
+GET /api/ledger/transactions?storeId=:storeId → Fetch ledger transactions relevant to the order.
+
+
+
+2. Data Integrity
+
+All status updates and stock decrements must be atomic transactions.
+
+Return clear error messages for:
+
+Insufficient stock
+
+Unauthorized access
+
+Transaction failures
+
+
+
+
+3. Security
+
+JWT authentication required for all calls.
+
+Strict RBAC enforcement for actions.
+
+Input validation (Zod or equivalent) for all API requests.
+
+Placeholder for centralized audit log integration for each status change.
+
+
+
+
+
+---
+
+Expected Deliverables from Replit Agent
+
+1. New React page: client/src/pages/store/orderDetails.tsx
+
+
+2. Fully integrated with React Query for fetching/updating:
+
+Order data
+
+Sub-order items
+
+Wallet balance
+
+Ledger transactions
+
+
+
+3. Action buttons to update sub-order status with RBAC enforcement.
+
+
+4. Loader, toast notifications, and status badges implemented.
+
+
+5. Navigation link from Store Dashboard to the Order Details page.
+
+
+6. Responsive, visually clean layout.
+
+
+7. Atomic stock and financial operations ensured in backend calls.
+
+
