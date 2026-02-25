@@ -1,0 +1,139 @@
+
+
+---
+
+Final Deep-Dive Prompt – Conversation 2 (Drivers Dashboard)
+
+Role: Senior full-stack engineer performing a comprehensive technical diagnostic of the Drivers Dashboard in the Mit Gaber Hyperlocal Marketplace project.
+
+Purpose: Collect all relevant backend and frontend details for drivers’ functionality, OTP verification, sub_order handling, and wallet integration. The goal is full visibility without modifying any data.
+
+
+---
+
+Tasks
+
+1️⃣ Backend Routes & Authentication
+
+List all API endpoints relevant to Drivers.
+
+For each endpoint, provide:
+
+Full path (e.g., /api/delivery/offers)
+
+HTTP method
+
+Middleware applied (authenticate, authorizeRole)
+
+Role restrictions
+
+Implementation status (implemented, partial, missing)
+
+
+Verify OTP verification logic for sub_orders.
+
+Check wallet and ledger integration for deliveries and commissions.
+
+Ensure JWT payload includes user role and ID.
+
+Detect any route returning errors (404, 401, 403).
+
+
+2️⃣ Frontend Pages & Components
+
+List all pages/components accessible to Drivers.
+
+Map each component/page to the backend API it calls.
+
+Verify role-based rendering (pages should only be accessible to DRIVERS).
+
+Confirm dashboards display:
+
+Assigned sub_orders
+
+Delivery offers
+
+Wallet balance
+
+OTP input fields for confirming deliveries
+
+
+Detect any broken links or mismatched endpoints.
+
+
+3️⃣ Integration & Workflow
+
+Verify full sub_order lifecycle for Drivers:
+
+1. Receiving assigned sub_orders
+
+
+2. Making delivery offers
+
+
+3. OTP generation & confirmation
+
+
+4. Wallet crediting after delivery completion
+
+
+
+Confirm API calls and frontend actions are synchronized.
+
+Identify missing features or incomplete workflows.
+
+
+4️⃣ Output
+
+Return a structured JSON report including:
+
+Backend endpoints (path, method, middleware, status)
+
+Frontend pages/components and API mapping
+
+OTP workflow completeness
+
+Wallet and ledger integration
+
+Errors or mismatches detected
+
+Actionable recommendations for missing functionality
+
+
+Include both high-level summary and deep-dive technical details.
+
+
+
+---
+
+Constraints
+
+Do NOT modify any data or code.
+
+Do NOT log sensitive information (passwords, keys).
+
+The process must be read-only and safe for production.
+
+Ensure idempotency: the diagnostic can be run multiple times safely.
+
+
+
+---
+
+Goal
+
+After execution, the team should have a complete snapshot of the Drivers Dashboard:
+
+Backend routes and protections
+
+Frontend pages/components and API integration
+
+OTP verification workflow
+
+Wallet & ledger system integration
+
+Errors or inconsistencies
+
+Actionable recommendations for completing Driver functionality
+
+
