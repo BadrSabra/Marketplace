@@ -7,7 +7,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { eq } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { authenticate, authorizeRole } from "./middleware/auth";
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
@@ -301,6 +301,25 @@ export async function registerRoutes(
       });
     } catch (err) {
       res.status(500).json({ message: "Internal error" });
+    }
+  });
+
+  // --- LEDGER MODULE ---
+  app.get("/api/ledger/transactions", authenticate, async (req, res) => {
+    try {
+      const userId = (req as any).user.id;
+      const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, userId));
+      if (!wallet) return res.json([]);
+
+      const transactions = await db.select()
+        .from(walletTransactions)
+        .where(eq(walletTransactions.walletId, wallet.id))
+        .orderBy(sql`${walletTransactions.createdAt} DESC`);
+      
+      console.log(`Fetched ${transactions.length} transactions for user ${userId}`);
+      res.json(transactions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 

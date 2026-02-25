@@ -12,8 +12,10 @@ import LoginPage from "@/pages/auth/login";
 import RegisterPage from "@/pages/auth/register";
 import AdminDashboard from "@/pages/admin/dashboard";
 import CustomerDashboard from "@/pages/customer/dashboard";
+import CustomerWallet from "@/pages/customer/wallet";
 import StoreDashboard from "@/pages/store/dashboard";
 import DriverDashboard from "@/pages/driver/dashboard";
+import DriverEarnings from "@/pages/driver/earnings";
 import UsersPage from "@/pages/admin/users";
 import StoresPage from "@/pages/admin/stores";
 import ProductsPage from "@/pages/admin/products";
@@ -71,6 +73,16 @@ function Router() {
       <Route path="/login" component={LoginPage} />
       <Route path="/register" component={RegisterPage} />
       <Route path="/" component={RoleBasedDashboard} />
+      
+      {/* Customer Routes */}
+      <Route path="/customer/wallet">
+        {() => <ProtectedRoute component={CustomerWallet} roles={["CUSTOMER"]} />}
+      </Route>
+
+      {/* Driver Routes */}
+      <Route path="/driver/earnings">
+        {() => <ProtectedRoute component={DriverEarnings} roles={["DRIVER"]} />}
+      </Route>
       
       {/* Admin Routes */}
       <Route path="/admin/users">

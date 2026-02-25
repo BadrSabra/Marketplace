@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, CheckCircle2, Package } from "lucide-react";
+import { Loader2, CheckCircle2, Package, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "wouter";
 
 export default function CustomerDashboard() {
   const { useMyOrders } = useOrders();
@@ -40,6 +41,8 @@ export default function CustomerDashboard() {
       
       setOtpValue("");
       queryClient.invalidateQueries({ queryKey: ["/api/orders/my-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ledger/transactions"] });
     } catch (error: any) {
       toast({
         title: "Verification Failed",
@@ -53,9 +56,17 @@ export default function CustomerDashboard() {
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Customer Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Manage your orders and verify deliveries.</p>
+      <header className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Customer Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Manage your orders and verify deliveries.</p>
+        </div>
+        <Link href="/customer/wallet">
+          <Button variant="outline" className="gap-2">
+            <Wallet className="h-4 w-4" />
+            My Wallet
+          </Button>
+        </Link>
       </header>
 
       {isLoading ? (
