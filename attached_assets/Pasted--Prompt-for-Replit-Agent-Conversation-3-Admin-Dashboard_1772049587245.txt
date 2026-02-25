@@ -1,0 +1,98 @@
+
+Prompt for Replit Agent – Conversation 3 (Admin Dashboard & Approvals)
+
+Role: Senior full-stack engineer.
+
+Objective: Perform a deep diagnostic and feature completion for the Admin Dashboard, focusing on approving Store Owners and Drivers, managing users, and monitoring system activity. Extract all necessary backend and frontend information, without breaking the project.
+
+Instructions for the Agent:
+
+1️⃣ Backend Inspection
+
+List all Admin-related API routes: /api/admin/users, /api/admin/approve/store, /api/admin/approve/driver, /api/admin/transactions, /api/admin/reports.
+
+For each route, extract:
+
+HTTP method
+
+Middleware (authenticate, authorizeRole)
+
+Role restrictions (should be ADMIN)
+
+Implementation status (Implemented / Partial / Missing)
+
+
+Check if Admin actions properly update database state:
+
+Approve new Store Owners → stores.isApproved
+
+Approve new Drivers → users.role = DRIVER & isApproved
+
+Ensure financial transactions can be reviewed (ledger, wallet_transactions)
+
+
+Identify any missing validations, error handling, or gaps.
+
+
+2️⃣ Frontend Inspection (Admin Dashboard)
+
+List all pages/components related to Admin:
+
+User approval tables
+
+Store approval interface
+
+Driver approval interface
+
+Wallet/ledger overview
+
+
+Map frontend components to backend API endpoints.
+
+Check if role-based routing guards are active and correct.
+
+
+3️⃣ Workflow & Integration Checks
+
+Verify that Admin actions trigger correct backend updates.
+
+Confirm Admin Dashboard shows live data (new users pending approval, pending deposits, active sub_orders).
+
+Identify missing UI elements or broken interactions.
+
+
+4️⃣ Error & Runtime Analysis
+
+Detect any API endpoints returning 401, 403, 404, or other errors.
+
+Highlight mismatches between frontend calls and backend route definitions.
+
+
+5️⃣ Health Reporting & Recommendations
+
+Output a structured JSON report including:
+
+Backend route coverage and status
+
+Frontend page/component mapping
+
+Data flow validation (Admin actions → DB updates)
+
+Missing features, UI gaps, or integration issues
+
+Recommendations for completion and polish
+
+
+
+6️⃣ Constraints & Safety
+
+Do not modify any database or code.
+
+Do not expose plaintext passwords or sensitive information.
+
+Ensure the output is readable and detailed for team review.
+
+
+Goal: After executing this diagnostic, the team should have a complete picture of Admin Dashboard readiness, including backend functionality, frontend mapping, approval workflows, and pending feature gaps.
+
+
