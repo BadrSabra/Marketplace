@@ -73,77 +73,49 @@ export async function registerRoutes(
   });
 
   app.post(api.auth.login.path, async (req, res) => {
-    let debugInfo: any = {
-      userFound: false,
-      passwordMatch: false,
-      approved: false,
-      role: null,
-      jwtGenerated: false,
-      finalStatus: "FAILED",
-      failurePoint: null
-    };
-
     try {
       const input = api.auth.login.input.parse(req.body);
       const email = input.email;
       const normalizedEmail = email.toLowerCase();
-
-      console.log("[LOGIN DEBUG] Input Email:", email);
-      console.log("[LOGIN DEBUG] Normalized Email:", normalizedEmail);
       
       const user = await storage.getUserByEmail(normalizedEmail);
-      console.log("[LOGIN DEBUG] User From DB:", user);
 
       if (!user) {
-        debugInfo.failurePoint = "USER_NOT_FOUND";
-        console.log(JSON.stringify(debugInfo, null, 2));
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      debugInfo.userFound = true;
-      debugInfo.role = user.role;
-      debugInfo.approved = user.isApproved;
-
-      console.log("[LOGIN DEBUG] Stored Hash:", user.password);
       const isMatch = await bcrypt.compare(input.password, user.password);
-      console.log("[LOGIN DEBUG] Password Match:", isMatch);
-
-      if (!isMatch) {
-        debugInfo.failurePoint = "PASSWORD_MISMATCH";
-        console.log(JSON.stringify(debugInfo, null, 2));
-        return res.status(401).json({ message: "Invalid credentials" });
+      
+      // FALLBACK: If bcrypt fails, check if it's the hex-encoded SHA-512 hash
+      let finalMatch = isMatch;
+      if (!isMatch && user.password.includes('.')) {
+        const [hash, salt] = user.password.split('.');
+        if (hash.length === 128) {
+           const crypto = await import("crypto");
+           const computedHash = crypto.createHmac('sha512', salt).update(input.password).digest('hex');
+           finalMatch = (computedHash === hash);
+           
+           // If it matches via fallback, update it to a proper bcrypt hash for next time
+           if (finalMatch) {
+             const newHashedPassword = await bcrypt.hash(input.password, 10);
+             await db.update(users).set({ password: newHashedPassword }).where(eq(users.id, user.id));
+           }
+        }
       }
 
-      debugInfo.passwordMatch = true;
-
-      console.log("[LOGIN DEBUG] is_approved:", user.isApproved);
-      console.log("[LOGIN DEBUG] role:", user.role);
+      if (!finalMatch) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
 
       if (!user.isApproved) {
-        debugInfo.failurePoint = "NOT_APPROVED";
-        console.log(JSON.stringify(debugInfo, null, 2));
-        console.log("Login blocked due to unapproved account");
         return res.status(403).json({ message: "Account not approved" });
       }
 
       const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
-      console.log("[LOGIN DEBUG] JWT creation result:", !!token);
-
-      if (token) {
-        debugInfo.jwtGenerated = true;
-        debugInfo.finalStatus = "SUCCESS";
-      } else {
-        debugInfo.failurePoint = "JWT_ERROR";
-      }
-
-      console.log(JSON.stringify(debugInfo, null, 2));
 
       const { password, ...userWithoutPassword } = user;
       res.status(200).json({ token, user: userWithoutPassword });
     } catch (err) {
-      console.error("[LOGIN DEBUG] Error during login:", err);
-      if (!debugInfo.failurePoint) debugInfo.failurePoint = "JWT_ERROR";
-      console.log(JSON.stringify(debugInfo, null, 2));
       res.status(400).json({ message: "Invalid input" });
     }
   });
