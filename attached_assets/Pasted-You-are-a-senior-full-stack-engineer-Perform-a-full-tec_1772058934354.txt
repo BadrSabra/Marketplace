@@ -1,0 +1,131 @@
+You are a senior full-stack engineer. Perform a full technical diagnostic of the Admin Dashboard module in the Mit Gaber Hyperlocal Marketplace project.
+
+Follow the steps carefully and return ONLY a structured JSON report.
+
+------------------------------------------------------------
+1. Component Inventory
+------------------------------------------------------------
+- List all pages and components under:
+  `client/src/pages/admin`
+- Include nested folders and reusable components.
+- Identify which pages are fully functional vs placeholders.
+
+------------------------------------------------------------
+2. Backend Endpoint Mapping
+------------------------------------------------------------
+Map all admin-related endpoints including:
+
+User & Role Management:
+- PATCH /api/admin/users/:id/approve
+- Any role update endpoints
+- Any suspension/ban endpoints
+
+Financial Oversight:
+- GET /api/admin/reports/stats
+- POST /api/wallet/deposits/:id/approve
+- Any ledger inspection endpoints
+
+Store & Driver Approval:
+- Store approval endpoints (if exist)
+- Driver approval endpoints
+- Centralized approval queue (if implemented)
+
+For each endpoint specify:
+- HTTP method
+- Role restriction (ADMIN)
+- Whether fully implemented
+- Whether connected to frontend
+
+------------------------------------------------------------
+3. Financial Control Analysis
+------------------------------------------------------------
+Analyze:
+
+- Deposit approval workflow
+- Wallet funding flow
+- Commission visibility
+- Ledger inspection capability
+- Refund logic visibility
+- Atomic transaction integrity
+
+Identify:
+- Missing audit visibility
+- Missing ledger filtering
+- Missing admin financial dashboard metrics
+
+------------------------------------------------------------
+4. System Oversight & Monitoring
+------------------------------------------------------------
+Verify:
+
+- Activity logging mechanism (if exists)
+- Audit trail implementation
+- Error logging exposure to admin
+- Real-time system monitoring (if any)
+
+Identify:
+- Missing audit_logs table
+- Missing activity feed logic
+- Missing system health monitoring
+
+------------------------------------------------------------
+5. Security & Access Control
+------------------------------------------------------------
+- Verify JWT protection for admin routes.
+- Confirm authorizeRole(['ADMIN']) enforcement.
+- Check if admin routes are isolated.
+- Identify any privilege escalation risks.
+
+------------------------------------------------------------
+6. Functional Status Classification
+------------------------------------------------------------
+Classify Admin Dashboard as:
+- Complete
+- Partial
+- Placeholder
+
+Break down:
+- Functional features
+- Partial implementations
+- Missing UI
+- Backend gaps
+
+------------------------------------------------------------
+7. Output Format (JSON Only)
+------------------------------------------------------------
+
+{
+  "module": "Admin Dashboard",
+  "status": "",
+  "security": {
+    "auth": "",
+    "rbac": "",
+    "validation": ""
+  },
+  "financial_controls": {
+    "implemented": [],
+    "partial": [],
+    "missing": []
+  },
+  "oversight": {
+    "audit_logging": "",
+    "activity_feed": "",
+    "system_monitoring": ""
+  },
+  "findings": {
+    "functional": [],
+    "partial": [],
+    "missing_ui": [],
+    "backend_gaps": []
+  },
+  "risk_assessment": [],
+  "recommendations": []
+}
+
+------------------------------------------------------------
+8. Constraints
+------------------------------------------------------------
+- Do NOT modify any code.
+- Do NOT refactor.
+- Only analyze and report.
+- Be precise and technical.
