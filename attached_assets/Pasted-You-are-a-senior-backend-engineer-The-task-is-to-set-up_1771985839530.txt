@@ -1,0 +1,184 @@
+You are a senior backend engineer.
+
+The task is to set up a **fresh database** for the Mit Gaber Hyperlocal Marketplace on a new platform. Follow a structured, step-by-step approach to ensure the system is fully operational with all core functionality.
+
+---
+
+### Step 1: Create Database Tables
+
+Create the following tables with proper fields, types, relationships, and constraints:
+
+1️⃣ users
+- id (UUID, primary key)
+- role (ENUM: ADMIN, CUSTOMER, STORE_OWNER, DRIVER)
+- name
+- email (unique)
+- password (hashed)
+- phone
+- is_approved (boolean)
+- created_at, updated_at
+
+2️⃣ wallets
+- id (UUID, primary key)
+- user_id (FK → users.id)
+- balance (decimal, default 0)
+- created_at, updated_at
+
+3️⃣ wallet_transactions
+- id (UUID, primary key)
+- wallet_id (FK → wallets.id)
+- type (ENUM: DEPOSIT, WITHDRAWAL, REFUND, COMMISSION)
+- amount (decimal)
+- status (ENUM: PENDING, COMPLETED, FAILED)
+- created_at, updated_at
+
+4️⃣ ledger
+- id (UUID, primary key)
+- reference_id (link to transaction or order)
+- debit_user_id
+- credit_user_id
+- amount
+- type (ENUM: DEPOSIT, WITHDRAWAL, COMMISSION)
+- created_at, updated_at
+
+5️⃣ stores
+- id (UUID, primary key)
+- owner_id (FK → users.id)
+- name
+- type (Supermarket, Pharmacy, Handmade, etc.)
+- location_text
+- approved (boolean)
+- created_at, updated_at
+
+6️⃣ products
+- id (UUID, primary key)
+- store_id (FK → stores.id)
+- name
+- price (decimal)
+- stock (integer)
+- created_at, updated_at
+
+7️⃣ orders
+- id (UUID, primary key)
+- customer_id (FK → users.id)
+- overall_status (ENUM: PENDING, ACCEPTED, IN_TRANSIT, DELIVERED, CANCELLED)
+- total_price
+- created_at, updated_at
+
+8️⃣ sub_orders
+- id (UUID, primary key)
+- order_id (FK → orders.id)
+- store_id (FK → stores.id)
+- status (ENUM: PENDING, ACCEPTED, IN_TRANSIT, DELIVERED, CANCELLED)
+- subtotal
+- created_at, updated_at
+
+9️⃣ order_items
+- id (UUID, primary key)
+- sub_order_id (FK → sub_orders.id)
+- product_id (FK → products.id)
+- quantity
+- price_at_order
+- created_at, updated_at
+
+🔟 delivery_offers
+- id (UUID, primary key)
+- sub_order_id (FK → sub_orders.id)
+- driver_id (FK → users.id)
+- offered_fee
+- status (ENUM: PENDING, ACCEPTED, REJECTED)
+- created_at, updated_at
+
+---
+
+### Step 2: Seed Initial Users and Wallets
+
+Create users with the following credentials and hashed passwords (bcrypt):
+
+- Admin → Admin@123
+- Customer → Cust@123
+- Store Owner → Store@123
+- Driver → Driver@123
+
+For each user:
+- Create a wallet with default balance = 0
+- Ensure UUIDs are generated for user_id and wallet_id
+- Log success: "User & Wallet created successfully: <name> (<role>)"
+
+---
+
+### Step 3: Roles and Permissions
+
+- JWT authentication must include `id` and `role`
+- Create `authorizeRole` middleware
+- Assign module access per role:
+
+| Role        | Modules Access                             |
+|-------------|--------------------------------------------|
+| Admin       | Wallet, Orders, Ledger, OTP, Commission    |
+| Store Owner | Orders, Wallet                              |
+| Driver      | Orders, Wallet, OTP                         |
+| Customer    | Orders, Wallet                              |
+
+- Protect routes using `authenticate` + `authorizeRole`
+
+---
+
+### Step 4: Create Core API Routes
+
+Implement the following endpoints:
+
+1️⃣ Authentication
+- POST /auth/register
+- POST /auth/login
+- GET /auth/me
+
+2️⃣ Wallet
+- GET /wallet → return wallet balance
+- POST /wallet/deposit → create PENDING deposit
+
+3️⃣ Orders
+- GET /orders → all orders (Admin)
+- GET /orders/my-orders → customer orders
+- GET /orders/my-store → store owner orders
+
+4️⃣ SubOrders (Driver)
+- GET /suborders → list available sub-orders
+- POST /delivery-offers → submit delivery offer
+
+5️⃣ Stores & Products
+- GET /stores/my/products → store owner products
+- POST /stores → add new store
+- GET /products → list products
+
+---
+
+### Step 5: Atomic Operations & Logging
+
+- Ensure creation of users + wallets + initial balances is **atomic**
+- Ensure deposit, commission, and refunds are **atomic**
+- Log all successes to console clearly
+
+---
+
+### Step 6: Validation & Security
+
+- Validate all emails
+- Passwords meet security rules: min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
+- All names are non-empty
+- JWT protected routes
+- Role-based access enforced
+
+---
+
+### Step 7: Summary & Report
+
+- Return a structured JSON object containing:
+  - All users created with role, email, wallet balance
+  - List of tables created
+  - Routes implemented
+  - Any missing components (if applicable)
+
+---
+
+> Execute step by step. Stop after each major phase and confirm before moving to the next.
