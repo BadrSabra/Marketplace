@@ -1,0 +1,47 @@
+Prompt 2 – Store Owner Earnings & Wallet Page
+Objective:
+Build a Store Owner Earnings dashboard with full wallet integration, showing current balance, total commissions, and transaction history. Integrate with the backend /api/wallet and /api/ledger/transactions endpoints. Ensure proper role-based access (STORE_OWNER only), atomic updates, and real-time UI feedback using React Query.
+Requirements / Features:
+Page Structure:
+Route: /store/earnings
+Components: Cards for Available Balance and Total Commissions, Table for Transaction History
+Use existing UI components (Card, Table, Badge, Loader2) for consistency
+Data Fetching & State Management:
+Fetch wallet balance via GET /api/wallet
+Fetch ledger transactions via GET /api/ledger/transactions
+Use React Query for caching and refetching every 30s
+Show loading spinner while data is loading
+Transaction Table:
+Columns: Date, Type, Related Order ID, Amount, Status
+Format Date using date-fns
+Show green for incoming credits (DEPOSIT, COMMISSION), red for debits
+Status badges: COMPLETED (green), PENDING (yellow), FAILED (red)
+Calculations:
+Compute Total Commissions Earned by summing all COMPLETED COMMISSION transactions
+UX / Error Handling:
+Display toast messages on fetch failure
+Ensure buttons are disabled when mutation is in progress (if any future actions added)
+Graceful empty states (e.g., "No earning history found")
+Backend Integration:
+Ensure RBAC: only STORE_OWNER can access /store/earnings
+All financial data must be consistent with ledgerService and walletService
+Future-proof for real-time updates via WebSockets
+Reporting / Documentation:
+Update JSON report: store_earnings_report.json with:
+نسخ التعليمات البرمجية
+JSON
+{
+  "page": "Store Owner Earnings",
+  "path": "/store/earnings",
+  "endpoints": ["GET /api/wallet", "GET /api/ledger/transactions"],
+  "status": "functional",
+  "recommendations": "Next: integrate Inventory tab and expand analytics (monthly revenue, top-selling products)"
+}
+Constraints:
+Must not switch to Autonomous mode
+Work must be incremental: page first, then data integration, then calculations
+Use only existing shared UI components for consistency
+Deliverables:
+client/src/pages/store/earnings.tsx fully implemented
+React Query integration for /api/wallet and /api/ledger/transactions
+JSON report store_earnings_report.json
