@@ -41,6 +41,16 @@ export class OrderController {
     }
   }
 
+  async getMyStoreOrders(req: Request, res: Response) {
+    try {
+      const userId = (req.user as any).id;
+      const orders = await orderService.getStoreOwnerOrders(userId);
+      res.json(orders);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
   async cancelSubOrder(req: Request, res: Response) {
     try {
       const userId = (req.user as any).id;

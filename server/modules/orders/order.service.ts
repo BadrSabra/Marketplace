@@ -1,6 +1,6 @@
 import { db } from "../../db";
-import { orders, subOrders, orderItems, products, wallets, walletTransactions } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { orders, subOrders, orderItems, products, wallets, walletTransactions, stores, users } from "@shared/schema";
+import { eq, and, sql } from "drizzle-orm";
 
 export class OrderService {
   async createMultiStoreOrder(customerId: string, items: { productId: string, quantity: number }[]) {
@@ -91,6 +91,59 @@ export class OrderService {
     return await Promise.all(customerOrders.map(async (order) => {
       return await this.getOrderWithSubOrders(order.id);
     }));
+  }
+
+  async getStoreOwnerOrders(ownerId: string) {
+    // 1. Get all stores owned by this user
+    const ownerStores = await db.select().from(stores).where(eq(stores.ownerId, ownerId));
+    if (ownerStores.length === 0) return [];
+
+    const storeIds = ownerStores.map(s => s.id);
+
+    // 2. Get all sub-orders for these stores
+    const ownerSubOrders = await db.select({
+      subOrder: subOrders,
+      parentOrder: orders,
+      customer: users,
+    })
+    .from(subOrders)
+    .innerJoin(orders, eq(subOrders.orderId, orders.id))
+    .innerJoin(users, eq(orders.customerId, users.id))
+    .where(sql`${subOrders.storeId} IN ${storeIds}`);
+
+    // 3. Group sub-orders by parent order for the requested format
+    const orderMap = new Map();
+
+    for (const row of ownerSubOrders) {
+      const orderId = row.parentOrder.id;
+      if (!orderMap.has(orderId)) {
+        orderMap.set(orderId, {
+          order_id: orderId,
+          customer_name: row.customer.name,
+          overall_status: row.parentOrder.overallStatus,
+          sub_orders: []
+        });
+      }
+
+      // Get items for this sub-order
+      const items = await db.select({
+        product_name: products.name,
+        price: orderItems.priceAtOrder,
+        quantity: orderItems.quantity
+      })
+      .from(orderItems)
+      .innerJoin(products, eq(orderItems.productId, products.id))
+      .where(eq(orderItems.subOrderId, row.subOrder.id));
+
+      orderMap.get(orderId).sub_orders.push({
+        sub_order_id: row.subOrder.id,
+        status: row.subOrder.status,
+        subtotal: row.subOrder.subtotal,
+        items
+      });
+    }
+
+    return Array.from(orderMap.values());
   }
 
   async cancelSubOrder(subOrderId: string, userId: string) {

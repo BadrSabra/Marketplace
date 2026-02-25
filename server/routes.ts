@@ -112,6 +112,11 @@ export async function registerRoutes(
     return orderController.getMyOrders(req, res);
   });
 
+  app.get("/api/orders/my-store", authenticate, authorizeRole(["STORE_OWNER"]), async (req, res) => {
+    const { orderController } = await import("./modules/orders/order.controller");
+    return orderController.getMyStoreOrders(req, res);
+  });
+
   app.get(api.orders.list.path, authenticate, async (req, res) => {
     const orders = await storage.getOrders();
     res.json(orders);
