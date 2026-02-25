@@ -1,0 +1,71 @@
+Prompt – Conversation 5 (Driver Dashboard & Delivery/Wallet Integration)
+Role: You are a senior full-stack engineer.
+Goal: Perform a deep diagnostic and integration check for the Driver Dashboard, Delivery Offers, OTP verification, and Wallet/Payment system for the Mit Gaber Hyperlocal Marketplace project. Extract maximum detail about backend, frontend, routes, and integrations. Do not modify any data or code, only report.
+Instructions
+1️⃣ Driver Dashboard Analysis
+List all pages/components related to Drivers (client/src/pages/driver).
+Map each frontend component/page to backend API endpoints.
+Identify which components are functional vs placeholders.
+Verify role-based access and protected routes (ProtectedRoute) for Drivers.
+Check that data fetching is integrated with TanStack Query or equivalent.
+Identify missing or incomplete UI/UX elements:
+Available delivery offers list
+Assigned orders / tasks
+OTP input for delivery verification
+Wallet balance / earnings display
+2️⃣ Delivery & OTP System
+List all backend routes for Delivery (/api/delivery/*) and OTP (/api/delivery/otp/*).
+Verify HTTP methods, middleware, and role restrictions.
+Check OTP generation and verification logic in deliveryOtp.service.ts.
+Verify integration with sub_orders lifecycle:
+Triggering sub_order status updates to DELIVERED upon OTP verification
+Commission calculation and driver payment via LedgerService
+Identify missing endpoints or edge cases that may break the flow.
+3️⃣ Wallet / Payment Flow
+Inspect backend routes for Driver wallet integration (/api/wallet/*).
+Verify deposit, balance, and ledger entries.
+Check atomicity and correctness of transactions (Hold → Release → Commission).
+Map frontend wallet components (if any) to backend endpoints.
+Identify missing features:
+Driver-facing earnings history UI
+Real-time updates of balances upon delivery completion
+4️⃣ Integration & Data Flow
+For each Driver feature (Delivery Offers, Assigned Orders, Wallet/Earnings), trace API call → controller → service → DB → response → frontend rendering.
+Identify mismatches, missing endpoints, or unhandled errors (404, 401, 403).
+Ensure JWT payload includes id and role and is properly used in API requests.
+5️⃣ Error Detection
+Detect any gaps between backend functionality and frontend UI.
+Highlight placeholder pages, missing components, or unimplemented forms.
+Flag potential edge cases in sub_order lifecycle, OTP verification, or wallet updates.
+6️⃣ Reporting
+Generate a structured JSON report including:
+نسخ التعليمات البرمجية
+JSON
+{
+  "driverDashboard": {
+    "pages": [...],
+    "apiMapping": [...],
+    "functionalStatus": "complete | partial | missing",
+    "uiGaps": [...]
+  },
+  "delivery": {
+    "routes": [...],
+    "otpIntegration": "ok | partial | missing",
+    "subOrderLifecycle": "ok | partial | broken",
+    "errorsDetected": [...]
+  },
+  "wallet": {
+    "routes": [...],
+    "ledgerIntegrity": "ok | partial | issues",
+    "frontendIntegration": "ok | partial | missing",
+    "missingFeatures": [...]
+  },
+  "recommendations": [...]
+}
+7️⃣ Constraints
+Do not change the database or frontend code.
+Do not expose passwords or sensitive data.
+Include detailed high-level and deep-dive technical insights.
+Highlight missing or partially implemented features for team action.
+Ensure repeated execution is idempotent (safe to run multiple times).
+Goal: After executing this diagnostic, the team should have a full snapshot of the Driver Dashboard, Delivery Offers, OTP verification, Wallet/Earnings system, and integration state, ready for final polishing and bug fixing.
