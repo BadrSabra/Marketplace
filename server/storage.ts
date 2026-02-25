@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { users, stores, products, orders, wallets, walletTransactions, subOrders, deliveryOffers, ratings } from "@shared/schema";
-import type { User, InsertUser, Store, InsertStore, Product, Order } from "@shared/schema";
+import { users, wallets } from "@shared/schema";
+import type { User, InsertUser, Wallet, InsertWallet } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 export interface IStorage {
@@ -8,12 +8,8 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   getUsers(): Promise<User[]>;
-
-  createStore(store: InsertStore): Promise<Store>;
-  getStores(): Promise<Store[]>;
-
-  getProducts(): Promise<Product[]>;
-  getOrders(): Promise<Order[]>;
+  createWallet(wallet: InsertWallet): Promise<Wallet>;
+  getWalletByUserId(userId: string): Promise<Wallet | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -36,21 +32,14 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(users);
   }
 
-  async createStore(insertStore: InsertStore): Promise<Store> {
-    const [store] = await db.insert(stores).values(insertStore).returning();
-    return store;
+  async createWallet(insertWallet: InsertWallet): Promise<Wallet> {
+    const [wallet] = await db.insert(wallets).values(insertWallet).returning();
+    return wallet;
   }
 
-  async getStores(): Promise<Store[]> {
-    return await db.select().from(stores);
-  }
-
-  async getProducts(): Promise<Product[]> {
-    return await db.select().from(products);
-  }
-
-  async getOrders(): Promise<Order[]> {
-    return await db.select().from(orders);
+  async getWalletByUserId(userId: string): Promise<Wallet | undefined> {
+    const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, userId));
+    return wallet;
   }
 }
 

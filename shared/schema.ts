@@ -5,7 +5,7 @@ import { z } from "zod";
 
 // ENUMS
 export const roleEnum = pgEnum("role", ["ADMIN", "CUSTOMER", "STORE_OWNER", "DRIVER"]);
-export const transactionTypeEnum = pgEnum("transaction_type", ["DEPOSIT", "HOLD", "RELEASE", "REFUND", "COMMISSION"]);
+export const transactionTypeEnum = pgEnum("transaction_type", ["DEPOSIT", "WITHDRAWAL", "REFUND", "COMMISSION"]);
 export const transactionStatusEnum = pgEnum("transaction_status", ["PENDING", "COMPLETED", "FAILED"]);
 export const orderStatusEnum = pgEnum("order_status", ["PENDING", "ACCEPTED", "IN_TRANSIT", "DELIVERED", "CANCELLED"]);
 export const deliveryStatusEnum = pgEnum("delivery_status", ["PENDING", "ASSIGNED", "PICKED_UP", "DELIVERED"]);
@@ -30,6 +30,18 @@ export const wallets = pgTable("wallets", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id),
   balance: numeric("balance", { precision: 12, scale: 2 }).notNull().default("0.00"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// LEDGER
+export const ledger = pgTable("ledger", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  referenceId: uuid("reference_id"),
+  debitUserId: uuid("debit_user_id").references(() => users.id),
+  creditUserId: uuid("credit_user_id").references(() => users.id),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  type: text("type", { enum: ["DEPOSIT", "WITHDRAWAL", "COMMISSION"] }).notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
