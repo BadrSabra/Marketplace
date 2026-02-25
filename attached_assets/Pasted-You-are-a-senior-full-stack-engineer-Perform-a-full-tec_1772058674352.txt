@@ -1,0 +1,129 @@
+You are a senior full-stack engineer. Perform a full technical diagnostic of the Store Owner Dashboard module in the Mit Gaber Hyperlocal Marketplace project.
+
+Follow the steps carefully and return ONLY a structured JSON report.
+
+------------------------------------------------------------
+1. Component Inventory
+------------------------------------------------------------
+- List all pages and components under:
+  `client/src/pages/store`
+- Include nested folders and reusable components.
+- Identify if dashboard layout is functional or placeholder.
+
+------------------------------------------------------------
+2. Backend Endpoint Mapping
+------------------------------------------------------------
+Map store-related endpoints including:
+
+- GET /api/orders/my-store
+- GET /api/orders/:id
+- PATCH /api/suborders/:id/status
+- POST /api/suborders/:id/cancel
+- Any stock/product update endpoints
+- Wallet-related endpoints (if store has wallet view)
+
+For each endpoint specify:
+- HTTP method
+- Role restriction (STORE_OWNER)
+- Whether fully implemented
+- Whether connected to frontend
+
+------------------------------------------------------------
+3. Order Lifecycle Analysis (Store Perspective)
+------------------------------------------------------------
+Analyze store-side order lifecycle:
+
+- Receiving sub-order
+- Accepting order
+- Marking as READY
+- Assigning driver (if applicable)
+- Completing store responsibility
+- Triggering commission logic
+
+Identify:
+- Missing status transitions
+- Missing stock decrement logic
+- Missing commission hooks
+- Missing UI buttons
+
+------------------------------------------------------------
+4. Product & Inventory Management
+------------------------------------------------------------
+- Verify product CRUD endpoints exist.
+- Confirm stock field exists in database.
+- Check if stock decrement occurs when sub-order accepted.
+- Identify missing inventory safeguards.
+
+------------------------------------------------------------
+5. Wallet & Commission Integration
+------------------------------------------------------------
+- Verify store wallet integration.
+- Confirm commission logic in ledgerService.processCommissions.
+- Check atomic transaction usage.
+- Identify missing store-side earnings UI.
+
+------------------------------------------------------------
+6. Security & Infrastructure
+------------------------------------------------------------
+- Verify JWT protection.
+- Confirm authorizeRole(['STORE_OWNER']) enforcement.
+- Check ProtectedRoute usage.
+- Verify TanStack Query usage (if present).
+
+------------------------------------------------------------
+7. Functional Status Classification
+------------------------------------------------------------
+Classify Store Dashboard as:
+- Complete
+- Partial
+- Placeholder
+
+Break down:
+- Functional features
+- Partial implementations
+- Missing UI
+- Backend gaps
+
+------------------------------------------------------------
+8. Output Format (JSON Only)
+------------------------------------------------------------
+
+{
+  "module": "Store Owner Dashboard",
+  "status": "",
+  "security": {
+    "auth": "",
+    "rbac": "",
+    "validation": ""
+  },
+  "order_lifecycle": {
+    "implemented": [],
+    "partial": [],
+    "missing": []
+  },
+  "inventory_management": {
+    "backend_ready": "",
+    "stock_decrement_logic": "",
+    "ui_status": ""
+  },
+  "wallet_integration": {
+    "backend_ready": "",
+    "ui_status": "",
+    "commission_logic": ""
+  },
+  "findings": {
+    "functional": [],
+    "partial": [],
+    "missing_ui": [],
+    "backend_gaps": []
+  },
+  "recommendations": []
+}
+
+------------------------------------------------------------
+9. Constraints
+------------------------------------------------------------
+- Do NOT modify any code.
+- Do NOT refactor.
+- Only analyze and report.
+- Be precise and technical.
