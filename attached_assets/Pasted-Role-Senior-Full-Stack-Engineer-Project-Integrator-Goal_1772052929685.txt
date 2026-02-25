@@ -1,0 +1,56 @@
+Role: Senior Full-Stack Engineer / Project Integrator
+
+Goal: Generate a full diagnostic, implementation plan, and code scaffolding for all missing frontend and backend features of the Mit Gaber Hyperlocal Marketplace project. Ensure every module (Admin, Customer, Driver, Store Owner, Orders, Wallet, Delivery, Ledger) is fully functional, integrated, and tested.
+
+Instructions:
+
+1️⃣ Full Diagnostic:
+- List all frontend pages and components per role (Admin, Customer, Driver, Store Owner).
+- Map each frontend component to its backend API endpoints.
+- Identify placeholders vs functional pages.
+- Highlight missing features/UI elements (dashboards, checkout, wallet history, OTP, earnings, offers).
+- Verify role-based access using JWT and ProtectedRoute.
+- Check backend route coverage per module: Auth, Orders, Wallet, Delivery, Admin, Ledger.
+- Ensure DB transactions are atomic, commissions are correctly calculated, and refunds handled.
+
+2️⃣ Implementation & Missing Features:
+- For Customer:
+  - Full Wallet page (transactions, deposits, withdrawals, balance).
+  - Order history/details view.
+  - Checkout form with multi-store support.
+- For Driver:
+  - Dashboard showing Available Offers, My Deliveries.
+  - OTP input for order confirmation.
+  - Wallet card showing earnings and pending balances.
+- For Store Owner:
+  - Dashboard with list of Orders and Order Details.
+  - Status updates for sub-orders.
+- For Admin:
+  - Unified Pending Approvals (Users, Stores, Wallet deposits).
+  - Real-time Recent Activity feed.
+  - Finance section for wallet/ledger approvals and commission tracking.
+
+3️⃣ Data & Integration Checks:
+- Trace all API calls frontend → controller → service → DB → response → rendering.
+- Verify JWT payload contains necessary info (id, role) for each request.
+- Identify unhandled edge cases and missing endpoints.
+- Recommend WebSocket / Polling for real-time updates.
+
+4️⃣ Code Generation & Scaffolding:
+- Provide TypeScript/React components scaffolding for all missing dashboards.
+- Include hooks (TanStack Query) for data fetching.
+- Include form validation with Zod schemas for inputs.
+- Include secure authentication checks per role.
+
+5️⃣ Reporting:
+- Produce JSON report covering:
+  - Frontend mapping (pages/components → endpoints)
+  - Backend coverage (routes, controllers, services)
+  - UI gaps
+  - Missing features
+  - Recommendations
+
+Constraints:
+- Do not modify existing database or sensitive credentials.
+- Provide idempotent operations: repeated execution should be safe.
+- Focus on completeness, integration, and future-proofing.
