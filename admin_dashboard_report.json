@@ -1,0 +1,13 @@
+{
+  "page": "Admin Dashboard",
+  "path": "/admin/dashboard",
+  "features": [
+    "Store Monitoring",
+    "Order Oversight",
+    "Financial Summary",
+    "Audit Logs",
+    "Admin Override Controls"
+  ],
+  "status": "functional",
+  "recommendations": "Next step: real-time monitoring via WebSockets and advanced financial analytics"
+}

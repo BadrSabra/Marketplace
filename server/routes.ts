@@ -329,6 +329,48 @@ export async function registerRoutes(
   });
 
   // --- ADMIN MODULE ---
+  app.get("/api/admin/stats", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
+    try {
+      const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
+      const [storeCount] = await db.select({ count: sql<number>`count(*)` }).from(stores);
+      const [orderCount] = await db.select({ count: sql<number>`count(*)` }).from(orders);
+      const [totalRevenue] = await db.select({ sum: sql<string>`sum(total_price)` }).from(orders).where(eq(orders.paymentStatus, "PAID"));
+
+      res.json({
+        totalUsers: Number(userCount.count),
+        totalStores: Number(storeCount.count),
+        totalOrders: Number(orderCount.count),
+        totalRevenue: totalRevenue.sum || "0.00",
+        activeStores: Number(storeCount.count), // Placeholder for active logic
+        pendingOrders: 0, // Placeholder
+        cancelledOrders: 0, // Placeholder
+        deliveredOrders: 0, // Placeholder
+        platformCommissions: "0.00",
+        storeEarnings: "0.00",
+        driverEarnings: "0.00"
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Internal error" });
+    }
+  });
+
+  app.get("/api/admin/orders", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
+    const allOrders = await db.select().from(orders).orderBy(sql`${orders.createdAt} DESC`);
+    res.json(allOrders);
+  });
+
+  app.get("/api/admin/stores", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
+    const allStores = await db.select().from(stores);
+    res.json(allStores);
+  });
+
+  app.get("/api/admin/audit", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
+    // Mock audit logs for now
+    res.json([
+      { id: 1, actionType: "SYSTEM_STARTUP", userRole: "SYSTEM", userId: "0", targetEntityId: "0", timestamp: new Date(), oldValue: null, newValue: "RUNNING" }
+    ]);
+  });
+
   app.patch("/api/admin/users/:id/approve", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
     try {
       const { id } = req.params;

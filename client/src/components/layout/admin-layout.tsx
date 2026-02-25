@@ -8,7 +8,8 @@ import {
   Package, 
   ShoppingCart,
   LogOut,
-  Menu
+  Menu,
+  ShieldAlert
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,7 +23,8 @@ function cn(...inputs: ClassValue[]) {
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/users", label: "Users", icon: Users },
+  { href: "/admin/audit", label: "Audit Logs", icon: ShieldAlert },
+  { href: "/admin/users", label: "Users", icon: Users },
   { href: "/stores", label: "Stores", icon: StoreIcon },
   { href: "/products", label: "Products", icon: Package },
   { href: "/orders", label: "Orders", icon: ShoppingCart },
