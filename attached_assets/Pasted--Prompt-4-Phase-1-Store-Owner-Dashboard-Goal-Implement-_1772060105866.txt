@@ -1,0 +1,169 @@
+
+Prompt 4 – Phase 1 (Store Owner Dashboard)
+
+Goal: Implement a fully functional Store Owner Dashboard that allows store owners to manage orders, update sub-order statuses, handle stock, and view earnings. Integrate backend services while enforcing RBAC, validation, and atomic transactions.
+
+Instructions for Replit Agent:
+
+1. Pages & Navigation
+
+Create /store/dashboard page.
+
+Navigation tabs:
+
+1. Incoming Orders – list all sub-orders for this store.
+
+
+2. Order Details – drill down into a sub-order’s items, quantities, prices, and status.
+
+
+3. Earnings & Wallet – summary of store earnings and transaction history.
+
+
+4. Inventory Manager – manage products, add/edit/delete, and update stock.
+
+
+
+
+
+2. Endpoints Integration
+
+Orders:
+
+GET /api/orders/my-store – list all orders for the store.
+
+GET /api/orders/:id – get order details.
+
+PATCH /api/suborders/:id/status – update sub-order status (PENDING → ACCEPTED → READY → PICKED_UP → DELIVERED). Ensure only STORE_OWNER or ADMIN can perform transitions.
+
+
+Wallet / Ledger:
+
+GET /api/wallet – store balance.
+
+GET /api/ledger/transactions – store’s transaction history.
+
+
+Products:
+
+GET /api/products?storeId=<storeId> – list products.
+
+POST /api/products – add product.
+
+PUT /api/products/:id – edit product.
+
+DELETE /api/products/:id – delete product.
+
+
+
+
+3. RBAC & Security
+
+Only STORE_OWNER can access dashboard pages.
+
+Enforce role validation in frontend (ProtectedRoute) and backend (authorizeRole(['STORE_OWNER']) middleware).
+
+Validate all inputs via Zod on frontend forms and Drizzle constraints on backend.
+
+
+
+4. Order Management Workflow
+
+Display Incoming Orders with:
+
+Sub-order ID, customer name, total, expected delivery fee, current status.
+
+Buttons for Accept, Mark Ready, Cancel.
+
+
+When Accept is clicked:
+
+Trigger PATCH endpoint → update sub-order status to ACCEPTED.
+
+Decrement stock for all products in the sub-order.
+
+Use atomic transaction to prevent overselling.
+
+
+When Mark Ready is clicked:
+
+Update sub-order status to READY.
+
+Trigger notification to available drivers (placeholder for future push/WebSocket integration).
+
+
+When Cancel is clicked:
+
+Update sub-order status to CANCELLED.
+
+Reverse any held funds (if any).
+
+
+Handle backend error responses:
+
+403 Forbidden – unauthorized action.
+
+409 Conflict – insufficient stock.
+
+400 Bad Request – invalid status transition.
+
+
+
+
+5. Inventory Management
+
+Show list of products with stock and price.
+
+Allow Add / Edit / Delete products.
+
+Ensure stock updates reflect in backend immediately.
+
+Validation:
+
+Price > 0
+
+Stock >= 0
+
+
+
+
+6. Earnings & Wallet
+
+Show Store Balance.
+
+Show Transaction History:
+
+Commission earned (from ledgerService.processCommissions).
+
+Deposits and refunds.
+
+
+Highlight pending vs completed transactions.
+
+
+
+7. UI/UX Requirements
+
+Use Cards for summary info (Balance, Total Earnings, Orders Count).
+
+Tables for Order Lists, Transaction History, Product Inventory.
+
+Responsive layout: grid for large screens, stacked for mobile.
+
+Loader when fetching data, Toasts for success/error messages.
+
+Status badges: PENDING (yellow), ACCEPTED (blue), READY (purple), PICKED_UP (cyan), DELIVERED (green), CANCELLED (red).
+
+
+
+8. Recommendations
+
+Prepare hooks for WebSocket updates for orders and earnings.
+
+Add placeholder for Audit logging: track STORE_OWNER actions (Accept, Ready, Cancel, Stock update).
+
+Ensure all critical financial operations (stock decrement + ledger) are atomic transactions.
+
+
+
+
