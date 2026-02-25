@@ -1,0 +1,60 @@
+Prompt – Conversation 4 (Customer & Wallet/Orders)
+Role: You are a senior full-stack engineer.
+Goal: Perform a deep diagnostic and integration check for the Customer Dashboard, Order Lifecycle, and Wallet/Payment Flow of the Mit Gaber Hyperlocal Marketplace project. Extract maximum detail about backend, frontend, routes, and integrations. Do not modify any data or code, only report.
+Instructions:
+1️⃣ Customer Dashboard Analysis
+List all pages/components related to Customers (client/src/pages/customer).
+Map each frontend component/page to its backend API endpoints.
+Identify which components are functional vs placeholders.
+Verify role-based access and protected routes (ProtectedRoute) for Customers.
+Check that data fetching is integrated with TanStack Query or equivalent.
+Identify missing or incomplete UI/UX elements (orders list, order details, wallet balance display, checkout forms).
+2️⃣ Order Lifecycle & Management
+List all backend routes related to Orders (/api/orders, /api/sub_orders) and verify HTTP methods, middleware, and role restrictions.
+Check multi-store splitting logic, sub-order creation, and status updates (Pending → In Progress → Delivered).
+Verify order cancellation and order history retrieval for Customers.
+Check integration between Orders and Delivery/OTP system, including triggering OTP verification upon delivery.
+Ensure proper error handling (404, 401, 403) for Customers.
+3️⃣ Wallet / Payment Flow
+Inspect backend routes for Wallet (/api/wallet/*) and Ledger services.
+Verify deposit, withdrawal, and balance endpoints with proper middleware and role protection.
+Check that ledger transactions are atomic and consistent.
+Confirm commission calculation and application of delivery fees.
+Map frontend wallet components (client/src/pages/customer/wallet) to backend endpoints.
+Identify missing features, e.g., deposit approval UI, transaction history, real-time balance updates.
+4️⃣ Integration & Data Flow
+For each frontend feature (Orders, Wallet), trace API call → controller → service → DB → response → frontend rendering.
+Identify any mismatches, missing endpoints, or unhandled edge cases.
+Verify that JWT payload contains necessary info (id, role) and is properly used in API requests.
+5️⃣ Reporting
+Generate a structured JSON report with:
+نسخ التعليمات البرمجية
+JSON
+{
+  "customerDashboard": {
+    "pages": [...],
+    "apiMapping": [...],
+    "functionalStatus": "complete | partial | missing",
+    "uiGaps": [...]
+  },
+  "orders": {
+    "routes": [...],
+    "lifecycleIntegrity": "ok | partial | broken",
+    "integrationWithDelivery": "ok | partial | missing",
+    "errorsDetected": [...]
+  },
+  "wallet": {
+    "routes": [...],
+    "ledgerIntegrity": "ok | partial | issues",
+    "frontendIntegration": "ok | partial | missing",
+    "missingFeatures": [...]
+  },
+  "recommendations": [...]
+}
+6️⃣ Constraints
+Do not change the database or frontend code.
+Do not expose passwords or sensitive data.
+Include detailed high-level and deep-dive technical insights.
+Highlight missing or partially implemented features for team action.
+Focus on idempotent verification, ensuring repeated execution is safe.
+Goal: After executing this diagnostic, the team should have a full snapshot of the Customer Dashboard, Order Lifecycle, Wallet/Payment system, and integration state, ready for final polishing and bug fixing.
