@@ -1,0 +1,164 @@
+You are a senior backend architect.
+
+Your task is to implement a robust SubOrder Status Management API for the Mit Gaber Hyperlocal Marketplace.
+
+This task is CRITICAL to complete the Store → Delivery lifecycle.
+
+Follow the instructions EXACTLY and modify ONLY the necessary backend files.
+
+------------------------------------------------------------
+OBJECTIVE
+------------------------------------------------------------
+
+Implement a new endpoint:
+
+PATCH /api/suborders/:id/status
+
+This endpoint allows STORE_OWNER to transition sub-order status through controlled lifecycle stages.
+
+------------------------------------------------------------
+ALLOWED STATUS TRANSITIONS
+------------------------------------------------------------
+
+Current schema supports:
+
+PENDING
+ACCEPTED
+READY
+PICKED_UP
+DELIVERED
+CANCELLED
+
+Implement strict transition validation:
+
+1. PENDING → ACCEPTED
+2. ACCEPTED → READY
+3. READY → PICKED_UP (Driver only)
+4. PICKED_UP → DELIVERED
+5. Any status → CANCELLED (with validation rules)
+
+Reject invalid transitions with 400 error.
+
+------------------------------------------------------------
+RBAC RULES
+------------------------------------------------------------
+
+- STORE_OWNER can:
+  - ACCEPT (PENDING → ACCEPTED)
+  - MARK READY (ACCEPTED → READY)
+  - CANCEL (if still PENDING or ACCEPTED)
+
+- DRIVER can:
+  - PICK_UP (READY → PICKED_UP)
+
+- SYSTEM (OTP verification flow) can:
+  - MARK DELIVERED
+
+Enforce via:
+authenticate middleware
+authorizeRole([...])
+
+------------------------------------------------------------
+VALIDATION REQUIREMENTS
+------------------------------------------------------------
+
+- Validate request body with Zod.
+- Required input:
+  {
+    "status": "NEW_STATUS"
+  }
+
+- Reject invalid status values.
+- Reject invalid transitions.
+
+------------------------------------------------------------
+SERVICE LAYER
+------------------------------------------------------------
+
+In OrderService (or SubOrderService if exists):
+
+Create:
+
+updateSubOrderStatus(subOrderId, newStatus, actorUser)
+
+Responsibilities:
+
+- Fetch sub-order
+- Validate ownership (storeId → ownerId match)
+- Validate transition
+- Update status
+- Return updated entity
+
+DO NOT implement stock decrement yet.
+DO NOT implement commission trigger here.
+This prompt handles ONLY status lifecycle.
+
+------------------------------------------------------------
+ATOMIC SAFETY
+------------------------------------------------------------
+
+Wrap database update in transaction.
+
+Use existing DB transaction utility (Drizzle transaction if available).
+
+------------------------------------------------------------
+AUDIT PREPARATION
+------------------------------------------------------------
+
+Insert placeholder hook:
+
+// TODO: Add audit log entry
+
+Do not implement audit logging yet.
+
+------------------------------------------------------------
+ROUTES REGISTRATION
+------------------------------------------------------------
+
+Register new route in routes.ts:
+
+app.patch(
+  "/api/suborders/:id/status",
+  authenticate,
+  authorizeRole(["STORE_OWNER", "DRIVER"]),
+  controllerMethod
+);
+
+Ensure role-based internal validation still enforced.
+
+------------------------------------------------------------
+ERROR RESPONSES
+------------------------------------------------------------
+
+Return structured JSON:
+
+400 → Invalid transition
+403 → Unauthorized role or ownership mismatch
+404 → Sub-order not found
+200 → Updated sub-order
+
+------------------------------------------------------------
+CONSTRAINTS
+------------------------------------------------------------
+
+- Do NOT refactor unrelated files.
+- Do NOT change schema.
+- Do NOT modify commission logic.
+- Do NOT implement stock logic here.
+- Keep changes minimal and surgical.
+- Ensure TypeScript types remain valid.
+
+------------------------------------------------------------
+OUTPUT FORMAT
+------------------------------------------------------------
+
+After implementation, return a summary JSON:
+
+{
+  "endpoint": "/api/suborders/:id/status",
+  "transitions_enforced": true,
+  "rbac_enforced": true,
+  "transaction_wrapped": true,
+  "files_modified": [],
+  "notes": []
+}
