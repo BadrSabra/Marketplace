@@ -1,0 +1,1 @@
+{"page": "Store Order Details", "path": "/store/order/[id]", "endpoints": ["GET /api/orders/:id", "PATCH /api/suborders/:id/status"], "status": "functional", "recommendations": "Next steps: integrate Earnings tab and Inventory tab"}

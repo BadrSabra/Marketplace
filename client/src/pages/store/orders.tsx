@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -102,6 +103,9 @@ export default function StoreOrders() {
                       <div className="text-xs font-mono text-muted-foreground">
                         ID: {sub.sub_order_id.split("-")[0]}...
                       </div>
+                      <Link href={`/store/order/${sub.parent_id}`}>
+                        <Button variant="link" size="sm" className="p-0 h-auto">View Details</Button>
+                      </Link>
                     </TableCell>
                     <TableCell className="font-medium">{sub.customer_name}</TableCell>
                     <TableCell>

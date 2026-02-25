@@ -1,0 +1,120 @@
+
+
+
+---
+
+Prompt 1 – Store Owner Order Details Page (UI + API Integration)
+
+Prompt Objective:
+Build a Store Owner Order Details page for each sub-order, displaying products, quantities, prices, sub-order status, and integrating backend APIs. Maintain RBAC, atomic transactions, and support stock & commission tracking.
+
+Precise Instructions for the Agent:
+
+1. Create the Order Details page
+
+Path: client/src/pages/store/order/[id].tsx
+
+Accept orderId as a route parameter and display all sub-orders for that order.
+
+
+
+2. Display key information for each Sub-order:
+
+Customer Name
+
+Sub-order ID
+
+Product list: name, quantity, price at order time
+
+Sub-total for each sub-order
+
+Delivery status + Payment status
+
+Stock availability for each product
+
+
+
+3. Integrate API endpoints:
+
+GET /api/orders/:id: fetch order details and all sub-orders
+
+PATCH /api/suborders/:id/status: update sub-order status (PENDING → ACCEPTED → READY → PICKED_UP → DELIVERED)
+
+Trigger stock updates when moving from PENDING → ACCEPTED (backend already implemented)
+
+Show error messages for out-of-stock items or other failures
+
+
+
+4. Add Status Management UI:
+
+Buttons to change status according to role (Store Owner only):
+
+PENDING → ACCEPTED
+
+ACCEPTED → READY
+
+READY → PICKED_UP (Driver only)
+
+DELIVERED → close order
+
+
+Disable buttons while processing (loading state)
+
+Use colored badges for each status, consistent with the Incoming Orders page
+
+
+
+5. Display basic financial info:
+
+Sub-total for each sub-order
+
+Total order value
+
+Optional: integrate ledger/commission display (for future phase)
+
+
+
+6. Error Handling:
+
+Show toast messages if a status update fails
+
+Display stock-related errors
+
+Prevent unauthorized users from changing sub-order status
+
+
+
+7. Navigation Integration:
+
+Link the page to the Store Dashboard and Orders Page
+
+Include a breadcrumb or “Back to Orders” link
+
+
+
+8. General Requirements:
+
+Use React Query for all fetches and mutations
+
+Use existing UI components (Card, Table, Badge, Button) for design consistency
+
+Code should be modular and ready for expansion to Inventory and Earnings pages later
+
+
+
+9. Output Report:
+
+After completing the page, save a JSON report including:
+
+{
+  "page": "Store Order Details",
+  "path": "/store/order/[id]",
+  "endpoints": ["GET /api/orders/:id", "PATCH /api/suborders/:id/status"],
+  "status": "functional",
+  "recommendations": "Next steps: integrate Earnings tab and Inventory tab"
+}
+
+
+
+
