@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, wallets } from "@shared/schema";
+import { users, wallets, stores } from "@shared/schema";
 import type { User, InsertUser, Wallet, InsertWallet } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
@@ -10,6 +10,7 @@ export interface IStorage {
   getUsers(): Promise<User[]>;
   createWallet(wallet: InsertWallet): Promise<Wallet>;
   getWalletByUserId(userId: string): Promise<Wallet | undefined>;
+  createStore(store: any): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -40,6 +41,11 @@ export class DatabaseStorage implements IStorage {
   async getWalletByUserId(userId: string): Promise<Wallet | undefined> {
     const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, userId));
     return wallet;
+  }
+
+  async createStore(insertStore: any): Promise<any> {
+    const [store] = await db.insert(stores).values(insertStore).returning();
+    return store;
   }
 }
 

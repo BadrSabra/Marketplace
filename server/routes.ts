@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
+import { users, wallets, stores } from "@shared/schema";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -24,12 +26,40 @@ export async function registerRoutes(
       }
 
       const hashedPassword = await bcrypt.hash(input.password, 10);
-      const user = await storage.createUser({ ...input, password: hashedPassword });
+      
+      const { user, wallet } = await db.transaction(async (tx) => {
+        const [user] = await tx.insert(users).values({
+          name: input.name,
+          email: input.email,
+          password: hashedPassword,
+          role: input.role,
+          transportType: input.extra?.transportType,
+          isApproved: true,
+        }).returning();
+
+        const [wallet] = await tx.insert(wallets).values({
+          userId: user.id,
+          balance: "0.00",
+        }).returning();
+
+        if (input.role === "STORE_OWNER" && input.extra) {
+          await tx.insert(stores).values({
+            ownerId: user.id,
+            name: input.extra.storeName!,
+            type: input.extra.storeType!,
+          });
+        }
+
+        return { user, wallet };
+      });
       
       const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
       
       const { password, ...userWithoutPassword } = user;
-      res.status(201).json({ token, user: userWithoutPassword });
+      res.status(201).json({ 
+        token, 
+        user: { ...userWithoutPassword, walletBalance: wallet.balance } 
+      });
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({
@@ -37,6 +67,7 @@ export async function registerRoutes(
           field: err.errors[0].path.join('.'),
         });
       }
+      console.error("Registration error:", err);
       res.status(500).json({ message: "Internal server error" });
     }
   });

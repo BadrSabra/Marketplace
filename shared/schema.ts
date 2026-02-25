@@ -18,9 +18,10 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
-  phone: text("phone").notNull(),
+  phone: text("phone"),
   role: roleEnum("role").notNull().default("CUSTOMER"),
   isApproved: boolean("is_approved").notNull().default(false),
+  transportType: text("transport_type"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -62,8 +63,9 @@ export const stores = pgTable("stores", {
   id: uuid("id").primaryKey().defaultRandom(),
   ownerId: uuid("owner_id").notNull().references(() => users.id),
   name: text("name").notNull(),
+  type: text("type"),
   description: text("description"),
-  locationText: text("location_text").notNull(),
+  locationText: text("location_text"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -159,6 +161,34 @@ export const insertRatingSchema = createInsertSchema(ratings).omit({ id: true, c
 export const insertDeliveryOtpSchema = createInsertSchema(deliveryOtps).omit({ id: true, createdAt: true, updatedAt: true });
 
 // AUTH SCHEMAS
+export const registerSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email"),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Must contain at least one special character"),
+  role: z.enum(["CUSTOMER", "STORE_OWNER", "DRIVER"]),
+  extra: z.object({
+    storeName: z.string().optional(),
+    storeType: z.string().optional(),
+    transportType: z.string().optional(),
+  }).optional(),
+}).refine((data) => {
+  if (data.role === "STORE_OWNER") {
+    return !!(data.extra?.storeName && data.extra?.storeType);
+  }
+  if (data.role === "DRIVER") {
+    return !!(data.extra?.transportType);
+  }
+  return true;
+}, {
+  message: "Role-specific fields are required",
+  path: ["extra"],
+});
+
 export const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),

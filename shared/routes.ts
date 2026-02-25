@@ -4,7 +4,7 @@ import {
   insertStoreSchema, stores,
   insertProductSchema, products,
   insertOrderSchema, orders,
-  loginSchema 
+  loginSchema, registerSchema
 } from './schema';
 
 export const errorSchemas = {
@@ -22,7 +22,7 @@ export const api = {
     register: {
       method: 'POST' as const,
       path: '/api/auth/register' as const,
-      input: insertUserSchema,
+      input: registerSchema,
       responses: {
         201: z.object({ token: z.string(), user: userWithoutPassword }),
         400: errorSchemas.validation,

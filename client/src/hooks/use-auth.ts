@@ -25,6 +25,26 @@ export function useAuth() {
     retry: false,
   });
 
+  const registerMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiFetch(api.auth.register.path, {
+        method: api.auth.register.method,
+        body: JSON.stringify(data),
+      });
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData.message || "Registration failed");
+      }
+      const parsed = api.auth.register.responses[201].parse(resData);
+      
+      localStorage.setItem("jwt_token", parsed.token);
+      return parsed.user;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData([api.auth.me.path], data);
+    },
+  });
+
   const loginMutation = useMutation({
     mutationFn: async (credentials: z.infer<typeof api.auth.login.input>) => {
       const validated = api.auth.login.input.parse(credentials);
@@ -56,6 +76,8 @@ export function useAuth() {
     error,
     login: loginMutation.mutateAsync,
     isLoggingIn: loginMutation.isPending,
+    register: registerMutation.mutateAsync,
+    isRegistering: registerMutation.isPending,
     logout,
   };
 }

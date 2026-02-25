@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
 import { Lock, Mail, ArrowRight } from "lucide-react";
@@ -86,6 +86,12 @@ export default function LoginPage() {
             {isLoggingIn ? "Signing in..." : "Sign In"}
             {!isLoggingIn && <ArrowRight className="w-5 h-5" />}
           </button>
+          <p className="text-center text-sm text-muted-foreground">
+            Don't have an account?{" "}
+            <Link href="/register" className="text-primary font-semibold hover:underline">
+              Register
+            </Link>
+          </p>
         </form>
       </motion.div>
     </div>

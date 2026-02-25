@@ -9,6 +9,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 // Pages
 import LoginPage from "@/pages/auth/login";
+import RegisterPage from "@/pages/auth/register";
 import AdminDashboard from "@/pages/admin/dashboard";
 import CustomerDashboard from "@/pages/customer/dashboard";
 import StoreDashboard from "@/pages/store/dashboard";
@@ -68,6 +69,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={LoginPage} />
+      <Route path="/register" component={RegisterPage} />
       <Route path="/" component={RoleBasedDashboard} />
       
       {/* Admin Routes */}
