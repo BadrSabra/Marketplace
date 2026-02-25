@@ -1,0 +1,92 @@
+{
+  "project_name": "Mit Gaber Hyperlocal Marketplace",
+  "diagnostic_date": "2026-02-25",
+  "database_analysis": {
+    "tables": [
+      {
+        "name": "users",
+        "columns": ["id", "name", "email", "password", "phone", "role", "isApproved", "transportType", "createdAt", "updatedAt"],
+        "enums": ["role: ADMIN, CUSTOMER, STORE_OWNER, DRIVER"]
+      },
+      {
+        "name": "wallets",
+        "columns": ["id", "userId", "balance", "createdAt", "updatedAt"]
+      },
+      {
+        "name": "ledger",
+        "columns": ["id", "referenceId", "debitUserId", "creditUserId", "amount", "type", "createdAt", "updatedAt"]
+      },
+      {
+        "name": "wallet_transactions",
+        "columns": ["id", "walletId", "type", "amount", "relatedOrderId", "status", "createdAt"],
+        "enums": ["transaction_type: DEPOSIT, WITHDRAWAL, REFUND, COMMISSION", "transaction_status: PENDING, COMPLETED, FAILED"]
+      },
+      {
+        "name": "stores",
+        "columns": ["id", "ownerId", "name", "type", "description", "locationText", "createdAt", "updatedAt"]
+      },
+      {
+        "name": "products",
+        "columns": ["id", "storeId", "name", "description", "price", "stock", "createdAt", "updatedAt"]
+      },
+      {
+        "name": "orders",
+        "columns": ["id", "customerId", "overallStatus", "deliveryStatus", "paymentStatus", "totalPrice", "createdAt", "updatedAt"],
+        "enums": ["order_status: PENDING, ACCEPTED, IN_TRANSIT, DELIVERED, CANCELLED", "delivery_status: PENDING, ASSIGNED, PICKED_UP, DELIVERED", "payment_status: PENDING, PAID, REFUNDED, FAILED"]
+      },
+      {
+        "name": "sub_orders",
+        "columns": ["id", "orderId", "storeId", "status", "subtotal", "expectedDeliveryFee", "createdAt", "updatedAt"]
+      },
+      {
+        "name": "order_items",
+        "columns": ["id", "subOrderId", "productId", "quantity", "priceAtOrder"]
+      },
+      {
+        "name": "delivery_offers",
+        "columns": ["id", "subOrderId", "driverId", "offeredFee", "status", "createdAt", "updatedAt"],
+        "enums": ["offer_status: PENDING, ACCEPTED, REJECTED, COUNTERED"]
+      },
+      {
+        "name": "delivery_otps",
+        "columns": ["id", "orderId", "subOrderId", "otpCode", "status", "createdAt", "updatedAt"]
+      }
+    ],
+    "bootstrap_logic": "Admin account and seed data initialized in server/routes.ts via ensureAdminAccount() and seedDatabase()."
+  },
+  "backend_analysis": {
+    "modules": ["delivery", "ledger", "notifications", "orders", "wallet"],
+    "rbac_middleware": ["authenticate", "authorizeRole"],
+    "key_endpoints": {
+      "auth": ["POST /api/auth/register", "POST /api/auth/login", "GET /api/auth/me"],
+      "admin": ["PATCH /api/admin/users/:id/approve", "GET /api/admin/reports/stats"],
+      "orders": ["POST /api/orders (Customer)", "GET /api/orders/:id", "GET /api/orders/my-store (Owner)", "POST /api/suborders/:id/cancel"],
+      "wallet": ["GET /api/wallet", "POST /api/wallet/deposit", "POST /api/wallet/deposits/:id/approve (Admin)"],
+      "delivery": ["POST /api/delivery/offers (Driver)", "POST /api/delivery/offers/:id/accept (Customer)", "POST /api/delivery/otp/generate", "POST /api/delivery/otp/verify"]
+    }
+  },
+  "core_systems": {
+    "order_flow": "Multi-store splitting implemented. Sub-orders created per store.",
+    "wallet_ledger": "HOLD/RELEASE implemented via LedgerService. Atomic transactions used for balance updates.",
+    "commissions": "1% commission distribution to Customer, Store Owner, and Driver implemented in ledgerService.processCommissions.",
+    "missing_logic": ["Stock level decrementing upon order acceptance", "Platform fee calculation beyond simple commissions", "Store-side status management (Ready for pickup)"]
+  },
+  "frontend_mapping": {
+    "pages": [
+      {"path": "/auth/*", "status": "Complete", "description": "Login and role-based registration"},
+      {"path": "/admin/dashboard", "status": "Partial", "description": "Overview stats functional, activity feed mocked"},
+      {"path": "/admin/users", "status": "Complete", "description": "User approval management"},
+      {"path": "/admin/approvals", "status": "Placeholder", "description": "Missing centralized queue logic"},
+      {"path": "/customer/dashboard", "status": "Partial", "description": "Basic layout exists"},
+      {"path": "/store/dashboard", "status": "Placeholder", "description": "Needs order management UI"},
+      {"path": "/driver/dashboard", "status": "Placeholder", "description": "Needs available offers list"}
+    ],
+    "missing_ui": ["Centralized Admin Approval Queue", "Driver Offer List", "Store Order Management", "Detailed Finance/Ledger View"]
+  },
+  "recommendations": [
+    "Implement store-side 'Ready for Pickup' transition",
+    "Create a centralized admin approval queue for Users, Stores, and Deposits",
+    "Develop real-time audit logging for the Admin Activity Feed",
+    "Build the Driver dashboard to list and bid on sub-orders"
+  ]
+}
