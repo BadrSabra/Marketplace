@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { initializeDatabase } from "./bootstrap/database.bootstrap";
 
 const app = express();
 const httpServer = createServer(app);
@@ -60,6 +61,13 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  try {
+    await initializeDatabase();
+  } catch (err) {
+    console.error("Failed to initialize database:", err);
+    process.exit(1);
+  }
+  
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
