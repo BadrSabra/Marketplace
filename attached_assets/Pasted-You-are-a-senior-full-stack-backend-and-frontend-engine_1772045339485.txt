@@ -1,0 +1,67 @@
+You are a senior full-stack backend and frontend engineer. Your task is to generate a **comprehensive, deep diagnostic report** about the current state of the Mit Gaber Hyperlocal Marketplace project. This report must be **read-only**: do not modify any code or data, and never expose plaintext passwords. Collect as much detail as possible.
+
+Scope:
+
+1️⃣ Database Inspection (PostgreSQL / Drizzle ORM):
+- List all tables and enums.
+- For each table: show columns, types, constraints, primary keys, foreign keys, and default values.
+- Highlight relationships between tables (e.g., users → wallets, orders → suborders → products).
+- Identify existence of core tables: users, wallets, ledger, orders, suborders, stores, products, wallet_transactions.
+- Check if Admin exists and its wallet.
+- Detect password hash types: bcrypt or legacy SHA-512.
+
+2️⃣ Backend Routes Inspection (Express):
+- List all implemented API routes, grouped by module.
+- For each route: path, HTTP method, middleware applied, role restrictions, route handler file & function.
+- Highlight key endpoints: 
+  GET /orders, GET /orders/my-orders, GET /orders/my-store, GET /suborders, 
+  POST /delivery-offers, GET /delivery-offers, GET /wallet/me, GET /stores/my/products, GET /users
+- Identify any path mismatches, missing handlers, or middleware misconfigurations.
+
+3️⃣ Authentication & Authorization:
+- Confirm JWT structure includes user role.
+- Check authorizeRole middleware.
+- Show which routes are protected and their allowed roles.
+- Identify fallback or legacy password verification methods.
+
+4️⃣ Order Engine Analysis:
+- Detect multi-store order splitting.
+- Confirm SubOrder logic and relationships.
+- Confirm order status workflow implementation.
+- Highlight any missing features or partial implementations.
+
+5️⃣ Wallet System Analysis:
+- Confirm existence of wallets and ledger tables.
+- Check if wallet transactions are atomic.
+- Highlight relationships between wallets, ledger, and users.
+- Report any missing or misconfigured elements.
+
+6️⃣ Frontend Analysis:
+- List all pages/components related to:
+  - Login, Registration (role-based)
+  - Customer, Store Owner, Driver, Admin dashboards
+  - API integrations per page/component
+  - Route guards and role-based access control
+- Highlight missing pages or inconsistencies in role-based rendering.
+- Identify any routes that may not match backend API endpoints.
+
+7️⃣ System Health Report:
+- Generate a structured JSON with:
+{
+  "database": { /* tables, columns, relationships, admin presence */ },
+  "backend": { /* routes, handlers, middleware, missing endpoints */ },
+  "auth": { /* JWT, role protection, password hash types */ },
+  "orderEngine": { /* multi-store, suborders, workflow */ },
+  "walletSystem": { /* wallets, ledger, transactions, atomicity */ },
+  "frontend": { /* pages, components, API connections, role protection */ },
+  "recommendations": [ /* any missing or partially implemented components */ ]
+}
+
+8️⃣ Safety & Constraints:
+- Read-only: do not change data or code.
+- Do not log plaintext passwords.
+- Focus on providing **full visibility** of current project state.
+- Include missing or partially implemented features in the recommendations.
+
+Goal:
+Provide a **deep, structured, end-to-end overview** of the project covering database, backend, authentication, order engine, wallet system, and frontend, to allow clear understanding of current status and next steps.
