@@ -1,10 +1,12 @@
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { DataCard } from "@/components/ui/data-card";
-import { Users, Store, Package, ShoppingCart } from "lucide-react";
+import { Users, Store, Package, ShoppingCart, DollarSign } from "lucide-react";
 import { useUsers } from "@/hooks/use-users";
 import { useStores } from "@/hooks/use-stores";
 import { useProducts } from "@/hooks/use-products";
 import { useOrders } from "@/hooks/use-orders";
+import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/api";
 
 export default function Dashboard() {
   const { data: users, isLoading: loadingUsers } = useUsers();
@@ -12,10 +14,19 @@ export default function Dashboard() {
   const { data: products, isLoading: loadingProducts } = useProducts();
   const { data: orders, isLoading: loadingOrders } = useOrders();
 
-  const totalUsers = users?.length || 0;
-  const totalStores = stores?.length || 0;
-  const totalProducts = products?.length || 0;
-  const totalOrders = orders?.length || 0;
+  const { data: stats, isLoading: loadingStats } = useQuery({
+    queryKey: ["/api/admin/reports/stats"],
+    queryFn: async () => {
+      const res = await apiFetch("/api/admin/reports/stats");
+      return res.json();
+    }
+  });
+
+  const totalUsers = stats?.totalUsers ?? users?.length ?? 0;
+  const totalStores = stats?.totalStores ?? stores?.length ?? 0;
+  const totalProducts = products?.length ?? 0;
+  const totalOrders = stats?.totalOrders ?? orders?.length ?? 0;
+  const totalRevenue = stats?.totalRevenue ?? "0.00";
 
   return (
     <AdminLayout>
@@ -24,32 +35,31 @@ export default function Dashboard() {
         <p className="text-muted-foreground mt-2">Welcome back. Here's what's happening today.</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         <DataCard 
           title="Total Users" 
-          value={loadingUsers ? "-" : totalUsers} 
+          value={loadingUsers || loadingStats ? "-" : totalUsers} 
           icon={<Users className="w-6 h-6" />}
-          trend="12% from last month"
-          trendUp={true}
         />
         <DataCard 
           title="Active Stores" 
-          value={loadingStores ? "-" : totalStores} 
+          value={loadingStores || loadingStats ? "-" : totalStores} 
           icon={<Store className="w-6 h-6" />}
-          trend="4% from last month"
-          trendUp={true}
         />
         <DataCard 
-          title="Products Listed" 
+          title="Products" 
           value={loadingProducts ? "-" : totalProducts} 
           icon={<Package className="w-6 h-6" />}
         />
         <DataCard 
           title="Total Orders" 
-          value={loadingOrders ? "-" : totalOrders} 
+          value={loadingOrders || loadingStats ? "-" : totalOrders} 
           icon={<ShoppingCart className="w-6 h-6" />}
-          trend="2% from yesterday"
-          trendUp={false}
+        />
+        <DataCard 
+          title="Revenue" 
+          value={loadingStats ? "-" : `$${totalRevenue}`} 
+          icon={<DollarSign className="w-6 h-6" />}
         />
       </div>
 

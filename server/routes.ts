@@ -238,6 +238,42 @@ export async function registerRoutes(
     return deliveryOfferController.accept(req, res);
   });
 
+  // --- ADMIN MODULE ---
+  app.patch("/api/admin/users/:id/approve", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [user] = await db.update(users)
+        .set({ isApproved: true, updatedAt: new Date() })
+        .where(eq(users.id, id))
+        .returning();
+      
+      if (!user) return res.status(404).json({ message: "User not found" });
+      
+      const { password, ...cleanUser } = user;
+      res.json(cleanUser);
+    } catch (err) {
+      res.status(500).json({ message: "Internal error" });
+    }
+  });
+
+  app.get("/api/admin/reports/stats", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
+    try {
+      const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
+      const [storeCount] = await db.select({ count: sql<number>`count(*)` }).from(stores);
+      const [orderCount] = await db.select({ count: sql<number>`count(*)` }).from(orders);
+      const [totalRevenue] = await db.select({ sum: sql<string>`sum(total_price)` }).from(orders).where(eq(orders.paymentStatus, "PAID"));
+
+      res.json({
+        totalUsers: Number(userCount.count),
+        totalStores: Number(storeCount.count),
+        totalOrders: Number(orderCount.count),
+        totalRevenue: totalRevenue.sum || "0.00"
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Internal error" });
+    }
+  });
+
   // Ensure Admin account is ready
   async function ensureAdminAccount() {
     const adminEmail = "admin@mitgaber.com";

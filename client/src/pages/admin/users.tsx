@@ -1,11 +1,23 @@
 import { AdminLayout } from "@/components/layout/admin-layout";
-import { useUsers } from "@/hooks/use-users";
+import { useUsers, useApproveUser } from "@/hooks/use-users";
 import { Spinner } from "@/components/ui/spinner";
 import { format } from "date-fns";
-import { Mail, Phone, Shield } from "lucide-react";
+import { Mail, Phone, Shield, CheckCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function UsersPage() {
   const { data: users, isLoading } = useUsers();
+  const approveUser = useApproveUser();
+  const { toast } = useToast();
+
+  const handleApprove = async (id: string) => {
+    try {
+      await approveUser.mutateAsync(id);
+      toast({ title: "User Approved", description: "The user can now log in." });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
 
   return (
     <AdminLayout>
@@ -31,6 +43,7 @@ export default function UsersPage() {
                   <th className="px-6 py-4">Role</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4">Joined</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">
@@ -65,6 +78,18 @@ export default function UsersPage() {
                     </td>
                     <td className="px-6 py-4 text-muted-foreground">
                       {format(new Date(user.createdAt), "MMM d, yyyy")}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      {!user.isApproved && (
+                        <button
+                          onClick={() => handleApprove(user.id)}
+                          disabled={approveUser.isPending}
+                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
+                          title="Approve User"
+                        >
+                          <CheckCircle className="w-5 h-5" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
