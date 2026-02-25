@@ -1,0 +1,140 @@
+تمام، لنصيغ Prompt 3 – Phase 1 بصياغة عميقة جدًا لتوجيه Replit Agent بدقة متناهية:
+
+
+---
+
+Prompt 3 – Phase 1: Driver & Customer Wallet UI Integration
+
+Role / Persona:
+You are a senior full-stack engineer specializing in hyperlocal marketplace platforms. Focus on integrating full Wallet and Ledger visibility into both the Customer and Driver dashboards, ensuring complete RBAC compliance, atomic transactions, and smooth UI/UX.
+
+Objectives:
+
+1. Implement Customer Wallet page showing:
+
+Current balance
+
+Pending holds (from delivery offers)
+
+Transaction history (ledger + wallet transactions)
+
+Deposit flow (POST /api/wallet/deposit)
+
+
+
+2. Implement Driver Earnings page showing:
+
+Current balance
+
+Held funds for ongoing deliveries
+
+Commission history
+
+Transaction details for each delivery
+
+
+
+3. Ensure UI-Backend Mapping is consistent:
+
+TanStack Query (or similar) for fetching live balances and transactions
+
+JWT-based auth via useAuth hook
+
+ProtectedRoute enforcement for CUSTOMER and DRIVER roles
+
+
+
+4. Add error handling and atomicity checks:
+
+Display errors if ledger fetch fails
+
+Handle empty or pending transactions gracefully
+
+
+
+5. Prepare placeholders for real-time updates:
+
+Pending holds update after OTP verification
+
+Commission updates after delivery completion
+
+
+
+
+Agent Tasks / Steps:
+
+1. Inspect Frontend:
+
+List all Customer pages/components (client/src/pages/customer)
+
+List all Driver pages/components (client/src/pages/driver)
+
+Identify any missing Wallet/Earnings UI
+
+
+
+2. Inspect Backend:
+
+Check server/modules/wallet/* and server/modules/ledger/*
+
+Verify all endpoints: /api/wallet, /api/wallet/deposit, /api/ledger/transactions
+
+Ensure endpoints support required filters (by user, role, type, status)
+
+
+
+3. Integration Tasks:
+
+Create Wallet.tsx for Customer, Earnings.tsx for Driver
+
+Fetch data via TanStack Query, refresh after deposit or delivery completion
+
+Display balance, pending holds, transaction history in tables/lists
+
+Add deposit form for Customer with validation and error handling
+
+Add commission display for Driver with breakdown per delivery
+
+
+
+4. Security / RBAC:
+
+Ensure only Customers can access /customer/wallet
+
+Ensure only Drivers can access /driver/earnings
+
+JWT token verification and ProtectedRoute enforcement
+
+
+
+5. Atomicity & Error Handling:
+
+Wrap all wallet/ledger operations in transactions (already backend-supported)
+
+Show meaningful UI messages on failure or empty data
+
+
+
+6. Audit Preparation:
+
+Add structured console logs for wallet/transaction fetches as placeholders for future centralized audit logs
+
+
+
+
+Deliverable:
+A JSON report containing:
+
+Pages/components mapped to endpoints
+
+Functional / partial / missing status for Wallet and Earnings UI
+
+Recommendations for real-time updates and missing features
+
+
+
+---
+
+لو تحب، أقدر أصيغ لك نسخة جاهزة للإرسال مباشرة إلى Replit Agent مع كل أوامر ls, cat, grep المخصصة للتنفيذ، بحيث يبدأ بالتحليل والإنشاء تلقائيًا خطوة بخطوة.
+
+هل تريد أن أقوم بذلك الآن؟

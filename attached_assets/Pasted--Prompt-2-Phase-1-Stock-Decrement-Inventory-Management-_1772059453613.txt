@@ -1,0 +1,120 @@
+
+
+Prompt 2 – Phase 1: Stock Decrement & Inventory Management
+
+Context:
+You are a senior full-stack engineer. The Mit Gaber Hyperlocal Marketplace project backend already has sub-order status transitions implemented (/api/suborders/:id/status). The next critical step is to implement inventory management:
+
+Reduce product stock when a sub-order moves to ACCEPTED.
+
+Validate stock availability before confirming a sub-order.
+
+Ensure atomicity with the existing Drizzle ORM transactions.
+
+Integrate seamlessly with ledgerService.processCommissions and the order lifecycle.
+
+Keep routes thin; use a service layer for all business logic.
+
+
+Tasks for Agent:
+
+1. Modify Order Service:
+
+In suborder.service.ts, implement decrementStock(subOrderId):
+
+Iterate over order_items of the sub-order.
+
+Check if each product.stock >= item.quantity.
+
+If any product has insufficient stock, throw a descriptive error and prevent status change.
+
+Otherwise, deduct the quantity from products.stock.
+
+
+
+
+2. Integrate with Status Transition:
+
+Hook decrementStock into the existing /api/suborders/:id/status endpoint:
+
+Only trigger when transitioning PENDING → ACCEPTED.
+
+Ensure this happens inside the existing Drizzle transaction to maintain atomicity.
+
+
+
+
+3. Error Handling:
+
+Return proper HTTP status codes:
+
+409 Conflict if stock is insufficient.
+
+200 OK on successful acceptance and stock decrement.
+
+
+Include clear messages for frontend display.
+
+
+
+4. RBAC & Validation:
+
+Confirm only STORE_OWNER can move sub-orders to ACCEPTED.
+
+Ensure ADMIN can override stock validation if needed (optional feature for emergency override).
+
+
+
+5. Unit Testing (Optional but Recommended):
+
+Test sub-order acceptance with:
+
+Sufficient stock → stock decremented correctly.
+
+Insufficient stock → request fails, stock unchanged.
+
+
+Edge cases: zero stock, multiple items in one sub-order.
+
+
+
+6. Documentation / Comments:
+
+Add detailed comments in suborder.service.ts explaining the logic.
+
+Update API docs for /api/suborders/:id/status to mention stock validation.
+
+
+
+7. Placeholder for Audit Log:
+
+If stock decrement fails or succeeds, log a placeholder message for later audit integration.
+
+
+
+
+Constraints:
+
+Do NOT change the sub-order status logic outside this integration.
+
+All changes must remain within service layer and route thinness principle.
+
+Maintain atomicity in all operations.
+
+
+Expected Output:
+
+Updated suborder.service.ts with decrementStock and integrated into status transition.
+
+routes.ts may have minimal adjustment to call the service.
+
+JSON or Markdown report summarizing:
+
+Stock decrement integration.
+
+Potential failure points.
+
+RBAC enforcement.
+
+
+

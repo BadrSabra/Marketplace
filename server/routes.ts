@@ -251,6 +251,9 @@ export async function registerRoutes(
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid status input" });
       }
+      if (err.message?.startsWith("INSUFFICIENT_STOCK")) {
+        return res.status(409).json({ message: err.message.replace("INSUFFICIENT_STOCK: ", "Insufficient stock for: ") });
+      }
       if (err.message === "NOT_FOUND") {
         return res.status(404).json({ message: "Sub-order not found" });
       }
