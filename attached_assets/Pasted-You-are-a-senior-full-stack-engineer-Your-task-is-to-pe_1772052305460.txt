@@ -1,0 +1,75 @@
+You are a senior full-stack engineer. Your task is to perform a **complete, deep diagnostic** of the Mit Gaber Hyperlocal Marketplace project in its current state. Extract **all possible detailed information** about backend, frontend, database, dashboards, roles, wallets, orders, delivery, OTP, and admin features. **Do not modify any code or data.**
+
+Objectives:
+
+1️⃣ **Database Analysis**
+- List all tables, enums, and columns (types, defaults, constraints: PK, FK, unique, not null)
+- Describe relationships between tables
+- Verify core tables: users, wallets, ledger, orders, sub_orders, stores, products, wallet_transactions, delivery_offers, ratings, delivery_otps
+- Verify Admin account exists, bcrypt password, linked wallet
+
+2️⃣ **Backend Routes & API**
+- List all routes for all modules: Auth, Orders, SubOrders, Wallet, Ledger, Delivery, Admin, Stores, Products, Users
+- For each route, provide: path, HTTP method, middleware, role restrictions, implementation status (complete/partial/missing)
+- Verify JWT payload contains id and role
+- Check multi-store order splitting, sub_order lifecycle, wallet atomicity, commission calculation
+- Identify missing or partial features (OTP verification, commission triggers, refunds)
+
+3️⃣ **Order & Wallet Engine**
+- Describe order lifecycle, sub-orders creation, status transitions
+- Verify ledger operations: HOLD, RELEASE, COMMISSION, REFUND
+- Map wallet transactions to frontend features
+- Identify missing integrations or UI features
+
+4️⃣ **Frontend & Dashboards**
+- List all pages/components per role (Admin, Customer, Store Owner, Driver)
+- Map each frontend component/page to backend API endpoints
+- Verify role-based access, ProtectedRoute usage
+- Check data fetching integration (TanStack Query or equivalent)
+- Identify UI gaps (placeholders, missing lists, forms, dashboards)
+- Note missing real-time updates (WebSockets, polling, notifications)
+
+5️⃣ **Delivery & OTP Flow**
+- Verify backend OTP generation and verification
+- Check sub_order status updates upon OTP verification
+- Map Customer and Driver UI components to OTP flow
+- Check delivery offer/bidding workflow integration
+
+6️⃣ **Admin & Reporting**
+- List all Admin pages (dashboard, users, stores, products, orders)
+- Check approval workflows (users, stores, drivers, wallet deposits)
+- Verify reporting endpoints and metrics (revenue, orders, active stores)
+- Identify UI gaps (placeholders, missing live data, charts)
+
+7️⃣ **Customer & Driver Dashboards**
+- Customer: dashboard, wallet, order history, checkout forms
+- Driver: dashboard, available delivery offers, assigned tasks, wallet/earnings
+- Map frontend components to backend APIs
+- Identify missing features, incomplete flows, and placeholders
+
+8️⃣ **Error & Integration Checks**
+- Verify route registration vs frontend calls
+- Identify unhandled errors (404, 401, 403)
+- Check consistency between backend, API, and frontend
+
+9️⃣ **Reporting**
+- Provide a **structured JSON report** with:
+{
+  "database": {...},
+  "backend": {...},
+  "orders": {...},
+  "wallet": {...},
+  "delivery": {...},
+  "admin": {...},
+  "customerDashboard": {...},
+  "driverDashboard": {...},
+  "recommendations": [...]
+}
+
+🔹 Constraints
+- Do not change any code or database
+- Do not expose passwords or sensitive data
+- Include high-level summary and deep technical details
+- Ensure idempotent verification (safe to re-run)
+
+Goal: Produce a **full snapshot of the project** including database health, backend completeness, frontend mapping, dashboard status per role, wallet and ledger integrity, delivery/OTP workflow, admin features, and any missing or partially implemented features, so the team can continue development and final polishing confidently.
