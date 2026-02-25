@@ -73,8 +73,10 @@ export default function Dashboard() {
               <div key={i} className="flex items-center gap-4 p-3 rounded-lg hover:bg-secondary/50 transition-colors">
                 <div className="w-2 h-2 rounded-full bg-primary" />
                 <div>
-                  <p className="text-sm font-medium text-foreground">New order placed</p>
-                  <p className="text-xs text-muted-foreground">2 minutes ago</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {i === 1 ? "New driver application: John Doe" : i === 2 ? "Wallet deposit pending: $500.00" : "Store 'Gaber Market' approved"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{i * 5} minutes ago</p>
                 </div>
               </div>
             ))}
