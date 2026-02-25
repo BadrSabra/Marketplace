@@ -16,6 +16,7 @@ import CustomerWallet from "@/pages/customer/wallet";
 import StoreDashboard from "@/pages/store/dashboard";
 import StoreOrders from "@/pages/store/orders";
 import StoreEarnings from "@/pages/store/earnings";
+import StoreInventory from "@/pages/store/inventory";
 import StoreOrderDetails from "@/pages/store/order/[id]";
 import DriverDashboard from "@/pages/driver/dashboard";
 import DriverEarnings from "@/pages/driver/earnings";
@@ -93,6 +94,9 @@ function Router() {
       </Route>
       <Route path="/store/earnings">
         {() => <ProtectedRoute component={StoreEarnings} roles={["STORE_OWNER"]} />}
+      </Route>
+      <Route path="/store/inventory">
+        {() => <ProtectedRoute component={StoreInventory} roles={["STORE_OWNER"]} />}
       </Route>
       <Route path="/store/order/:id">
         {() => <ProtectedRoute component={StoreOrderDetails} roles={["STORE_OWNER"]} />}

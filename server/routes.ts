@@ -159,8 +159,68 @@ export async function registerRoutes(
 
   // --- PRODUCTS MODULE ---
   app.get(api.products.list.path, async (req, res) => {
+    const storeId = req.query.storeId as string;
+    if (storeId) {
+      const products = await storage.getProductsByStoreId(storeId);
+      return res.json(products);
+    }
     const products = await storage.getProducts();
     res.json(products);
+  });
+
+  app.post("/api/products", authenticate, authorizeRole(["STORE_OWNER"]), async (req, res) => {
+    try {
+      const { insertProductSchema } = await import("@shared/schema");
+      const input = insertProductSchema.parse(req.body);
+      const product = await storage.createProduct(input);
+      res.status(201).json(product);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Internal error" });
+    }
+  });
+
+  app.put("/api/products/:id", authenticate, authorizeRole(["STORE_OWNER"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { insertProductSchema } = await import("@shared/schema");
+      const input = insertProductSchema.partial().parse(req.body);
+      const product = await storage.updateProduct(id, input);
+      if (!product) return res.status(404).json({ message: "Product not found" });
+      res.json(product);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Internal error" });
+    }
+  });
+
+  app.delete("/api/products/:id", authenticate, authorizeRole(["STORE_OWNER"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteProduct(id);
+      res.sendStatus(204);
+    } catch (err) {
+      res.status(500).json({ message: "Internal error" });
+    }
+  });
+
+  app.patch("/api/products/:id/stock", authenticate, authorizeRole(["STORE_OWNER"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { stock } = z.object({ stock: z.number().int().nonnegative() }).parse(req.body);
+      const product = await storage.updateProductStock(id, stock);
+      if (!product) return res.status(404).json({ message: "Product not found" });
+      res.json(product);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Internal error" });
+    }
   });
 
   // --- ORDERS MODULE ---

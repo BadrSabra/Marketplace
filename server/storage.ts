@@ -11,6 +11,13 @@ export interface IStorage {
   createWallet(wallet: InsertWallet): Promise<Wallet>;
   getWalletByUserId(userId: string): Promise<Wallet | undefined>;
   createStore(store: any): Promise<any>;
+  getProducts(): Promise<any[]>;
+  getProductsByStoreId(storeId: string): Promise<any[]>;
+  getProduct(id: string): Promise<any | undefined>;
+  createProduct(product: any): Promise<any>;
+  updateProduct(id: string, product: any): Promise<any>;
+  deleteProduct(id: string): Promise<void>;
+  updateProductStock(id: string, stock: number): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -46,6 +53,51 @@ export class DatabaseStorage implements IStorage {
   async createStore(insertStore: any): Promise<any> {
     const [store] = await db.insert(stores).values(insertStore).returning();
     return store;
+  }
+
+  async getProducts(): Promise<any[]> {
+    const { products } = await import("@shared/schema");
+    return await db.select().from(products);
+  }
+
+  async getProductsByStoreId(storeId: string): Promise<any[]> {
+    const { products } = await import("@shared/schema");
+    return await db.select().from(products).where(eq(products.storeId, storeId));
+  }
+
+  async getProduct(id: string): Promise<any | undefined> {
+    const { products } = await import("@shared/schema");
+    const [product] = await db.select().from(products).where(eq(products.id, id));
+    return product;
+  }
+
+  async createProduct(insertProduct: any): Promise<any> {
+    const { products } = await import("@shared/schema");
+    const [product] = await db.insert(products).values(insertProduct).returning();
+    return product;
+  }
+
+  async updateProduct(id: string, updateProduct: any): Promise<any> {
+    const { products } = await import("@shared/schema");
+    const [product] = await db.update(products)
+      .set({ ...updateProduct, updatedAt: new Date() })
+      .where(eq(products.id, id))
+      .returning();
+    return product;
+  }
+
+  async deleteProduct(id: string): Promise<void> {
+    const { products } = await import("@shared/schema");
+    await db.delete(products).where(eq(products.id, id));
+  }
+
+  async updateProductStock(id: string, stock: number): Promise<any> {
+    const { products } = await import("@shared/schema");
+    const [product] = await db.update(products)
+      .set({ stock, updatedAt: new Date() })
+      .where(eq(products.id, id))
+      .returning();
+    return product;
   }
 }
 

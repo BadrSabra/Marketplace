@@ -1,0 +1,13 @@
+{
+  "page": "Store Owner Inventory",
+  "path": "/store/inventory",
+  "endpoints": [
+    "GET /api/products?storeId=:id",
+    "POST /api/products",
+    "PUT /api/products/:id",
+    "DELETE /api/products/:id",
+    "PATCH /api/products/:id/stock"
+  ],
+  "status": "functional",
+  "recommendations": "Next: integrate Inventory warnings with Dashboard and link to Earnings analytics"
+}

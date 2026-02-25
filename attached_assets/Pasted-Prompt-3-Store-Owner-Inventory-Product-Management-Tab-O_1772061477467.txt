@@ -1,0 +1,59 @@
+Prompt 3 – Store Owner Inventory / Product Management Tab
+Objective:
+Build a Store Owner Inventory / Product Management page that allows the store to view, add, edit, and delete products, manage stock levels, and link product changes to order availability. Integrate fully with the backend Products module and ensure stock decrement logic is consistent with orders.
+Requirements / Features:
+Page Structure:
+Route: /store/inventory
+Components:
+Products Table: Columns for Product ID, Name, Category, Price, Stock, Actions
+Add/Edit Product Form: Modal or dedicated section using existing UI components (Form, Input, Button, Select)
+Action Buttons: Edit, Delete, Adjust Stock
+Data Fetching & State Management:
+Fetch products from GET /api/products?storeId=:id
+Use React Query for caching, invalidation after mutations
+Mutations:
+POST /api/products → Add product
+PUT /api/products/:id → Edit product
+DELETE /api/products/:id → Delete product
+Optional: PATCH /api/products/:id/stock → Adjust stock directly
+UX / Validation:
+Validate all form inputs using Zod schemas:
+Name: non-empty string
+Price: positive number
+Stock: non-negative integer
+Category: string from allowed values
+Show toast notifications for success/failure
+Confirm delete with a modal before removing a product
+Disable submit buttons while mutation is in progress
+Integration with Orders:
+Ensure stock decrement logic is consistent with sub-order acceptance
+Display a warning if a product is out-of-stock or stock is low (<5 units)
+Backend Integration:
+Ensure RBAC: only STORE_OWNER can access /store/inventory endpoints
+All CRUD operations must respect database constraints (Products table, stock column)
+Ensure atomicity for stock adjustments when linked to orders
+Reporting / Documentation:
+Update JSON report: store_inventory_report.json with:
+نسخ التعليمات البرمجية
+JSON
+{
+  "page": "Store Owner Inventory",
+  "path": "/store/inventory",
+  "endpoints": [
+    "GET /api/products?storeId=:id",
+    "POST /api/products",
+    "PUT /api/products/:id",
+    "DELETE /api/products/:id",
+    "PATCH /api/products/:id/stock"
+  ],
+  "status": "functional",
+  "recommendations": "Next: integrate Inventory warnings with Dashboard and link to Earnings analytics"
+}
+Constraints:
+Incremental work: Table view first, then Add/Edit, then Delete/Stock actions
+Use only existing shared UI components for consistency
+All mutations must invalidate queries to ensure fresh UI state
+Deliverables:
+client/src/pages/store/inventory.tsx fully implemented
+React Query integration with Products endpoints
+JSON report store_inventory_report.json
