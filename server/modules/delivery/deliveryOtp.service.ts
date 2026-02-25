@@ -14,6 +14,14 @@ export class DeliveryOtpService {
       status: "PENDING"
     });
 
+    console.log(JSON.stringify({
+      event: "OTP_GENERATED",
+      orderId,
+      subOrderId,
+      timestamp: new Date().toISOString(),
+      success: true
+    }));
+
     return otpCode;
   }
 
@@ -28,6 +36,14 @@ export class DeliveryOtpService {
       ));
 
     if (!otpRecord || otpRecord.otpCode !== otpCode) {
+      console.log(JSON.stringify({
+        event: "OTP_VERIFICATION_FAILED",
+        orderId,
+        subOrderId,
+        timestamp: new Date().toISOString(),
+        reason: !otpRecord ? "OTP_NOT_FOUND_OR_EXPIRED" : "INVALID_OTP_CODE",
+        success: false
+      }));
       throw new Error("Invalid or expired OTP");
     }
 
@@ -51,6 +67,14 @@ export class DeliveryOtpService {
           .set({ overallStatus: "DELIVERED", updatedAt: new Date() })
           .where(eq(orders.id, orderId));
       }
+
+      console.log(JSON.stringify({
+        event: "OTP_VERIFICATION_SUCCESS",
+        orderId,
+        subOrderId,
+        timestamp: new Date().toISOString(),
+        success: true
+      }));
     });
   }
 }

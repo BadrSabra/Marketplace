@@ -207,7 +207,7 @@ export async function registerRoutes(
   });
 
   app.post("/api/delivery/otp/verify", authenticate, authorizeRole(["CUSTOMER"]), async (req, res) => {
-    const { deliveryOtpController } = await import("./delivery/deliveryOtp.controller");
+    const { deliveryOtpController } = await import("./modules/delivery/deliveryOtp.controller");
     return deliveryOtpController.verify(req, res);
   });
 
