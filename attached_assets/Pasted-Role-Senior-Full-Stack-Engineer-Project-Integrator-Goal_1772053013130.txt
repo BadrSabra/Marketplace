@@ -1,0 +1,94 @@
+Role: Senior Full-Stack Engineer / Project Integrator
+
+Goal: Generate a complete diagnostic, implementation plan, and code scaffolding to finish the Mit Gaber Hyperlocal Marketplace project. Ensure all roles (Admin, Customer, Driver, Store Owner) and modules (Orders, Wallet, Delivery, Ledger) are fully functional and integrated. Produce detailed JSON reports and step-by-step implementation instructions.
+
+Instructions:
+
+1️⃣ Full Project Diagnostic:
+- Frontend:
+  - Enumerate all pages/components per role (Admin, Customer, Driver, Store Owner).
+  - Map each frontend component to its backend API endpoints.
+  - For each page, indicate:
+    - Functional (connected to backend)
+    - Placeholder (needs implementation)
+    - Missing (not created yet)
+- Backend:
+  - List all modules and their route coverage (Auth, Orders, Wallet, Delivery, Admin, Ledger).
+  - For each route, indicate HTTP method, endpoint, middleware used (auth, role), and functional status.
+  - Identify missing or partially implemented logic (e.g., Wallet deposit approval, Driver offers UI, Sub-order refunds).
+- Database:
+  - Summarize tables, enums, relationships, and key constraints.
+  - Confirm admin account exists and essential data seeded.
+- Integration:
+  - Trace data flow from frontend → controller → service → DB → response → frontend rendering.
+  - Verify JWT payload contains user id and role, and ensure proper role-based access on all routes.
+  - Highlight any unhandled edge cases or missing endpoints.
+
+2️⃣ Implementation Plan (Detailed for each role):
+
+- **Customer:**
+  - Build Wallet page: transaction history, deposits, withdrawals, real-time balance updates.
+  - Implement Order history and Order Details page.
+  - Enhance Checkout page: multi-store order splitting, validation, integration with Wallet.
+  - Recent Activity feed combining orders and wallet events.
+
+- **Driver:**
+  - Build Driver Dashboard:
+    - Available Delivery Offers list
+    - My Active Deliveries
+    - OTP verification form for completed deliveries
+    - Wallet card: Pending Clearances, Available Balance, Transaction History
+  - Integrate backend delivery/ledger endpoints with frontend via hooks (TanStack Query).
+
+- **Store Owner:**
+  - Build Store Dashboard:
+    - List of Orders assigned to the store
+    - Order Details view
+    - Sub-order status updates
+    - Integration with Wallet for earnings/commissions
+
+- **Admin:**
+  - Consolidate Pending Approvals:
+    - Users, Stores, Wallet deposits
+    - Unified dashboard showing all tasks
+  - Real-time Recent Activity feed: orders, wallet changes, delivery events
+  - Finance section:
+    - Wallet deposit approvals
+    - Ledger and commission tracking
+  - Admin stats: total users, active stores, orders, revenue, commission tracking, delivery performance
+
+3️⃣ Backend & Engine:
+- Ensure Orders module:
+  - Multi-store splitting logic
+  - Sub-order lifecycle: Pending → Accepted → In Transit → Delivered
+  - Refund logic for canceled sub-orders
+- Ensure Wallet module:
+  - Atomic ledger transactions (HOLD, RELEASE, COMMISSION, REFUND)
+  - Admin approval workflow for deposits
+- Ensure Delivery module:
+  - OTP generation and verification
+  - Offer bidding system with funds hold on acceptance
+- Ensure Ledger module:
+  - Commission distribution (Customer, Store, Driver)
+  - Accurate accounting for all transactions
+
+4️⃣ Frontend Integration:
+- For each missing or placeholder page:
+  - Generate TypeScript + React component scaffolding
+  - Use TanStack Query for data fetching
+  - Use Zod schemas for form validation
+  - Apply ProtectedRoute and role-based authentication
+- Include WebSocket / Polling support for real-time updates where applicable
+
+5️⃣ Reporting:
+- Produce structured JSON report with:
+  - Frontend mapping: pages/components → endpoints → functional status
+  - Backend route coverage and status
+  - UI gaps / missing features
+  - Recommendations and next steps
+
+6️⃣ Constraints:
+- Do not modify the existing database or sensitive credentials
+- Ensure idempotency: repeated execution must be safe
+- Prioritize backend integrity, data consistency, and atomic operations
+- Focus on completing missing frontend dashboards and integrations for all roles
