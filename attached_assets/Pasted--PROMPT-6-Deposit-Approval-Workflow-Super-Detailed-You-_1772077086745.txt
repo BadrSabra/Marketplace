@@ -1,0 +1,205 @@
+
+
+🔹 PROMPT 6 — Deposit Approval Workflow (Super-Detailed)
+
+You are implementing the **Deposit Approval Workflow** for the Mit Gaber Hyperlocal Marketplace. The goal is to allow **ADMIN users** to approve pending customer deposits safely, atomically, and with full ledger integration.
+
+---
+
+### 1️⃣ Endpoint Specification
+
+- **Endpoint:** `POST /api/admin/deposits/:id/approve`
+- **RBAC:** Only `ADMIN` users can execute
+- **Input:** 
+  ```ts
+  interface ApproveDepositDTO {
+    deposit_id: string;        // Path param :id
+    force?: boolean;           // Optional admin override
+    notes?: string;            // Optional internal comment
+  }
+
+Output:
+
+interface ApproveDepositResponse {
+  deposit_id: string;
+  ledger_entry_id: string;
+  status: 'APPROVED' | 'FAILED';
+  message: string;
+}
+
+
+
+---
+
+2️⃣ Preconditions / Validations
+
+1. Deposit must exist → 404 if not found
+
+
+2. Deposit must be in PENDING status → 409 Conflict if already approved/rejected
+
+
+3. Deposit amount > 0 → 422 Validation Error
+
+
+4. Customer must exist → 404 if missing
+
+
+5. Optional force=true allows admin to approve deposits that may have validation issues (e.g., negative amount, missing receipt)
+
+
+
+
+---
+
+3️⃣ Ledger / Wallet Integration
+
+Create ledger entry:
+
+Type: DEPOSIT
+
+Amount: deposit.amount
+
+Status: COMPLETED
+
+
+Update customer wallet balance atomically in a single transaction
+
+Prevent double-processing using unique constraint (deposit_id, type) in ledger table
+
+All DB operations must be wrapped in a single atomic transaction
+
+
+
+---
+
+4️⃣ Business Rules
+
+1. Approving deposit updates:
+
+deposit.status = APPROVED
+
+deposit.approved_at = now()
+
+deposit.approved_by = ADMIN_USER_ID
+
+
+
+2. Ledger entry created in same transaction
+
+
+3. Wallet balance incremented in same transaction
+
+
+4. Admin notes stored in deposit.notes column (optional)
+
+
+5. Any failure → rollback all changes, return error
+
+
+
+
+---
+
+5️⃣ Edge Cases
+
+Deposit already approved → 409
+
+Deposit rejected or invalid → 422
+
+Negative deposit amount → 422 unless force=true
+
+Missing customer account → 404
+
+Concurrency: multiple admins trying to approve same deposit simultaneously → only one success, others fail gracefully
+
+
+
+---
+
+6️⃣ Service Layer Responsibilities
+
+DepositService.approveDeposit(deposit_id: string, admin_id: string, force = false):
+
+
+1. Fetch deposit by ID
+2. Validate status PENDING (unless force=true)
+3. Validate amount > 0 and customer exists (unless force=true)
+4. Start DB transaction
+5. Update deposit.status → APPROVED, approved_at, approved_by
+6. Increment customer wallet balance
+7. Insert ledger entry type DEPOSIT
+8. Commit transaction
+9. Return deposit_id + ledger_entry_id + status
+
+
+---
+
+7️⃣ Audit / Logging
+
+Log every approval attempt:
+
+
+console.log(`[AUDIT-DEPOSIT] deposit_id=${deposit_id} approved_by=${admin_id} force=${force}`);
+
+Placeholder for integration with audit_logs middleware
+
+
+
+---
+
+8️⃣ Unit / Integration Tests
+
+1. Approve a valid pending deposit → success
+
+
+2. Approve an already approved deposit → 409
+
+
+3. Approve deposit with negative amount → 422
+
+
+4. Approve deposit with missing customer → 404
+
+
+5. Force approval of invalid deposit → success
+
+
+6. Concurrency test: multiple admins approve same deposit simultaneously → only one success, others fail gracefully
+
+
+7. Wallet balance increment matches deposit amount
+
+
+8. Ledger entry correctly created with type DEPOSIT, amount, and status COMPLETED
+
+
+
+
+---
+
+9️⃣ Agent Execution Instructions
+
+Only modify /server/modules/deposits/
+
+Implement controller, service, types, and unit tests
+
+Enforce RBAC: ADMIN only
+
+Use atomic DB transactions for wallet + ledger update
+
+Include double-processing protection
+
+Include logging placeholder
+
+Include unit & concurrency test scenarios
+
+Return only modified files
+
+
+
+---
+
+End of Prompt 6. Execute step-by-step, include unit tests, validation coverage, RBAC enforcement, and atomic ledger updates.
+
+--
