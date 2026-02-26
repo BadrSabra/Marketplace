@@ -1,0 +1,217 @@
+
+🔹 PROMPT 2 — Stock Decrement & Validation (Super-Detailed Version)
+
+You are implementing **Stock Decrement & Validation Logic** for the Mit Gaber Hyperlocal Marketplace project. This logic is tightly integrated with SubOrder status transitions. Follow instructions exactly.
+
+---
+
+### 1️⃣ Trigger Points
+
+- Trigger stock decrement **only** when:
+  - SubOrder transitions **PENDING → ACCEPTED** by STORE_OWNER
+- No decrement for CANCELLED, READY, PICKED_UP, DELIVERED transitions
+- Admin override allowed:
+  - ADMIN can accept even if stock insufficient
+  - Should log a warning for manual override
+
+---
+
+### 2️⃣ Stock Validation Rules
+
+- Each sub-order has multiple items:
+  - `product_id`
+  - `quantity_requested`
+- Check available stock for **each product**
+- If any product has insufficient stock:
+  - Reject transition with **HTTP 409 Conflict**
+  - Return JSON listing the **product names and available quantities**
+
+Example response:
+
+```json
+{
+  "error": "Insufficient stock for sub-order",
+  "details": [
+    { "product_id": "123", "product_name": "Tomato", "available": 2, "requested": 5 }
+  ]
+}
+
+
+---
+
+3️⃣ Atomic Transaction Wrapping
+
+Wrap the entire process in a single DB transaction:
+
+1. Fetch SubOrder with SELECT FOR UPDATE
+
+
+2. Validate status transition (Prompt 1 logic)
+
+
+3. Validate stock for each item
+
+
+4. Deduct stock quantities
+
+
+5. Update SubOrder status
+
+
+6. Log audit placeholder / emit event
+
+
+
+Rollback if any step fails
+
+
+
+---
+
+4️⃣ Edge Cases
+
+Concurrent ACCEPTED attempts on same products → prevented via transaction locks
+
+Partial stock availability → must reject whole order
+
+Zero or negative quantity requested → reject with HTTP 400
+
+Products that have been deleted after order → reject with HTTP 404
+
+Admin override → allow but log warning
+
+
+
+---
+
+5️⃣ RBAC Enforcement
+
+STORE_OWNER:
+
+Only for sub-orders of their store
+
+
+ADMIN:
+
+Full override
+
+
+DRIVER:
+
+Cannot trigger stock decrement
+
+
+Unauthorized → HTTP 403
+
+
+
+---
+
+6️⃣ Event Emission
+
+Emit: suborder.stock.updated
+
+Payload:
+
+
+{
+  "sub_order_id": "<uuid>",
+  "products": [
+    { "product_id": "<id>", "old_stock": 10, "new_stock": 5 }
+  ],
+  "actor_id": "<user_id>",
+  "timestamp": "<ISO>"
+}
+
+
+---
+
+7️⃣ Logging / Audit Placeholder
+
+Structured log:
+
+
+[AUDIT-STOCK] user=<actor_id> decremented stock for suborder=<sub_order_id> items=[<product_ids>] override=<true/false>
+
+
+---
+
+8️⃣ Response Schema
+
+{
+  "sub_order_id": "<uuid>",
+  "status": "<new_status>",
+  "stock_updates": [
+    { "product_id": "<uuid>", "previous_stock": <int>, "new_stock": <int> }
+  ],
+  "updated_at": "<ISO timestamp>"
+}
+
+HTTP 200 → success
+
+HTTP 400 → invalid quantity or product missing
+
+HTTP 403 → unauthorized role
+
+HTTP 409 → insufficient stock
+
+
+
+---
+
+9️⃣ Testing Requirements
+
+Unit tests for:
+
+Successful stock decrement for multiple items
+
+Reject when stock insufficient
+
+Reject for negative or zero quantity
+
+Admin override works
+
+Concurrency simulation: 2 STORE_OWNERS accept same items simultaneously → only 1 succeeds
+
+
+Include assertion for suborder.stock.updated event emission
+
+Include rollback simulation for failed transactions
+
+
+
+---
+
+1️⃣0️⃣ File Structure
+
+server/modules/orders/suborder.service.ts → stock decrement and validation logic
+
+server/modules/products/products.service.ts → fetch and update stock
+
+server/modules/orders/suborder.spec.ts → unit tests
+
+server/modules/orders/suborder.types.ts → optional stock-related types
+
+
+
+---
+
+1️⃣1️⃣ Notes for Agent
+
+Only modify suborder.service.ts and products.service.ts
+
+Keep transaction wrapping consistent with Prompt 1
+
+Do not implement audit DB table yet (placeholder only)
+
+Ensure atomicity: no partial stock deduction
+
+Return structured JSON for all error responses
+
+
+
+---
+
+End of Prompt 2. Execute step-by-step and return only modified files and unit tests coverage.
+
+-
