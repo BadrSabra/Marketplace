@@ -230,6 +230,7 @@ export type DeliveryOffer = typeof deliveryOffers.$inferSelect;
 export type Rating = typeof ratings.$inferSelect;
 export type DeliveryOtp = typeof deliveryOtps.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
+export type LedgerTransaction = typeof ledger.$inferSelect;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertWallet = z.infer<typeof insertWalletSchema>;

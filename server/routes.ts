@@ -279,16 +279,30 @@ export async function registerRoutes(
   app.get("/api/ledger/transactions", authenticate, async (req, res) => {
     try {
       const userId = (req as any).user.id;
-      const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, userId));
-      if (!wallet) return res.json([]);
+      const { type, status, date_from, date_to, limit, offset, sort_by, sort_order, search } = req.query;
 
-      const transactions = await db.select()
-        .from(walletTransactions)
-        .where(eq(walletTransactions.walletId, wallet.id))
-        .orderBy(sql`${walletTransactions.createdAt} DESC`);
+      const result = await ledgerService.getTransactions({
+        user_id: userId,
+        type: type as string,
+        status: status as string,
+        date_from: date_from as string,
+        date_to: date_to as string,
+        limit: limit ? parseInt(limit as string) : 50,
+        offset: offset ? parseInt(offset as string) : 0,
+        sort_by: sort_by as string,
+        sort_order: sort_order as ("asc" | "desc"),
+      });
+
+      // Filter by search (OrderId) if provided
+      if (search) {
+        const searchTerm = (search as string).toLowerCase();
+        result.transactions = result.transactions.filter(t => 
+          t.referenceId?.toLowerCase().includes(searchTerm)
+        );
+      }
       
-      console.log(`Fetched ${transactions.length} transactions for user ${userId}`);
-      res.json(transactions);
+      console.log(`Fetched ${result.transactions.length} transactions for user ${userId}`);
+      res.json(result);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
