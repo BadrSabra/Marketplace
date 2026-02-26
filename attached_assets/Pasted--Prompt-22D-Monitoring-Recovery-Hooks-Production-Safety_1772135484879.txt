@@ -1,0 +1,192 @@
+
+
+
+---
+
+Prompt 22D – Monitoring & Recovery Hooks (Production Safety Layer)
+
+Goal / Objective:
+Implement a robust monitoring and recovery system for the Mit Gaber Hyperlocal Marketplace backend. Ensure that all critical financial operations, wallets, ledger entries, and admin overrides are observed in real-time, with automated health checks, backup verification, and safe recovery hooks. The system must prevent data corruption, notify on failures, and maintain atomic integrity for all transactional operations.
+
+
+---
+
+Instructions for Replit Agent:
+
+1. Health Monitoring Endpoints:
+
+Implement GET /api/admin/health endpoint that returns JSON with:
+
+Database connectivity status
+
+Latest wallet transaction timestamp
+
+Ledger consistency check (sum of wallet balances vs ledger total)
+
+Audit log accessibility
+
+Optional server memory and CPU usage stats
+
+
+Response should include boolean ok field and descriptive details object.
+
+
+
+2. Automated Backup Verification:
+
+Scan backups/ directory for latest SQL dump.
+
+Confirm successful creation and validate file size > 0.
+
+Log last successful backup timestamp in a dedicated system_health table.
+
+
+
+3. Transaction & Wallet Monitoring Hooks:
+
+Wrap all wallet and ledger operations (deduct, credit, approveDeposit, adminOverride) with a try/catch + audit logging:
+
+On failure, rollback transaction fully.
+
+Log error details in audit_logs with event_type = TRANSACTION_FAILURE.
+
+Trigger internal notification (console log or admin alert stub).
+
+
+
+
+4. Ledger & Audit Consistency Checks:
+
+Implement a periodic script scripts/check-ledger-consistency.ts that:
+
+Sums all wallet balances
+
+Compares sum to ledger total
+
+Compares total transactions in ledger to wallet_transactions count
+
+Reports mismatches with severity level
+
+
+Ensure that it can run safely on production without blocking other transactions.
+
+
+
+5. Recovery Hooks:
+
+Implement safe recovery script scripts/recover-wallets.ts:
+
+Can reconcile wallets from ledger in case of missing or inconsistent balances.
+
+Must execute in atomic transactions.
+
+Must log each correction in audit_logs as RECOVERY_ACTION.
+
+Should never truncate data; only reconcile amounts.
+
+
+
+
+6. RBAC & Security:
+
+Health and recovery endpoints must only be accessible to ADMIN users.
+
+All monitoring scripts must verify admin credentials when executed manually.
+
+
+
+7. Testing & Edge Cases:
+
+Create automated tests to simulate:
+
+DB disconnection
+
+Failed wallet transaction
+
+Ledger mismatch
+
+Failed backup
+
+
+Verify system logs proper errors without crashing the server.
+
+Confirm rollback occurs and balances remain consistent.
+
+
+
+8. Reporting & Alerts:
+
+On detection of any inconsistency or failed transaction, log:
+
+Timestamp
+
+User performing action
+
+Wallet / transaction / ledger ID
+
+Error description
+
+
+For now, console log the event; future enhancement: integrate email/SMS/webhook alerts.
+
+
+
+9. Output / Verification for Deployment:
+
+Health endpoint returns ok: true when all checks pass.
+
+Recovery script reconciles wallets correctly in test scenario.
+
+Backup verification script confirms last backup exists and is valid.
+
+All logs are written to audit_logs and optionally to console.
+
+
+
+
+
+---
+
+Execution Notes:
+
+No schema changes required.
+
+Must be safe to run on the current production-ready environment.
+
+All database operations must be atomic with db.transaction and for("update") to avoid race conditions.
+
+Scripts and endpoints should be ready to execute immediately with npm run dev or npx tsx.
+
+
+
+---
+
+Expected Deliverables by Replit Agent:
+
+1. GET /api/admin/health endpoint
+
+
+2. scripts/check-ledger-consistency.ts
+
+
+3. scripts/recover-wallets.ts
+
+
+4. scripts/verify-backup.ts
+
+
+5. Automated test scripts for transaction/ledger recovery
+
+
+6. Audit logs entries for monitoring and recovery actions
+
+
+
+
+---
+
+💡 Goal:
+By implementing this prompt, the system will have full observability, automatic health checks, and recovery capabilities, completing the final safety layer of Production Safety Layer 22D, ready for a 95% Production-Grade environment.
+
+
+--

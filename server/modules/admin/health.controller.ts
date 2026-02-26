@@ -55,18 +55,71 @@ export const healthController = {
       if (cpuStatus === "CRITICAL") overallStatus = "DOWN";
     }
 
-    // 4. Disk Check (Mocked for environment constraints as real fs check might be restricted)
-    // In a real environment we would use something like check-disk-space
-    let diskStatus: any = { freeMb: 1024, totalMb: 5120, status: "OK" };
+    // 4. Ledger Consistency Check
+    let ledgerConsistency: any = { consistent: true };
+    try {
+      const { wallets, ledger } = await import("@shared/schema");
+      const walletSum = await db.select({ total: sql<string>`sum(balance)` }).from(wallets);
+      const ledgerSum = await db.select({ total: sql<string>`sum(amount)` }).from(ledger);
+      
+      const wTotal = parseFloat(walletSum[0]?.total || "0");
+      const lTotal = parseFloat(ledgerSum[0]?.total || "0");
+      
+      ledgerConsistency = {
+        walletsTotal: wTotal,
+        ledgerTotal: lTotal,
+        consistent: Math.abs(wTotal - lTotal) < 0.01
+      };
+
+      if (!ledgerConsistency.consistent) {
+        overallStatus = "DEGRADED";
+        alerts.push("Ledger inconsistency detected");
+      }
+    } catch (err: any) {
+      ledgerConsistency = { status: "ERROR", error: err.message };
+    }
+
+    // 5. Backup Verification
+    let backupStatus: any = { status: "OK" };
+    try {
+      const fs = await import("fs");
+      const path = await import("path");
+      const backupsDir = path.join(process.cwd(), "backups");
+      if (fs.existsSync(backupsDir)) {
+        const files = fs.readdirSync(backupsDir).filter(f => f.endsWith(".sql")).sort().reverse();
+        if (files.length > 0) {
+          const stats = fs.statSync(path.join(backupsDir, files[0]));
+          backupStatus = {
+            filename: files[0],
+            size: stats.size,
+            timestamp: stats.mtime,
+            valid: stats.size > 0
+          };
+          if (stats.size === 0) {
+            backupStatus.status = "ERROR";
+            alerts.push("Latest backup is empty");
+          }
+        } else {
+          backupStatus = { status: "MISSING" };
+          alerts.push("No backups found");
+        }
+      } else {
+        backupStatus = { status: "NO_DIRECTORY" };
+      }
+    } catch (err: any) {
+      backupStatus = { status: "ERROR", error: err.message };
+    }
 
     const response = {
       status: overallStatus,
+      ok: overallStatus === "OK",
       timestamp,
       components: {
         database: dbStatus,
         memory: { usedMb, totalMb, status: memoryStatus },
         cpu: { loadPercent, status: cpuStatus },
-        disk: diskStatus
+        ledger: ledgerConsistency,
+        backup: backupStatus
       },
       alerts
     };

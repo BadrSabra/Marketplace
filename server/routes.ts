@@ -316,6 +316,7 @@ export async function registerRoutes(
   });
 
   const { healthController } = await import("./modules/admin/health.controller");
+  app.get("/api/admin/health", authenticate, authorizeRole(["ADMIN"]), healthController.getHealth);
   app.get("/api/admin/system-health", authenticate, authorizeRole(["ADMIN"]), healthController.getHealth);
 
   app.get("/api/admin/reports/stats", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
