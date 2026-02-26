@@ -39,6 +39,17 @@ export class SubOrderController {
       res.status(500).json({ error: "Internal server error" });
     }
   }
+
+  async getActiveDelivery(req: Request, res: Response) {
+    try {
+      const driverId = (req as any).user.id;
+      const activeDelivery = await subOrderService.getActiveDeliveryForDriver(driverId);
+      res.json(activeDelivery || null);
+    } catch (err: any) {
+      console.error("Error fetching active delivery:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
 }
 
 export const subOrderController = new SubOrderController();

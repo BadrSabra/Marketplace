@@ -169,6 +169,56 @@ export class SubOrderService {
       };
     });
   }
+
+  async getActiveDeliveryForDriver(driverId: string) {
+    const [activeSubOrder] = await db
+      .select({
+        id: subOrders.id,
+        orderId: subOrders.orderId,
+        status: subOrders.status,
+        subtotal: subOrders.subtotal,
+        customerName: users.name,
+        customerPhone: users.phone,
+      })
+      .from(subOrders)
+      .innerJoin(orders, eq(subOrders.orderId, orders.id))
+      .innerJoin(users, eq(orders.customerId, users.id))
+      .where(
+        and(
+          eq(subOrders.assignedDriverId, driverId),
+          sql`${subOrders.status} IN ('ASSIGNED', 'PICKED_UP')`
+        )
+      )
+      .limit(1);
+
+    if (!activeSubOrder) return null;
+
+    const items = await db
+      .select({
+        productName: products.name,
+        quantity: orderItems.quantity,
+      })
+      .from(orderItems)
+      .innerJoin(products, eq(orderItems.productId, products.id))
+      .where(eq(orderItems.subOrderId, activeSubOrder.id));
+
+    const [otpRecord] = await db
+      .select()
+      .from(deliveryOtps)
+      .where(
+        and(
+          eq(deliveryOtps.subOrderId, activeSubOrder.id),
+          eq(deliveryOtps.status, "PENDING")
+        )
+      )
+      .limit(1);
+
+    return {
+      ...activeSubOrder,
+      items,
+      otp: otpRecord?.otpCode,
+    };
+  }
 }
 
 export const subOrderService = new SubOrderService();

@@ -21,6 +21,7 @@ import StoreOrderDetails from "@/pages/store/order/[id]";
 import DriverDashboard from "@/pages/driver/dashboard";
 import DriverEarnings from "@/pages/driver/earnings";
 import DriverTasks from "@/pages/driver/tasks";
+import ActiveDelivery from "@/pages/driver/active-delivery";
 import UsersPage from "@/pages/admin/users";
 import StoresPage from "@/pages/admin/stores";
 import ProductsPage from "@/pages/admin/products";
@@ -91,6 +92,9 @@ function Router() {
       </Route>
       <Route path="/driver/tasks">
         {() => <ProtectedRoute component={DriverTasks} roles={["DRIVER"]} />}
+      </Route>
+      <Route path="/driver/active-delivery">
+        {() => <ProtectedRoute component={ActiveDelivery} roles={["DRIVER"]} />}
       </Route>
       
       {/* Store Routes */}
