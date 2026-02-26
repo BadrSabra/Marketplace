@@ -1,0 +1,118 @@
+You are tasked with building the **Customer Transaction History Page** for the Mit Gaber Hyperlocal Marketplace. This page allows customers to view all ledger/wallet transactions, filter them, and see status indicators. It must integrate with backend APIs, enforce **RBAC**, handle **edge cases**, and provide **full validation**.
+
+---
+
+### 1️⃣ Page / Component
+
+- **Customer Transaction History Page** (`/customer/transactions`)  
+  - **Transaction Table**:
+    - Columns:
+      - Date & Time
+      - Type (DEPOSIT, PAYMENT, COMMISSION, REFUND)
+      - Related Order ID (if applicable)
+      - Amount (positive for credit, negative for debit)
+      - Status (PENDING, COMPLETED, FAILED)
+      - Notes / description
+  - **Filtering / Sorting Options**:
+    - By date range  
+    - By type  
+    - By status  
+    - Optional search by related order ID  
+  - **Pagination**:
+    - Server-side or client-side, 10–20 records per page  
+
+---
+
+### 2️⃣ Data Fetching & API Integration
+
+| Action                        | Endpoint                         | Method | Notes |
+|--------------------------------|--------------------------------|--------|-------|
+| Fetch transactions             | /api/ledger/transactions       | GET    | RBAC: CUSTOMER only, include amount, type, status, createdAt, relatedOrderId |
+| Optional filtering params      | ?type=&status=&startDate=&endDate= | GET  | All filtering applied server-side if supported |
+| Pagination                     | ?page=&limit=                   | GET    | Default page=1, limit=20 |
+
+- Use **React Query** or **SWR** for fetching  
+
+---
+
+### 3️⃣ UI / UX Details
+
+- **Transactions Table**:
+  - Render rows with alternating colors or subtle borders  
+  - Amount colored:
+    - Green for credit (DEPOSIT, COMMISSION, REFUND)  
+    - Red for debit (PAYMENT)  
+  - Status badges:
+    - PENDING → yellow  
+    - COMPLETED → green  
+    - FAILED → red  
+- **Filtering / Sorting UI**:
+  - Date picker for start/end  
+  - Dropdown for type and status  
+  - Search bar for order ID  
+  - Apply button to trigger query refetch  
+- **Loading states**:
+  - Spinner or skeleton rows while fetching  
+- **Empty/Error states**:
+  - No transactions → "No transactions found"  
+  - API error → "Failed to load transactions" + retry  
+
+---
+
+### 4️⃣ Calculations & Validations
+
+- Sum of transactions optional for display (e.g., total credits vs debits)  
+- Validate amount is numeric  
+- Validate status and type match allowed values  
+- Ensure dates are valid and startDate ≤ endDate  
+
+---
+
+### 5️⃣ Edge Cases
+
+- Large number of transactions → ensure pagination works  
+- Missing related order ID → display "-"  
+- Partial failed transactions → show FAILED badge  
+- Filtering returns zero results → show empty state  
+- Network errors → toast + retry button  
+
+---
+
+### 6️⃣ Real-Time Enhancements (Optional)
+
+- Optional WebSocket for new transactions or status updates  
+- Polling fallback every 30–60 seconds  
+
+---
+
+### 7️⃣ Testing Requirements
+
+- Unit tests:
+  - Amount coloring correct per type  
+  - Status badges render correct colors  
+  - Filtering function works correctly  
+- Integration tests:
+  - Fetching transactions flow  
+  - Pagination  
+  - Filtering by type, status, date  
+  - Handling missing fields (order ID, notes)  
+  - RBAC enforced: CUSTOMER only  
+
+---
+
+### 8️⃣ Agent Execution Instructions
+
+1. Build **Customer Transaction History Page** at `/customer/transactions`  
+2. Fetch transactions from `/api/ledger/transactions` with all filtering options  
+3. Display transactions table with **date, type, order ID, amount, status, notes**  
+4. Implement **filtering by date, type, status** and optional search by order ID  
+5. Implement **pagination** (10–20 per page)  
+6. Include **loading states, empty state, and error handling**  
+7. Optional: **real-time updates** via WebSocket or polling  
+8. Add **unit and integration tests** for all functionality  
+9. Enforce **RBAC (CUSTOMER only)**  
+10. Log important events in **audit logging system** (Prompt 7)  
+
+---
+
+End of **Prompt 17**. Execute **step-by-step**, ensuring **transaction table, filtering, pagination, edge-case handling, real-time updates, and audit logging**.
