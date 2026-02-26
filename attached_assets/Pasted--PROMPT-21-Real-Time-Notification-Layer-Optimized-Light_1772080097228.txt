@@ -1,0 +1,112 @@
+
+---
+
+🔹 PROMPT 21 – Real-Time Notification Layer (Optimized, Lightweight, Stepwise)
+
+You are tasked with designing a **Real-Time Notification Layer** for Mit Gaber Hyperlocal Marketplace, in a way that is executable **incrementally and safely** without requiring full autonomous execution. The goal is to implement notifications for Customers, Store Owners, Drivers, and Admins triggered by backend events, while minimizing architectural complexity and avoiding untested multi-file integration.
+
+---
+
+### 1️⃣ Goal
+Provide real-time event notifications for:
+- Order status updates
+- New assignments or available tasks
+- Wallet and deposit changes
+- Earnings updates
+- System alerts
+
+Notifications should respect **RBAC** and only be delivered to authorized users.
+
+---
+
+### 2️⃣ Stepwise Lightweight Implementation
+
+#### Step 1 – Event Emitter Middleware (Backend)
+- Implement a centralized **Event Emitter** in the backend.
+- Every state-changing operation (order status, wallet deposit, commission process) triggers an event.
+- Example:
+```ts
+emitEvent('ORDER_STATUS_UPDATE', {
+  userId: customerId,
+  subOrderId,
+  newStatus,
+  updatedBy,
+  timestamp: new Date()
+});
+
+No WebSocket or client yet — just a modular emitter that can be consumed later.
+
+
+Step 2 – Event Logging & RBAC Check
+
+For each emitted event, verify:
+
+User exists and role matches event type
+
+Sensitive events not leaked to unauthorized roles
+
+
+Optionally log to audit_logs table for traceability.
+
+
+Step 3 – Minimal Client Hook (Stub)
+
+Provide a React hook interface that can later be connected to WebSocket or polling:
+
+
+const { notifications, pushEvent } = useNotificationStub(userId, role);
+
+pushEvent(event) simulates event delivery for testing
+
+Allows front-end testing of UI updates (badges, lists, alerts) without requiring full WebSocket infrastructure yet
+
+
+Step 4 – Optional Incremental WebSocket Layer (Stretch Goal)
+
+Introduce WebSocket server /ws/notifications in a future step
+
+Authenticate connections via JWT
+
+Map users to their roles and deliver only relevant events
+
+Offline queuing can be added later
+
+
+
+---
+
+3️⃣ Benefits of this Approach
+
+Lightweight & Safe: Backend emitter and stub hook can be implemented now.
+
+Incremental: Later, a full WebSocket layer can be added with minimal changes.
+
+RBAC-compliant: Events are filtered by role before delivery.
+
+Testable: Front-end and back-end flows can be tested without live sockets.
+
+
+
+---
+
+4️⃣ Edge Cases Covered
+
+Only authorized users receive events
+
+Simulated delivery allows UI testing even offline
+
+Event payloads structured and versioned for future expansion
+
+Logging ensures traceability for debugging
+
+
+
+---
+
+5️⃣ Instruction to Replit Agent
+
+> Implement the Event Emitter middleware, RBAC checks, logging, and React stub hook step by step. Do not attempt a full autonomous WebSocket implementation. Ensure each step is modular and testable independently. Later, the actual WebSocket layer can be added as an enhancement.
+
+
+
+-
