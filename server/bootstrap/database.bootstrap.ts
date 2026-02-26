@@ -34,7 +34,7 @@ export async function initializeDatabase() {
 
     // 2. Ensure Core Tables Exist
     console.log("[DB] Checking tables...");
-    const tables = ['users', 'wallets', 'stores'];
+    const tables = ['users', 'wallets', 'stores', 'ledger', 'audit_logs'];
     for (const table of tables) {
       const tableCheck = await pool.query(`SELECT to_regclass('public.${table}')`);
       if (!tableCheck.rows[0].to_regclass) {
@@ -75,6 +75,34 @@ export async function initializeDatabase() {
               location_text TEXT,
               created_at TIMESTAMP DEFAULT NOW(),
               updated_at TIMESTAMP DEFAULT NOW()
+            )
+          `);
+        } else if (table === 'ledger') {
+          await pool.query(`
+            CREATE TABLE IF NOT EXISTS ledger (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              reference_id UUID,
+              debit_user_id UUID REFERENCES users(id),
+              credit_user_id UUID REFERENCES users(id),
+              amount DECIMAL(12,2) NOT NULL,
+              type TEXT NOT NULL,
+              created_at TIMESTAMP DEFAULT NOW(),
+              updated_at TIMESTAMP DEFAULT NOW()
+            )
+          `);
+        } else if (table === 'audit_logs') {
+          await pool.query(`
+            CREATE TABLE IF NOT EXISTS audit_logs (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              action_type TEXT NOT NULL,
+              entity_type TEXT NOT NULL,
+              entity_id UUID NOT NULL,
+              performed_by_user_id UUID NOT NULL REFERENCES users(id),
+              performed_by_role TEXT NOT NULL,
+              old_value JSONB,
+              new_value JSONB,
+              metadata JSONB,
+              created_at TIMESTAMP DEFAULT NOW()
             )
           `);
         }
