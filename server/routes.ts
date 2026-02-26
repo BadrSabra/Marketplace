@@ -11,6 +11,7 @@ import { eq, sql, and } from "drizzle-orm";
 import { authenticate, authorizeRole } from "./middleware/auth";
 import { productsController } from "./modules/products/products.controller";
 import { subOrderController } from "./modules/orders/suborder.controller";
+import { walletController } from "./modules/wallet/wallet.controller";
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 
@@ -323,6 +324,20 @@ export async function registerRoutes(
       res.status(500).json({ message: error.message });
     }
   });
+
+  app.get("/api/wallet/pending", authenticate, async (req, res) => {
+    try {
+      const userId = (req as any).user.id;
+      // Filter pending deposits for the specific user
+      const deposits = await walletService.getPendingDeposits();
+      const userDeposits = deposits.filter(d => d.user.id === userId);
+      res.json(userDeposits);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/wallet/deposit", authenticate, walletController.deposit);
 
   // Ensure Admin account is ready
   async function ensureAdminAccount() {

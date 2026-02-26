@@ -1,0 +1,130 @@
+You are tasked with building the **Customer Wallet Management Page** for the Mit Gaber Hyperlocal Marketplace. This page allows customers to view their wallet balance, deposit funds, and monitor pending holds. It must integrate seamlessly with backend wallet and ledger services, enforce **RBAC**, handle **edge cases**, and provide **full validation**.
+
+---
+
+### 1️⃣ Page / Component
+
+- **Customer Wallet Page** (`/customer/wallet`)  
+  - **Current Wallet Balance** (available and pending amounts)  
+  - **Deposit Funds Form**:
+    - Amount (numeric, positive, >0)
+    - Receipt URL (valid URL)  
+    - Submit button  
+    - Validation feedback inline  
+  - **Pending Holds / Deposits**:
+    - List of deposits awaiting admin approval  
+    - Show date, amount, status (PENDING, APPROVED, REJECTED)  
+  - **Transaction History Table**:
+    - Date & time  
+    - Type: DEPOSIT, REFUND, PAYMENT, COMMISSION  
+    - Amount (+/-)  
+    - Status: PENDING, COMPLETED, FAILED  
+    - Related Order ID (if applicable)  
+  - Filters:
+    - Transaction type  
+    - Date range  
+  - Pagination:
+    - 10–20 transactions per page  
+    - Next/prev navigation  
+
+---
+
+### 2️⃣ Data Fetching & API Integration
+
+| Action                        | Endpoint                          | Method | Notes |
+|--------------------------------|---------------------------------|--------|-------|
+| Fetch wallet balance            | /api/wallet                      | GET    | RBAC: CUSTOMER only |
+| Fetch transaction history       | /api/ledger/transactions          | GET    | Support query params: type, startDate, endDate, page, limit |
+| Submit deposit request          | /api/wallet/deposit               | POST   | Payload: { amount, receiptUrl } |
+| Optional: refresh data          | /api/wallet or /api/ledger/transactions | Polling/WebSocket | Real-time updates for completed deposits |
+
+- Use **React Query** for fetching/mutations  
+- Invalidate queries after deposit submission, ledger updates  
+
+---
+
+### 3️⃣ UI / UX Details
+
+- **Wallet Balance Card**:
+  - Show **Available Balance**  
+  - Show **Pending Holds** (deposits not yet approved)  
+- **Deposit Funds Form**:
+  - Inline validation errors: non-numeric, zero, negative, invalid URL  
+  - Disabled submit button while mutation pending  
+  - Toast notification for success/failure  
+- **Transaction History Table**:
+  - Green for credits (DEPOSIT, COMMISSION)  
+  - Red for debits (PAYMENT, REFUND)  
+  - Status badges: PENDING → yellow, COMPLETED → green, FAILED → red  
+- **Filter Panel**:
+  - Transaction type dropdown  
+  - Date range picker  
+- **Pagination Controls** at table bottom  
+- **Loading spinners** for balance, transactions, deposits  
+- **Empty states** for no transactions or no pending deposits  
+
+---
+
+### 4️⃣ Calculations & Validations
+
+- Deposit amount > 0  
+- Receipt URL must be valid  
+- Pending holds = sum of all PENDING deposits  
+- Balance = confirmed wallet balance (excluding pending)  
+- Prevent rendering negative balance  
+- Filter inputs validated: dates and type  
+
+---
+
+### 5️⃣ Edge Cases
+
+- No deposits → show “No pending deposits” placeholder  
+- No transactions → show “No transactions found”  
+- Network error → toast + retry  
+- Deposit rejected → update pending holds and show status badge  
+- Multiple concurrent deposits → ensure atomic ledger updates  
+
+---
+
+### 6️⃣ Real-Time Enhancements
+
+- Optional WebSocket updates for:
+  - Deposit approval/rejection  
+  - Wallet balance updates  
+  - Transaction history updates  
+- Auto-refresh every 30–60 seconds if WebSocket unavailable  
+
+---
+
+### 7️⃣ Testing Requirements
+
+- Unit tests:
+  - Wallet balance renders correctly  
+  - Pending holds sum correctly  
+  - Deposit form validation works  
+- Integration tests:
+  - Submit deposit flow  
+  - Transaction table renders and filters correctly  
+  - Pagination works  
+  - RBAC enforced: CUSTOMER only  
+  - Real-time updates reflected in UI  
+
+---
+
+### 8️⃣ Agent Execution Instructions
+
+1. Build **Customer Wallet Page** at `/customer/wallet`  
+2. Fetch **wallet balance** from `/api/wallet`  
+3. Fetch **transaction history** from `/api/ledger/transactions` with filtering and pagination  
+4. Implement **Deposit Funds Form** with validation and toast feedback  
+5. Display **pending holds** separately with status badges  
+6. Implement **transaction table** with filters, pagination, and color-coded statuses  
+7. Include **loading spinners, empty states, and toast notifications**  
+8. Implement optional **real-time updates via WebSocket or polling**  
+9. Add **unit and integration tests** for all functionality  
+10. Enforce **RBAC (CUSTOMER only)**  
+11. Log all deposit submissions, status changes, and errors in **audit logging system** (Prompt 7)  
+
+---
+
+End of **Prompt 15**. Execute **step-by-step**, ensuring **secure RBAC, full deposit workflow, pending holds display, transaction history, filtering, pagination, edge-case handling, real-time updates, and audit logging**.
