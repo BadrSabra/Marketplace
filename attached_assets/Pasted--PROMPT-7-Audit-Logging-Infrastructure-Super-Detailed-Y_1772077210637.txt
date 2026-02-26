@@ -1,0 +1,228 @@
+
+
+---
+
+🔹 PROMPT 7 — Audit Logging Infrastructure (Super-Detailed)
+
+You are tasked with implementing a **centralized audit logging infrastructure** for the Mit Gaber Hyperlocal Marketplace. The goal is to **track all critical system events**, including financial actions, status transitions, and admin operations, in a **structured, queryable, and extensible** manner.
+
+---
+
+### 1️⃣ Database Schema
+
+- **Table:** `audit_logs`
+- **Columns:**
+```ts
+interface AuditLog {
+  id: string;                  // UUID primary key
+  timestamp: Date;             // Event timestamp
+  user_id?: string;            // Nullable, for system actions
+  role?: 'ADMIN' | 'STORE_OWNER' | 'DRIVER' | 'CUSTOMER' | 'SYSTEM';
+  resource_type: string;       // e.g., 'DEPOSIT', 'ORDER', 'SUBORDER', 'PRODUCT'
+  resource_id?: string;        // Optional, the ID of affected resource
+  action: string;              // e.g., 'APPROVE', 'CANCEL', 'UPDATE_STATUS'
+  metadata: Record<string, any>; // JSON for additional context
+  ip_address?: string;         // Optional
+  user_agent?: string;         // Optional
+}
+
+Indexes:
+
+(resource_type, resource_id)
+
+(timestamp)
+
+(user_id, role)
+
+
+
+
+---
+
+2️⃣ Middleware for Express / Fastify
+
+Global middleware intercepts all mutating requests (POST, PATCH, PUT, DELETE)
+
+Records audit log entry after successful DB transaction
+
+Captures:
+
+user_id, role (from JWT)
+
+resource_type (derived from route or manually passed)
+
+resource_id (route param or body)
+
+action (explicit from controller)
+
+metadata (request body / relevant fields)
+
+ip_address (req.ip)
+
+user_agent (req.headers['user-agent'])
+
+
+
+Example TypeScript middleware:
+
+async function auditLogger(req, res, next) {
+  const originalSend = res.send;
+  res.send = async function (body) {
+    try {
+      if (req.method !== 'GET') {
+        await insertAuditLog({
+          user_id: req.user?.id,
+          role: req.user?.role,
+          resource_type: req.audit?.resource_type,
+          resource_id: req.audit?.resource_id,
+          action: req.audit?.action,
+          metadata: req.audit?.metadata || req.body,
+          ip_address: req.ip,
+          user_agent: req.headers['user-agent'],
+          timestamp: new Date(),
+        });
+      }
+    } catch (err) {
+      console.error('Audit logging failed', err);
+    }
+    return originalSend.apply(this, arguments);
+  };
+  next();
+}
+
+
+---
+
+3️⃣ Service Layer
+
+AuditService.insertAuditLog(entry: AuditLog)
+
+
+Responsibilities:
+
+1. Validate required fields: action, resource_type, timestamp
+
+
+2. Insert into audit_logs table
+
+
+3. Ensure logging does not block main transaction, but wraps optional atomic logging when necessary for critical financial events
+
+
+
+
+---
+
+4️⃣ Critical Event Hooks
+
+Order / SubOrder Status Changes:
+
+PENDING → ACCEPTED → READY → PICKED_UP → DELIVERED → CANCELLED
+
+Include old and new status in metadata
+
+
+Deposit / Wallet Changes:
+
+Approval, rejection, adjustments
+
+Include amounts, transaction IDs
+
+
+Product / Inventory Changes:
+
+Add / Edit / Delete
+
+Include stock levels
+
+
+User Management:
+
+Create / Update / Suspend / Role changes
+
+
+System Actions:
+
+Cron jobs, batch processes, admin overrides
+
+
+
+
+---
+
+5️⃣ Edge Cases & Safeguards
+
+1. Fail-safe: Logging failure must not block main operation
+
+
+2. JSON-serializable metadata; fallback to stringified if circular references
+
+
+3. Concurrency: multiple actions on same resource → log independently with timestamp
+
+
+4. Sensitive data: redact passwords, payment credentials, secrets
+
+
+
+
+---
+
+6️⃣ Testing / Validation
+
+Unit tests:
+
+1. Insert log manually → verify DB record
+
+
+2. Middleware logs mutating request → verify fields captured
+
+
+3. Concurrency: multiple simultaneous requests → logs must be consistent
+
+
+4. Sensitive fields are redacted
+
+
+
+Integration tests:
+
+Approve deposit → log captured with correct resource_type, resource_id, metadata
+
+Order status transition → log includes old and new status
+
+
+
+
+---
+
+7️⃣ Agent Execution Instructions
+
+Implement audit_logs table and migrations
+
+Create AuditService with insertAuditLog()
+
+Implement global middleware for Express/Fastify
+
+Integrate hooks in:
+
+Deposit approval
+
+SubOrder status transitions
+
+Product CRUD
+
+User management
+
+
+Include unit tests + integration tests
+
+Only modify /server/modules/audit/ or global middleware
+
+
+
+---
+
+End of Prompt 7. Execute step-by-step, ensure full audit coverage, non-blocking logging, sensitive data redaction, and unit + integration tests included.
+
+---
