@@ -1,0 +1,210 @@
+
+
+---
+
+🔹 PROMPT 4 — Driver Available Tasks Endpoint (Super-Detailed)
+
+You are implementing the **Driver Available Tasks Endpoint** for the Mit Gaber Hyperlocal Marketplace. This endpoint allows drivers to view sub-orders that are **unassigned** and available for delivery. Follow instructions with precision.
+
+---
+
+### 1️⃣ File & Structure
+
+- `server/modules/delivery/delivery.controller.ts`
+- `server/modules/delivery/delivery.service.ts`
+- `server/modules/delivery/delivery.types.ts`
+- `server/modules/delivery/delivery.spec.ts` (Unit Tests)
+
+---
+
+### 2️⃣ RBAC Rules
+
+| Action          | Role Allowed  |
+|-----------------|---------------|
+| GET Available Tasks | DRIVER      |
+| Unauthorized     | All others → HTTP 403 |
+
+- Only **active, approved drivers** can see available tasks
+- Drivers can only see **sub-orders not yet assigned to a driver**
+
+---
+
+### 3️⃣ Endpoint Definition
+
+**GET** `/api/delivery/available-tasks`
+
+#### Query Parameters:
+
+- `page` (optional, default 1)
+- `limit` (optional, default 20)
+- `store_id` (optional, filter by store)
+- `category` (optional, filter by product category)
+
+#### Response:
+
+```ts
+interface AvailableTaskDTO {
+  sub_order_id: string;
+  order_id: string;
+  store_id: string;
+  store_name: string;
+  customer_name: string;
+  customer_address: string;
+  items: { product_name: string; quantity: number }[];
+  subtotal: number;
+  created_at: string;
+  status: 'PENDING' | 'ACCEPTED' | 'READY';
+  assigned_driver_id?: string; // null if unassigned
+}
+
+
+---
+
+4️⃣ Business Logic / Filtering
+
+1. Only sub-orders with status READY AND assigned_driver_id IS NULL
+
+
+2. Optional filters:
+
+store_id → only tasks from that store
+
+category → only tasks containing at least one item in that category
+
+
+
+3. Pagination: page and limit
+
+
+4. Sort tasks by created_at ASC (oldest first)
+
+
+
+
+---
+
+5️⃣ Edge Cases / Error Handling
+
+Unauthorized → 403
+
+Page or limit invalid (negative / zero / non-integer) → 400
+
+No available tasks → return empty array [] (200 OK)
+
+Invalid store_id or category → 400
+
+Concurrent assignment (race conditions) → handled at assignment, endpoint only shows available
+
+
+
+---
+
+6️⃣ Service Layer Responsibilities
+
+DeliveryService.getAvailableTasks(driver_id, filters):
+
+1. Verify driver is active & approved
+
+
+2. Query sub-orders:
+
+status = READY
+
+assigned_driver_id IS NULL
+
+apply optional filters
+
+
+
+3. Map results to AvailableTaskDTO
+
+
+4. Return array + total count for pagination
+
+
+
+
+
+---
+
+7️⃣ Security & RBAC
+
+Must check user.role === 'DRIVER'
+
+Must check driver status === 'ACTIVE'
+
+No sensitive data exposed (do not return customer phone/email)
+
+Admin override not needed here
+
+
+
+---
+
+8️⃣ Audit / Logging
+
+Log access attempts (for monitoring, not modification):
+
+
+console.log(`[AUDIT-DELIVERY] driver_id=${driver_id} action=VIEW_AVAILABLE_TASKS filters=${JSON.stringify(filters)}`);
+
+Placeholder for future audit_logs integration
+
+
+
+---
+
+9️⃣ Unit / Integration Tests
+
+1. DRIVER role successfully retrieves available tasks
+
+
+2. Unauthorized role → 403
+
+
+3. Pagination works correctly
+
+
+4. Filter by store_id / category works
+
+
+5. Returns empty array if no tasks
+
+
+6. Edge cases:
+
+Negative page / limit → 400
+
+Non-existent store_id / category → 400
+
+
+
+7. Concurrency test: multiple drivers request simultaneously → all see only unassigned tasks
+
+
+
+
+---
+
+1️⃣0️⃣ Agent Execution Instructions
+
+Only modify /server/modules/delivery/
+
+Implement controller, service, types, and unit tests
+
+Ensure all responses use AvailableTaskDTO
+
+Strictly enforce RBAC & driver status
+
+Include pagination and filtering
+
+Include logging placeholder
+
+
+
+---
+
+End of Prompt 4. Execute step-by-step, return only modified files, include unit tests and validation coverage.
+
+---
+

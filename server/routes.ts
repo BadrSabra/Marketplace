@@ -14,10 +14,15 @@ import { subOrderController } from "./modules/orders/suborder.controller";
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 
+import { deliveryController } from "./modules/delivery/delivery.controller";
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // ...
+  // Delivery
+  app.get("/api/delivery/available-tasks", authenticate, deliveryController.getAvailableTasks);
   // --- AUTH MODULE ---
   app.post(api.auth.register.path, async (req, res) => {
     try {

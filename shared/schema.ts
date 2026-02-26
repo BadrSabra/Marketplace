@@ -102,6 +102,7 @@ export const subOrders = pgTable("sub_orders", {
   storeId: uuid("store_id").notNull().references(() => stores.id),
   status: orderStatusEnum("status").notNull().default("PENDING"),
   subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull(),
+  assignedDriverId: uuid("assigned_driver_id").references(() => users.id),
   expectedDeliveryFee: numeric("expected_delivery_fee", { precision: 10, scale: 2 }).notNull().default("0.00"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
