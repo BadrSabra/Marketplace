@@ -13,6 +13,7 @@ import RegisterPage from "@/pages/auth/register";
 import AdminDashboard from "@/pages/admin/dashboard";
 import CustomerDashboard from "@/pages/customer/dashboard";
 import CustomerWallet from "@/pages/customer/wallet";
+import CustomerTransactions from "@/pages/customer/transactions";
 import StoreDashboard from "@/pages/store/dashboard";
 import StoreOrders from "@/pages/store/orders";
 import StoreEarnings from "@/pages/store/earnings";
@@ -85,6 +86,9 @@ function Router() {
       {/* Customer Routes */}
       <Route path="/customer/wallet">
         {() => <ProtectedRoute component={CustomerWallet} roles={["CUSTOMER"]} />}
+      </Route>
+      <Route path="/customer/transactions">
+        {() => <ProtectedRoute component={CustomerTransactions} roles={["CUSTOMER"]} />}
       </Route>
       <Route path="/customer/order/:id">
         {() => <ProtectedRoute component={CustomerOrderDetails} roles={["CUSTOMER"]} />}

@@ -1,0 +1,96 @@
+You are tasked with building the **Customer Profile Management Page** for the Mit Gaber Hyperlocal Marketplace. This page allows customers to view and update their personal information, delivery preferences, and contact details. It must integrate with backend APIs, enforce **RBAC**, handle **edge cases**, provide **validation**, and ensure changes are atomic and reflected in the database immediately.
+
+---
+
+### 1️⃣ Page / Component
+
+- **Customer Profile Page** (`/customer/profile`)  
+  - Display editable fields:
+    - Full Name
+    - Phone Number
+    - Email (read-only)
+    - Delivery Address(es)
+    - Preferred Transport Type (e.g., Bike, Car, Walk)
+    - Optional Profile Picture URL  
+  - Save/Update button  
+
+---
+
+### 2️⃣ Data Fetching & API Integration
+
+| Action                        | Endpoint                         | Method | Notes |
+|--------------------------------|--------------------------------|--------|-------|
+| Fetch customer profile          | /api/customer/profile           | GET    | RBAC: CUSTOMER only, returns all editable fields |
+| Update customer profile         | /api/customer/profile           | PATCH  | Atomic update, validate phone, transportType, and addresses |
+| Optional profile picture upload | /api/customer/profile/avatar    | POST   | Returns URL to store in profile |
+
+---
+
+### 3️⃣ UI / UX Details
+
+- **Form Layout**:
+  - Grouped fields (Contact Info, Delivery Preferences)  
+  - Inline validation messages for each field  
+  - Save button disabled if no changes  
+- **Feedback / Notifications**:
+  - Success → toast: "Profile updated successfully"  
+  - Error → toast: show API error message  
+- **Loading States**:
+  - Spinner while fetching initial profile  
+  - Disable form during submission  
+- **Validation Rules**:
+  - Phone Number → numeric, required, 10–15 digits  
+  - Transport Type → must be one of predefined enum values  
+  - Delivery Address → not empty, optional multiple addresses  
+  - Full Name → required, letters only, max 50 characters  
+
+---
+
+### 4️⃣ Edge Cases
+
+- User enters invalid phone → show inline error  
+- Attempt to save without changes → disable save button  
+- Network errors → toast + retry option  
+- Partial update fails → rollback changes (atomic PATCH)  
+- Multiple addresses → support add/edit/remove  
+- Optional avatar → validate URL format, size < 2MB  
+
+---
+
+### 5️⃣ Real-Time / Reactive Enhancements
+
+- Live preview of updated profile picture if URL changes  
+- Optional auto-save every few seconds if fields are modified  
+
+---
+
+### 6️⃣ Testing Requirements
+
+- Unit tests:
+  - Field validation (phone, transportType, addresses)  
+  - Save button disabled when no changes  
+- Integration tests:
+  - Fetching profile data  
+  - Successful PATCH updates reflected in database  
+  - Error handling for failed updates or network issues  
+  - RBAC enforced: CUSTOMER only  
+
+---
+
+### 7️⃣ Agent Execution Instructions
+
+1. Build **Customer Profile Page** at `/customer/profile`  
+2. Fetch customer data from `/api/customer/profile` and prefill the form  
+3. Implement **editable fields**: fullName, phone, delivery addresses, transportType, avatar URL  
+4. Add **inline validation** and disable Save button if invalid or unchanged  
+5. Implement **PATCH /api/customer/profile** for atomic updates  
+6. Provide **toast notifications** for success and failure  
+7. Handle **loading and network error states**  
+8. Optional: **live avatar preview** and auto-save  
+9. Add **unit and integration tests** for all functionality  
+10. Enforce **RBAC: CUSTOMER only**  
+11. Log important changes in **audit logging system** (Prompt 7)  
+
+---
+
+End of **Prompt 18**. Execute **step-by-step**, ensuring **editable fields, validation, atomic updates, feedback notifications, edge-case handling, RBAC, and audit logging** are fully implemented.
