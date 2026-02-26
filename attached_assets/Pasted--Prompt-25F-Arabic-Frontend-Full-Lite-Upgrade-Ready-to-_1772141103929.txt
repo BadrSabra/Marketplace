@@ -1,0 +1,202 @@
+
+
+---
+
+Prompt 25F – Arabic Frontend Full Lite Upgrade – Ready-to-Execute
+
+Goal: Refactor Mit Gaber Hyperlocal Marketplace frontend to fully support Arabic users.
+
+Features to implement:
+
+1. Arabic Translation:
+Translate all UI text (buttons, labels, badges, table headers, notifications).
+
+
+2. RTL Support:
+Wrap main containers with dir="rtl" and adjust layouts for proper right-to-left alignment.
+
+
+3. Simplified UX:
+Short, clear Arabic labels for buttons, badges, feedback messages.
+Real-time toast notifications for API actions.
+
+
+4. Automated Verification:
+Test that all text is translated, RTL applied, and UI stable.
+
+
+
+
+---
+
+Implementation Details
+
+// client/src/hooks/useTranslation.ts
+export const translations: Record<string, string> = {
+  // Global Buttons
+  "Accept": "قبول",
+  "Cancel": "إلغاء",
+  "Mark Ready": "تحديد جاهز",
+  "Delete": "حذف",
+  "Update": "تحديث",
+  "Add Product": "إضافة منتج",
+  "Deposit Funds": "إيداع أموال",
+  "Submit Offer": "تقديم عرض",
+  "Generate OTP": "إنشاء رمز OTP",
+  "Confirm": "تأكيد",
+  "Back": "رجوع",
+
+  // Statuses
+  "Pending": "قيد الانتظار",
+  "Accepted": "تم القبول",
+  "Ready": "جاهز",
+  "Picked Up": "تم الاستلام",
+  "Delivered": "تم التسليم",
+  "Cancelled": "ملغي",
+
+  // Table Headers
+  "Order Info": "معلومات الطلب",
+  "Customer": "العميل",
+  "Items": "العناصر",
+  "Total": "الإجمالي",
+  "Status": "الحالة",
+  "Actions": "الإجراءات",
+
+  // Dashboard
+  "Active Sub-Orders": "الطلبات الفرعية النشطة",
+  "Wallet Balance": "رصيد المحفظة",
+  "Transactions": "المعاملات",
+  "Commission History": "سجل العمولات",
+  "Held Funds": "الأموال المحتجزة",
+  "Profile": "الملف الشخصي",
+  "Notifications": "الإشعارات",
+
+  // Feedback / Notifications
+  "Order Status Updated": "تم تحديث حالة الطلب",
+  "Insufficient Balance": "الرصيد غير كافٍ",
+  "Success": "تم بنجاح",
+  "Error": "خطأ",
+  "No orders found.": "لا توجد طلبات حالياً",
+  "No products found.": "لا توجد منتجات حالياً",
+  "Operation Failed": "فشلت العملية",
+
+  // Customer / Driver
+  "Available Tasks": "المهام المتاحة",
+  "Assigned Orders": "الطلبات المعينة",
+  "Balance": "الرصيد",
+  "Deposit Pending": "إيداع معلق"
+};
+
+export function useTranslation(key: string): string {
+  return translations[key] || key;
+}
+
+
+---
+
+JSX Usage Example
+
+import { useTranslation } from "@/hooks/useTranslation";
+const t = useTranslation;
+
+<div dir="rtl" className="container mx-auto p-6 space-y-6">
+  <h1>{t("Active Sub-Orders")}</h1>
+
+  <TableHead>{t("Customer")}</TableHead>
+  <TableHead>{t("Items")}</TableHead>
+  <TableHead>{t("Total")}</TableHead>
+  <TableHead>{t("Status")}</TableHead>
+  <TableHead>{t("Actions")}</TableHead>
+
+  <Button>{t("Accept")}</Button>
+  <Button variant="destructive">{t("Cancel")}</Button>
+</div>
+
+
+---
+
+Real-Time Feedback Example
+
+toast({ title: t("Success"), description: t("Order Status Updated") });
+toast({ title: t("Error"), description: t("Insufficient Balance"), variant: "destructive" });
+
+
+---
+
+Automated Verification Script
+
+// scripts/test-arabic-frontend.ts
+import { render } from "@testing-library/react";
+import StoreOrders from "../client/src/pages/store/orders";
+import { translations } from "../client/src/hooks/useTranslation";
+
+test("All keys exist in translation", () => {
+  Object.keys(translations).forEach(key => {
+    expect(translations[key]).not.toBe("");
+  });
+});
+
+test("Render orders page with RTL", () => {
+  const { container } = render(<StoreOrders />);
+  expect(container.querySelector("div[dir='rtl']")).toBeTruthy();
+});
+
+Generate log logs/arabic-frontend-test.json:
+
+{
+  "timestamp": "2026-02-26T20:30:00.000Z",
+  "checks": {
+    "RTL_applied": true,
+    "all_text_translated": true,
+    "notifications_working": true,
+    "UI_stable": true
+  },
+  "summary": {
+    "status": "PASS",
+    "errors": 0,
+    "warnings": 0
+  }
+}
+
+
+---
+
+Execution Instructions for Replit Agent
+
+1. Apply useTranslation to all pages and components.
+
+
+2. Wrap main containers in dir="rtl".
+
+
+3. Replace all literal text, buttons, badges, notifications with Arabic translations.
+
+
+4. Run scripts/test-arabic-frontend.ts to verify.
+
+
+5. Generate logs/arabic-frontend-test.json.
+
+
+6. Confirm full RTL compliance and UI stability.
+
+
+
+
+---
+
+✅ After execution:
+
+Full Arabic interface.
+
+RTL layout applied.
+
+Simplified UX for non-technical users.
+
+Real-time notifications working.
+
+Verification logs generated.
+
+
+
+-
