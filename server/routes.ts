@@ -314,6 +314,16 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/wallet", authenticate, async (req, res) => {
+    try {
+      const userId = (req as any).user.id;
+      const balance = await walletService.getBalance(userId);
+      res.json({ balance });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Ensure Admin account is ready
   async function ensureAdminAccount() {
     const adminEmail = "admin@mitgaber.com";
