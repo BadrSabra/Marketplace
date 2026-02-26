@@ -1,0 +1,196 @@
+
+
+---
+
+🎯 Objective
+
+Create a safe Arabic translation foundation layer for Mit Gaber Hyperlocal Marketplace without modifying any existing UI components or pages.
+
+This is Phase 1 only.
+No JSX updates.
+No RTL changes.
+No string replacements.
+
+Just infrastructure setup.
+
+
+---
+
+📁 Step 1: Create Translation Directory
+
+Create:
+
+client/src/i18n/
+
+
+---
+
+📄 Step 2: Create Arabic Translation File
+
+Create:
+
+client/src/i18n/ar.ts
+
+Content:
+
+export const ar = {
+  common: {
+    accept: "قبول",
+    cancel: "إلغاء",
+    confirm: "تأكيد",
+    back: "رجوع",
+    delete: "حذف",
+    update: "تحديث",
+    success: "تم بنجاح",
+    error: "حدث خطأ",
+  },
+
+  status: {
+    pending: "قيد الانتظار",
+    accepted: "تم القبول",
+    ready: "جاهز",
+    picked_up: "تم الاستلام",
+    delivered: "تم التسليم",
+    cancelled: "ملغي",
+  },
+
+  store: {
+    active_sub_orders: "الطلبات الفرعية النشطة",
+    no_orders: "لا توجد طلبات حالياً",
+    add_product: "إضافة منتج",
+    wallet_balance: "رصيد المحفظة",
+  },
+
+  wallet: {
+    deposit: "إيداع أموال",
+    insufficient_balance: "الرصيد غير كافٍ",
+    transactions: "المعاملات",
+  },
+
+  notifications: {
+    order_status_updated: "تم تحديث حالة الطلب",
+    operation_failed: "فشلت العملية",
+  }
+};
+
+
+---
+
+📄 Step 3: Create Language Index
+
+Create:
+
+client/src/i18n/index.ts
+
+Content:
+
+import { ar } from "./ar";
+
+export const languages = {
+  ar,
+};
+
+export type Language = keyof typeof languages;
+
+export const defaultLanguage: Language = "ar";
+
+
+---
+
+📄 Step 4: Create Safe Translation Hook
+
+Create:
+
+client/src/hooks/useSafeTranslation.ts
+
+Content:
+
+import { languages, defaultLanguage } from "@/i18n";
+
+export function useSafeTranslation() {
+  const lang = defaultLanguage;
+
+  function t(path: string): string {
+    const keys = path.split(".");
+    let value: any = languages[lang];
+
+    for (const key of keys) {
+      if (!value[key]) return path;
+      value = value[key];
+    }
+
+    return value;
+  }
+
+  return { t };
+}
+
+
+---
+
+🛡️ Safety Rules
+
+DO NOT modify any existing page.
+
+DO NOT replace any strings yet.
+
+DO NOT apply RTL.
+
+DO NOT refactor components.
+
+DO NOT touch API logic.
+
+
+This phase is infrastructure only.
+
+
+---
+
+🧪 Step 5: Add Verification Script
+
+Create:
+
+scripts/test-i18n-foundation.ts
+
+import { languages } from "../client/src/i18n";
+
+if (!languages.ar) {
+  throw new Error("Arabic language not registered");
+}
+
+console.log("Arabic i18n foundation initialized successfully.");
+
+
+---
+
+📝 Step 6: Generate Log File
+
+Create:
+
+logs/i18n-phase1.json
+
+Content:
+
+{
+  "phase": 1,
+  "status": "SUCCESS",
+  "rtl_applied": false,
+  "ui_modified": false,
+  "risk_level": "ZERO",
+  "notes": "Arabic translation foundation created safely."
+}
+
+
+---
+
+✅ Expected Result After Prompt 1
+
+✔ Translation structure exists
+✔ Arabic dictionary ready
+✔ Hook created
+✔ No UI modified
+✔ Project compiles normally
+✔ Zero breaking risk
+
+
+---
