@@ -1,0 +1,119 @@
+You are working on a Node.js + Express backend for a hyperlocal marketplace.
+
+IMPORTANT RULES:
+- Do NOT refactor the architecture.
+- Do NOT move files.
+- Do NOT modify unrelated services.
+- Do NOT introduce new external dependencies.
+- Do NOT change commission, deposit, or order logic.
+- Only implement a wallet negative balance protection guard.
+- Keep changes minimal and localized.
+
+------------------------------------------------------------
+OBJECTIVE
+------------------------------------------------------------
+
+Implement a strict protection that prevents any wallet balance from going negative under any condition.
+
+This must apply to ALL wallet deduction operations.
+
+------------------------------------------------------------
+IMPLEMENTATION REQUIREMENTS
+------------------------------------------------------------
+
+1️⃣ Locate wallet deduction logic.
+
+Any place where:
+- wallet.balance is reduced
+- or a debit ledger entry is created
+
+Before performing the deduction:
+
+A. Fetch the current wallet balance.
+B. Validate:
+
+    if (currentBalance < deductionAmount) {
+        throw BUSINESS_RULE_VIOLATION
+        message: "Insufficient wallet balance"
+    }
+
+C. Abort the operation immediately if validation fails.
+D. Ensure balance remains unchanged if operation fails.
+
+------------------------------------------------------------
+ATOMIC SAFETY
+------------------------------------------------------------
+
+If the deduction is already inside a database transaction:
+
+- Ensure the balance check happens inside the same transaction scope.
+- Do NOT redesign the transaction system.
+- Just ensure validation is performed immediately before update.
+
+------------------------------------------------------------
+ERROR FORMAT
+------------------------------------------------------------
+
+Use existing error handling middleware.
+
+Error type:
+- code: BUSINESS_RULE_VIOLATION
+- message: "Insufficient wallet balance"
+
+Do NOT expose internal stack traces.
+
+------------------------------------------------------------
+EDGE CASES TO COVER
+------------------------------------------------------------
+
+- Deduction amount is zero → allow.
+- Deduction amount is negative → reject.
+- Wallet not found → throw NOT_FOUND.
+- Concurrent deduction attempt should not result in negative balance.
+
+------------------------------------------------------------
+MINIMAL TEST (MANDATORY)
+------------------------------------------------------------
+
+Add a basic test that:
+
+1. Creates a wallet with balance = 100
+2. Attempts deduction of 150
+3. Verifies:
+   - Operation fails
+   - Balance remains 100
+   - No ledger entry created
+
+Test can be minimal but must pass.
+
+------------------------------------------------------------
+DO NOT IMPLEMENT:
+------------------------------------------------------------
+
+- Idempotency
+- Commission guards
+- Deposit protection
+- Admin overrides
+- Monitoring
+- Backup
+- Schema redesign
+
+This task is strictly limited to negative balance protection.
+
+------------------------------------------------------------
+SUCCESS CRITERIA
+------------------------------------------------------------
+
+✔ No wallet can go below zero
+✔ System does not crash
+✔ Existing features continue to work
+✔ Test passes
+✔ No new dependencies added
+
+------------------------------------------------------------
+STOP AFTER COMPLETION
+------------------------------------------------------------
+
+Do not implement additional improvements.
+Do not refactor.
+Only report what was modified.
