@@ -1,0 +1,160 @@
+
+Prompt 23 – Production-Ready Core Deployment
+
+Objective:
+Deploy the Mit Gaber Hyperlocal Marketplace Core to a Production-Ready state within a controlled, safe environment, ensuring all financial, operational, and system integrity layers are active, validated, and monitored. The goal is to produce a fully functional, safe, and verifiable production snapshot without switching to Autonomous mode.
+
+Instructions for Replit Agent:
+
+1. Environment Validation
+
+Verify that all dependencies (uuid, express-rate-limit, helmet, cors, pg, drizzle-orm) are installed.
+
+Ensure .env configuration is present with production credentials (DB, JWT secrets, admin emails).
+
+Check that Drizzle ORM schema is in sync with the database using initializeDatabase() and/or drizzle-kit push in safe mode.
+
+Confirm all migrations (ledger, audit_logs, wallets, orders, sub_orders) have been applied successfully.
+
+If any schema mismatch is detected, stop and report the exact table/column causing the conflict; do not auto-truncate or drop tables.
+
+
+
+2. Backup & Recovery
+
+Create a full database backup in backups/db-YYYYMMDD-HHMMSS.sql.
+
+Run verification scripts:
+
+scripts/verify-backup.ts
+
+scripts/test-safety.ts
+
+
+Confirm backups are consistent, complete, and restorable.
+
+
+
+3. Core Service Startup
+
+Start the server (npm run dev or equivalent) in production mode.
+
+Confirm all modules load correctly:
+
+wallet, ledger, orders, sub_orders, products, users, audit_logs
+
+
+Ensure that RBAC enforcement is functional:
+
+ADMIN, STORE_OWNER, DRIVER, CUSTOMER roles must have correct access.
+
+
+Validate that Admin Override, Wallet Transactions, and Commission Processing are operational and safe.
+
+
+
+4. Health Checks
+
+Expose a GET /api/admin/health endpoint.
+
+Verify the following automatically:
+
+DB connectivity
+
+Ledger balance consistency
+
+Wallet balances ≥ 0
+
+Audit logs operational
+
+Core services responding (status 200)
+
+
+Log any failures with detailed error messages and stop deployment if critical errors are found.
+
+
+
+5. Financial Integrity Validation
+
+Run wallet/ledger simulation scripts:
+
+Deduct, deposit, approveDeposit, adminOverride
+
+Confirm negative balances are prevented
+
+Confirm ledger entries match wallet changes
+
+
+Confirm all commission and transaction triggers fire correctly and only once.
+
+
+
+6. Application Verification
+
+Test all dashboards (Store, Driver, Customer, Admin) in a sandbox mode:
+
+Orders list, order details, wallet, earnings, product management
+
+
+Confirm real-time updates (status badges) are accurate
+
+Validate all form inputs, validation messages, and error handling for edge cases.
+
+
+
+7. Safety Report
+
+Generate a deployment report in logs/production-safety-report.json including:
+
+Health endpoint check results
+
+Backup verification
+
+Ledger consistency checks
+
+Admin override tests
+
+Any warnings/errors
+
+
+
+
+8. Final Confirmation
+
+Once all checks pass, print:
+
+✅ Production-Ready Core Deployment Complete
+✅ All health checks passed
+✅ Ledger and wallet integrity confirmed
+✅ Backups verified and restorable
+✅ RBAC enforcement active
+
+If any failures, log detailed report and halt deployment until issues are resolved.
+
+
+
+
+Constraints:
+
+Do not modify existing data without explicit validation (no truncates, drops, or schema-altering commands without confirmation).
+
+Ensure atomicity in financial operations.
+
+Ensure all scripts are idempotent and safe to rerun.
+
+Maintain audit logs for every critical step.
+
+
+Output Expectations:
+
+A fully running production-ready system.
+
+Verified health and safety checks.
+
+Backup and recovery confirmed.
+
+Deployment report generated for investor demo or production rollout.
+
+
+
+-

@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-02-26T19:55:57.606Z",
+  "checks": {
+    "database": {
+      "status": "OK",
+      "latency": "N/A"
+    },
+    "backups": {
+      "count": 1,
+      "latest": "db-20260226-194750.sql"
+    },
+    "ledger": {
+      "walletsTotal": "2000.00",
+      "ledgerTotal": "2000.00",
+      "consistent": true
+    }
+  },
+  "summary": {
+    "status": "PASS",
+    "errors": 0,
+    "warnings": 0
+  }
+}
