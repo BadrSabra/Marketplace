@@ -222,6 +222,7 @@ export const loginSchema = z.object({
 
 // API TYPES
 export type User = typeof users.$inferSelect;
+export type Role = User["role"];
 export type Wallet = typeof wallets.$inferSelect;
 export type WalletTransaction = typeof walletTransactions.$inferSelect;
 export type Store = typeof stores.$inferSelect;

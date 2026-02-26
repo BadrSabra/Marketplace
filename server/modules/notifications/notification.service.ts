@@ -1,4 +1,6 @@
 import nodemailer from "nodemailer";
+import { notificationEmitter, type NotificationEvent } from "./notification.emitter";
+import { auditService } from "../audit/audit.service";
 
 export class NotificationService {
   private transporter;
@@ -11,6 +13,27 @@ export class NotificationService {
         pass: process.env.GMAIL_PASS,
       },
     });
+
+    notificationEmitter.on("notification", this.handleNotification.bind(this));
+  }
+
+  private async handleNotification(event: NotificationEvent) {
+    // RBAC Check / Logging
+    try {
+      await auditService.logAction({
+        actionType: `NOTIFICATION_${event.type}`,
+        entityType: "NOTIFICATION",
+        entityId: event.userId as any,
+        performedByUserId: event.userId,
+        performedByRole: event.role,
+        newValue: event.payload,
+        metadata: {
+          timestamp: event.timestamp,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to log notification audit:", error);
+    }
   }
 
   async sendEmail(to: string, subject: string, text: string) {

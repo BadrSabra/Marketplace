@@ -3,6 +3,7 @@ import { deposits } from "@shared/deposits.schema";
 import { wallets, ledger, users } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { auditService } from "../../services/auditService";
+import { emitNotification } from "../notifications/notification.emitter";
 
 export class DepositService {
   async approveDeposit(depositId: string, adminId: string, force = false, notes?: string) {
@@ -76,6 +77,14 @@ export class DepositService {
         oldValue: { status: deposit.status, balance: oldBalance },
         newValue: { status: "APPROVED", balance: newBalance },
         metadata: { notes, force }
+      });
+
+      // 8. Emit Notification
+      emitNotification("WALLET_UPDATE", customer.id, customer.role, {
+        depositId,
+        amount: deposit.amount,
+        status: "APPROVED",
+        newBalance
       });
 
       return {

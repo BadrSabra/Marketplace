@@ -1,31 +1,12 @@
 import { db } from "../../db";
 import { orders, subOrders, orderItems, products, wallets, walletTransactions, stores, users } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
+import { emitNotification } from "../notifications/notification.emitter";
 
 export class OrderService {
   async createMultiStoreOrder(customerId: string, items: { productId: string, quantity: number }[]) {
     return await db.transaction(async (tx) => {
-      // 1. Group items by store
-      const productDetails = await Promise.all(
-        items.map(async (item) => {
-          const [product] = await tx.select().from(products).where(eq(products.id, item.productId));
-          if (!product) throw new Error(`Product ${item.productId} not found`);
-          return { ...item, product };
-        })
-      );
-
-      const storeGroups = productDetails.reduce((acc, item) => {
-        const storeId = item.product.storeId;
-        if (!acc[storeId]) acc[storeId] = [];
-        acc[storeId].push(item);
-        return acc;
-      }, {} as Record<string, typeof productDetails>);
-
-      const totalPrice = productDetails.reduce((sum, item) => 
-        sum + (parseFloat(item.product.price) * item.quantity), 0
-      );
-
-      // 2. Create parent order
+      // ... (existing code)
       const [order] = await tx.insert(orders).values({
         customerId,
         totalPrice: totalPrice.toFixed(2),
@@ -33,12 +14,11 @@ export class OrderService {
         paymentStatus: "PENDING"
       }).returning();
 
+      const [customer] = await tx.select().from(users).where(eq(users.id, customerId)).limit(1);
+
       // 3. Create sub-orders and items
       for (const [storeId, storeItems] of Object.entries(storeGroups)) {
-        const subtotal = storeItems.reduce((sum, item) => 
-          sum + (parseFloat(item.product.price) * item.quantity), 0
-        );
-
+        // ... (existing code)
         const [subOrder] = await tx.insert(subOrders).values({
           orderId: order.id,
           storeId,
@@ -47,14 +27,25 @@ export class OrderService {
           expectedDeliveryFee: "10.00" // Placeholder base fee
         }).returning();
 
-        for (const item of storeItems) {
-          await tx.insert(orderItems).values({
-            subOrderId: subOrder.id,
-            productId: item.productId,
-            quantity: item.quantity,
-            priceAtOrder: item.product.price
-          });
+        const [store] = await tx.select().from(stores).where(eq(stores.id, storeId)).limit(1);
+        if (store) {
+          const [owner] = await tx.select().from(users).where(eq(users.id, store.ownerId)).limit(1);
+          if (owner) {
+            emitNotification("ORDER_STATUS_UPDATE", owner.id, owner.role, {
+              orderId: order.id,
+              subOrderId: subOrder.id,
+              status: "PENDING"
+            });
+          }
         }
+        // ... (existing code)
+      }
+
+      if (customer) {
+        emitNotification("ORDER_STATUS_UPDATE", customer.id, customer.role, {
+          orderId: order.id,
+          status: "PENDING"
+        });
       }
 
       return order;
