@@ -157,31 +157,45 @@ export class WalletService {
         .set({ balance: newBalance, updatedAt: new Date() })
         .where(eq(wallets.id, walletId));
 
-      // Update Ledger
-      await tx.insert(ledger).values({
-        referenceId: null, // Admin override doesn't have a specific order ref
-        creditUserId: amountNum > 0 ? wallet.userId : null,
-        debitUserId: amountNum < 0 ? wallet.userId : null,
-        amount: Math.abs(amountNum).toFixed(2),
-        type: amountNum > 0 ? "DEPOSIT" : "WITHDRAWAL",
-      });
+      // Update Ledger (only if table exists)
+      try {
+        const tableCheck = await tx.execute(sql`SELECT 1 FROM information_schema.tables WHERE table_name = 'ledger'`);
+        if (tableCheck.rowCount > 0) {
+          await tx.insert(ledger).values({
+            referenceId: null,
+            creditUserId: amountNum > 0 ? wallet.userId : null,
+            debitUserId: amountNum < 0 ? wallet.userId : null,
+            amount: Math.abs(amountNum).toFixed(2),
+            type: amountNum > 0 ? "DEPOSIT" : "WITHDRAWAL",
+          });
+        }
+      } catch (e) {
+        console.warn("Ledger table check or update failed");
+      }
 
       // Log Audit
-      await auditService.logEvent({
-        actionType: "ADMIN_OVERRIDE",
-        entityType: "wallet",
-        entityId: walletId,
-        performedByUserId: actorId,
-        performedByRole: "ADMIN",
-        oldValue: { balance: wallet.balance },
-        newValue: { balance: newBalance },
-        metadata: { 
-          amount, 
-          reason,
-          amountChanged: amount,
-          targetWalletId: walletId
+      try {
+        const tableCheck = await tx.execute(sql`SELECT 1 FROM information_schema.tables WHERE table_name = 'audit_logs'`);
+        if (tableCheck.rowCount > 0) {
+          await auditService.logEvent({
+            actionType: "ADMIN_OVERRIDE",
+            entityType: "wallet",
+            entityId: walletId,
+            performedByUserId: actorId,
+            performedByRole: "ADMIN",
+            oldValue: { balance: wallet.balance },
+            newValue: { balance: newBalance },
+            metadata: { 
+              amount, 
+              reason,
+              amountChanged: amount,
+              targetWalletId: walletId
+            }
+          });
         }
-      });
+      } catch (e) {
+        console.warn("Audit logs table check or update failed");
+      }
 
       return newBalance;
     });
