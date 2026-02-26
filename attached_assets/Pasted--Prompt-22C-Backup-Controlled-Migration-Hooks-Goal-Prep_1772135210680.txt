@@ -1,0 +1,111 @@
+
+Prompt 22C – Backup & Controlled Migration Hooks
+
+Goal:
+Prepare the system for enabling the ledger and audit_logs tables safely without disrupting existing wallet balances or financial operations. Implement automated backup, safe migration hooks, pre-checks, and atomic verification scripts. Ensure the system remains fully operational during and after migration.
+
+Detailed Instructions for Replit Agent:
+
+1. Pre-Migration Backup:
+
+Create a complete backup of the database (dump) before applying any schema changes.
+
+Verify backup integrity (checksum or record count).
+
+Save backup in a safe, timestamped location (e.g., /backups/db-YYYYMMDD-HHMMSS.sql).
+
+
+
+2. Schema Migration Scripts:
+
+Create migration scripts for ledger and audit_logs tables:
+
+ledger: id (PK), user_id (FK), type, amount, related_order_id, created_at.
+
+audit_logs: id (PK), action_type, table_name, record_id, user_id, changes (JSON), created_at.
+
+
+Ensure migrations can be applied safely without truncating existing tables.
+
+Include idempotency: running the script twice does not duplicate tables or data.
+
+
+
+3. Pre-Migration Checks:
+
+Verify that all current wallet balances are consistent (wallet.balance >= 0).
+
+Confirm no pending transactions are mid-flight (pendingDeposits or pendingSubOrders).
+
+Log any inconsistencies before proceeding.
+
+
+
+4. Atomic Migration Hooks:
+
+Wrap migration steps in a transaction block where possible.
+
+Ensure ledger entries are correctly linked to existing wallet operations.
+
+Ensure audit_logs captures all changes post-migration.
+
+
+
+5. Post-Migration Verification Scripts:
+
+Implement automated scripts to:
+
+Confirm wallet balances match ledger aggregates.
+
+Validate that audit_logs table is writable and logs a sample action.
+
+Test rollback scenarios: intentionally fail one migration step and verify that no partial tables or inconsistent state remain.
+
+
+
+
+6. Safety & RBAC:
+
+Only ADMIN role can trigger migration.
+
+Include CLI confirmation prompt (Type YES to proceed with migration) before executing.
+
+All scripts must safely abort if pre-checks fail.
+
+
+
+7. Testing & Logging:
+
+Generate a test report summarizing:
+
+Backup created with path and checksum.
+
+Tables created successfully.
+
+All verification tests passed.
+
+
+Log all actions to console in a structured JSON format for traceability.
+
+
+
+8. Output:
+
+Confirm in console when migration is safe to activate ledger and audit_logs fully.
+
+Provide safe instructions for enabling triggers after verification.
+
+
+
+
+Constraints & Notes:
+
+Do not modify live wallet balances during migration.
+
+Do not truncate any tables.
+
+Ensure system remains operational for other API endpoints while migration scripts run.
+
+Provide clear error messages for any failed step.
+
+
