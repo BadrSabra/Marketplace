@@ -281,6 +281,7 @@ export async function registerRoutes(
       const filters = {
         userId: req.query.userId as string,
         actionType: req.query.actionType as string,
+        status: req.query.status as string,
         startDate: req.query.startDate as string,
         endDate: req.query.endDate as string,
         limit: req.query.limit ? parseInt(req.query.limit as string) : 50,

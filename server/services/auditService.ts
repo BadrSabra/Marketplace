@@ -58,6 +58,10 @@ export class AuditService {
       conditions.push(lte(auditLogs.createdAt, new Date(filters.endDate)));
     }
 
+    if (filters.status) {
+      conditions.push(eq(sql`metadata->>'status'`, filters.status));
+    }
+
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const logs = await db

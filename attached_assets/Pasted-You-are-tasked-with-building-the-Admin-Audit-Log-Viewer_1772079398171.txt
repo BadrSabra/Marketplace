@@ -1,0 +1,105 @@
+You are tasked with building the **Admin Audit Log Viewer** UI for the Mit Gaber Hyperlocal Marketplace. This page allows admins to view, filter, and inspect all system audit logs, including financial actions, order status changes, approvals, and critical system events. It must integrate with the backend audit log endpoints, enforce **RBAC**, support **filtering, pagination**, and **real-time updates**, and handle all edge cases.
+
+---
+
+### 1️⃣ Page / Component
+
+- **Admin Audit Log Page** (`/admin/audit-logs`)
+  - Table/List view of logs with columns:
+    - Timestamp (date & time)
+    - User (name & role)
+    - Action Type (ORDER_UPDATE, DEPOSIT_APPROVAL, COMMISSION_PROCESSED, PROFILE_CHANGE, etc.)
+    - Target Entity (Order ID, SubOrder ID, User ID, Wallet Transaction ID)
+    - Previous Value / New Value (if applicable)
+    - Status (Success, Failed)
+  - Filter controls:
+    - Date range
+    - User
+    - Action type
+    - Status
+  - Pagination controls
+  - Search bar (optional, by entity ID or user name)
+  - Optional: real-time update toggle
+
+---
+
+### 2️⃣ Data Fetching & API Integration
+
+| Action                  | Endpoint                   | Method | Notes |
+|--------------------------|----------------------------|--------|-------|
+| Fetch audit logs         | /api/admin/audit-logs      | GET    | RBAC: ADMIN only, supports filters, pagination |
+| Real-time updates        | /ws/admin/audit-logs       | WS     | Optional WebSocket stream for live log updates |
+| Fetch single log details | /api/admin/audit-logs/:id  | GET    | For detailed inspection, shows before/after values |
+
+---
+
+### 3️⃣ UI / UX Details
+
+- **Table Layout**:
+  - Columns: Timestamp, User, Role, Action Type, Target Entity, Status, Details
+  - Expandable row for `Previous / New values`
+- **Filtering UI**:
+  - Date pickers for start/end
+  - Multi-select for users
+  - Action type dropdown
+  - Status dropdown
+- **Pagination**:
+  - 20 logs per page
+  - Next / Previous / Jump to page
+- **Loading & Error States**:
+  - Spinner while loading
+  - Retry button on error
+  - Empty state if no logs found
+
+---
+
+### 4️⃣ Edge Cases
+
+- No logs available → show friendly message  
+- Network errors → show retry toast  
+- Invalid filters → validate and reset to defaults  
+- Large datasets → ensure table virtualized / paginated  
+- Real-time stream disconnect → auto-reconnect and notify admin  
+
+---
+
+### 5️⃣ Security & RBAC
+
+- Only **ADMIN** users can access this page  
+- Enforce RBAC in frontend and verify with backend  
+- Do not expose sensitive fields unnecessarily (e.g., full payment card numbers)  
+- Log all admin interactions for compliance  
+
+---
+
+### 6️⃣ Testing Requirements
+
+- Unit tests:
+  - Filter inputs validate correctly  
+  - Pagination works as expected  
+  - Row expansion shows correct before/after values  
+- Integration tests:
+  - Fetch audit logs with filters  
+  - Real-time updates reflected in UI  
+  - RBAC enforcement (non-admin users blocked)  
+  - Error handling for failed API calls  
+
+---
+
+### 7️⃣ Agent Execution Instructions
+
+1. Build **Admin Audit Log Page** at `/admin/audit-logs`  
+2. Fetch logs from `/api/admin/audit-logs` with filters and pagination  
+3. Display **table with columns**: Timestamp, User, Role, Action Type, Target Entity, Status, Details  
+4. Implement **expandable row** for Previous / New values  
+5. Add **filter UI**: date range, user, action type, status  
+6. Add **pagination controls** (20 logs per page)  
+7. Implement **loading, error, and empty states**  
+8. Optional: integrate **WebSocket** for live log updates  
+9. Add **unit and integration tests** for all functionality  
+10. Enforce **RBAC: ADMIN only**  
+11. Log important interactions in **audit_logs** system (backend Prompt 7)  
+
+---
+
+End of **Prompt 19**. Execute **step-by-step**, ensuring **full filtering, pagination, expandable details, RBAC enforcement, real-time updates, and edge-case handling** are implemented.
