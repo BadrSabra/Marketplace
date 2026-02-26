@@ -1,0 +1,181 @@
+.
+
+
+---
+
+🔹 PROMPT 1 — SubOrder Status Management API (Super-Detailed Version)
+
+You are implementing a **SubOrder Status Management API** for the Mit Gaber Hyperlocal Marketplace project. Follow these instructions exactly. No deviations.
+
+---
+
+### 1️⃣ Endpoint Specification
+
+- **Method**: PATCH
+- **Route**: /api/suborders/:id/status
+- **Purpose**: Allow status transitions for sub-orders according to role and lifecycle rules.
+
+---
+
+### 2️⃣ Allowed Status Transitions
+
+| Current Status | Allowed Next Status |
+|----------------|------------------|
+| PENDING        | ACCEPTED, CANCELLED |
+| ACCEPTED       | READY, CANCELLED    |
+| READY          | PICKED_UP           |
+| PICKED_UP      | DELIVERED           |
+| DELIVERED      | (terminal, no further transitions) |
+| CANCELLED      | (terminal)          |
+
+> Any other transition should return HTTP 400 with a descriptive error.
+
+---
+
+### 3️⃣ Role-Based Access Control (RBAC)
+
+- **STORE_OWNER**:
+  - Can transition: PENDING → ACCEPTED
+  - Can transition: ACCEPTED → READY
+  - Can CANCEL sub-orders if PENDING or ACCEPTED
+- **DRIVER**:
+  - Can transition: READY → PICKED_UP
+  - Can transition: PICKED_UP → DELIVERED
+- **ADMIN**:
+  - Full override for all transitions (for emergency/manual corrections)
+- **Validation**:
+  - STORE_OWNER can only modify sub-orders of their store
+  - DRIVER can only modify sub-orders assigned to them
+
+Return **403 Forbidden** if RBAC fails.
+
+---
+
+### 4️⃣ Input Validation
+
+- **sub_order_id**: must exist in the database
+- **status**: must be string, match allowed next status for the current state
+- **Optional**: reason field if CANCELLED
+
+Return **404 Not Found** if sub-order does not exist.
+
+---
+
+### 5️⃣ Database Transaction
+
+- Wrap **status update**, **stock decrement triggers** (if ACCEPTED), and **audit log placeholder** in a single **atomic transaction**.
+- Ensure rollback on any failure.
+- Use `SELECT FOR UPDATE` to prevent race conditions when reading the sub-order.
+
+---
+
+### 6️⃣ Event Emission
+
+- Emit an event: `suborder.status.changed`
+- Include payload:
+```json
+{
+  "sub_order_id": "<id>",
+  "previous_status": "<status>",
+  "new_status": "<status>",
+  "actor_id": "<user_id>",
+  "timestamp": "<ISO>"
+}
+
+
+---
+
+7️⃣ Logging / Audit Placeholder
+
+Add structured console log:
+
+
+[AUDIT-PLACEHOLDER] user=<actor_id> changed suborder=<sub_order_id> from <old_status> to <new_status>
+
+This will later integrate with audit_logs table.
+
+
+
+---
+
+8️⃣ Response Schema
+
+{
+  "sub_order_id": "<uuid>",
+  "old_status": "<string>",
+  "new_status": "<string>",
+  "updated_at": "<ISO timestamp>"
+}
+
+HTTP 200 for success
+
+HTTP 400 for invalid transition
+
+HTTP 403 for unauthorized role
+
+HTTP 404 for sub-order not found
+
+HTTP 409 if stock insufficient (for ACCEPTED)
+
+
+
+---
+
+9️⃣ Testing Requirements
+
+Unit tests for:
+
+Valid transitions per role
+
+Invalid transitions rejected
+
+Unauthorized roles rejected
+
+Terminal state transitions rejected
+
+
+Mock transaction rollback to simulate failure
+
+Simulate concurrent acceptance by multiple STORE_OWNERS (ensure atomicity)
+
+
+
+---
+
+1️⃣0️⃣ File Structure
+
+server/modules/orders/suborder.controller.ts → PATCH endpoint
+
+server/modules/orders/suborder.service.ts → Business logic, validation, transaction, event emission
+
+server/modules/orders/suborder.dto.ts → Request and Response DTOs
+
+server/modules/orders/suborder.spec.ts → Unit tests
+
+server/modules/orders/suborder.types.ts → Status enum, RBAC constants
+
+
+
+---
+
+1️⃣1️⃣ Notes for Agent
+
+Only modify SubOrder service/controller files.
+
+Do not touch unrelated modules.
+
+Do not implement audit log DB table yet (placeholder only).
+
+Ensure all errors return clear JSON messages with status codes.
+
+Include timestamps in responses for all status changes.
+
+Keep console logging structured for future integration.
+
+
+
+---
+
+End of Prompt 1. Execute step-by-step, returning only the new files modified along with test coverage.
+
+---

@@ -300,32 +300,8 @@ export async function registerRoutes(
 
   // --- SUBORDERS STATUS MANAGEMENT ---
   app.patch("/api/suborders/:id/status", authenticate, authorizeRole(["STORE_OWNER", "DRIVER", "ADMIN"]), async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { status } = z.object({ status: z.string() }).parse(req.body);
-      const { subOrderService } = await import("./modules/orders/suborder.service");
-      
-      const updatedSubOrder = await subOrderService.updateSubOrderStatus(id, status, (req as any).user);
-      res.json(updatedSubOrder);
-    } catch (err: any) {
-      if (err instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid status input" });
-      }
-      if (err.message?.startsWith("INSUFFICIENT_STOCK")) {
-        return res.status(409).json({ message: err.message.replace("INSUFFICIENT_STOCK: ", "Insufficient stock for: ") });
-      }
-      if (err.message === "NOT_FOUND") {
-        return res.status(404).json({ message: "Sub-order not found" });
-      }
-      if (err.message === "INVALID_TRANSITION") {
-        return res.status(400).json({ message: "Invalid status transition" });
-      }
-      if (err.message === "UNAUTHORIZED_OWNERSHIP" || err.message === "UNAUTHORIZED_ACTION" || err.message === "UNAUTHORIZED_ROLE") {
-        return res.status(403).json({ message: "Unauthorized to perform this transition" });
-      }
-      console.error("SubOrder status update error:", err);
-      res.status(500).json({ message: "Internal server error" });
-    }
+    const { subOrderController } = await import("./modules/orders/suborder.controller");
+    return subOrderController.updateStatus(req, res);
   });
 
   // --- ADMIN MODULE ---

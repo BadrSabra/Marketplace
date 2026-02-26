@@ -1,19 +1,16 @@
 import { db } from "../../db";
-import { subOrders, stores, orderItems, products } from "@shared/schema";
+import { subOrders, stores, orderItems, products, deliveryOffers } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import type { User, SubOrder } from "@shared/schema";
 import { auditService } from "../../services/auditService";
+import { allowedTransitions } from "./suborder.types";
 
 export class SubOrderService {
   /**
    * Internal helper to decrement stock when a sub-order is accepted.
    * Validates that all items have sufficient stock before proceeding.
-   * @param tx Drizzle transaction instance
-   * @param subOrderId ID of the sub-order being accepted
-   * @param isOverride If true (e.g., ADMIN), skip stock validation checks
    */
   private async decrementStock(tx: any, subOrderId: string, isOverride: boolean = false) {
-    // Fetch all items in the sub-order with their current product stock
     const items = await tx
       .select({
         itemId: orderItems.id,
@@ -28,12 +25,10 @@ export class SubOrderService {
 
     for (const item of items) {
       if (!isOverride && item.currentStock < item.quantity) {
-        // Log failure for audit preparation
-        console.log(`[AUDIT] Stock decrement failed for sub-order ${subOrderId}: Product ${item.productName} has insufficient stock (${item.currentStock} < ${item.quantity})`);
+        console.log(`[AUDIT] Stock decrement failed for sub-order ${subOrderId}: Product ${item.productName} has insufficient stock`);
         throw new Error(`INSUFFICIENT_STOCK: ${item.productName}`);
       }
 
-      // Deduct quantity from products.stock
       await tx
         .update(products)
         .set({
@@ -42,66 +37,61 @@ export class SubOrderService {
         })
         .where(eq(products.id, item.productId));
       
-      console.log(`[AUDIT] Stock decremented for product ${item.productName} (Qty: ${item.quantity}) in sub-order ${subOrderId}`);
+      console.log(`[AUDIT] Stock decremented for product ${item.productName} (Qty: ${item.quantity})`);
     }
   }
 
-  async updateSubOrderStatus(subOrderId: string, newStatus: string, actorUser: User): Promise<SubOrder> {
+  async updateSubOrderStatus(subOrderId: string, newStatus: any, actorUser: User): Promise<SubOrder> {
     return await db.transaction(async (tx) => {
-      // 1. Fetch sub-order
+      // Use SELECT FOR UPDATE to prevent race conditions
       const [subOrder] = await tx
         .select()
         .from(subOrders)
-        .where(eq(subOrders.id, subOrderId));
+        .where(eq(subOrders.id, subOrderId))
+        .for("update");
 
-      if (!subOrder) {
-        throw new Error("NOT_FOUND");
-      }
+      if (!subOrder) throw new Error("NOT_FOUND");
 
-      // 2. Validate ownership/role and transition
-      const currentStatus = subOrder.status;
+      const currentStatus = subOrder.status as keyof typeof allowedTransitions;
 
-      // Transition validation logic
-      const allowedTransitions: Record<string, string[]> = {
-        "PENDING": ["ACCEPTED", "CANCELLED"],
-        "ACCEPTED": ["READY", "CANCELLED"],
-        "READY": ["PICKED_UP", "CANCELLED"],
-        "PICKED_UP": ["DELIVERED", "CANCELLED"],
-      };
-
+      // 1. Transition validation
       if (!allowedTransitions[currentStatus]?.includes(newStatus) && newStatus !== "CANCELLED") {
         throw new Error("INVALID_TRANSITION");
       }
 
-      // RBAC Validation
+      // 2. RBAC Validation
       let isOverride = false;
       if (actorUser.role === "STORE_OWNER") {
-        // Verify store ownership
         const [store] = await tx
           .select()
           .from(stores)
           .where(and(eq(stores.id, subOrder.storeId), eq(stores.ownerId, actorUser.id)));
         
-        if (!store) {
-          throw new Error("UNAUTHORIZED_OWNERSHIP");
-        }
+        if (!store) throw new Error("UNAUTHORIZED_OWNERSHIP");
 
         const storeAllowed = ["ACCEPTED", "READY", "CANCELLED"];
-        if (!storeAllowed.includes(newStatus)) {
-          throw new Error("UNAUTHORIZED_ACTION");
-        }
+        if (!storeAllowed.includes(newStatus)) throw new Error("UNAUTHORIZED_ACTION");
       } else if (actorUser.role === "DRIVER") {
-        if (newStatus !== "PICKED_UP") {
-          throw new Error("UNAUTHORIZED_ACTION");
-        }
+        const [assignedOffer] = await tx
+          .select()
+          .from(deliveryOffers)
+          .where(and(
+            eq(deliveryOffers.subOrderId, subOrderId),
+            eq(deliveryOffers.driverId, actorUser.id),
+            eq(deliveryOffers.status, "ACCEPTED")
+          ));
+        
+        if (!assignedOffer && actorUser.role !== "ADMIN") throw new Error("UNAUTHORIZED_ACTION");
+
+        const driverAllowed = ["PICKED_UP", "DELIVERED"];
+        if (!driverAllowed.includes(newStatus)) throw new Error("UNAUTHORIZED_ACTION");
       } else if (actorUser.role === "ADMIN") {
-        // Admin can do any valid transition or cancel
-        isOverride = true; // Optional emergency override for stock if needed
+        isOverride = true;
       } else {
         throw new Error("UNAUTHORIZED_ROLE");
       }
 
-      // 3. Inventory Management: Handle stock decrement on ACCEPTED transition
+      // 3. Stock Management
       if (currentStatus === "PENDING" && newStatus === "ACCEPTED") {
         await this.decrementStock(tx, subOrderId, isOverride);
       }
@@ -109,14 +99,13 @@ export class SubOrderService {
       // 4. Update status
       const [updatedSubOrder] = await tx
         .update(subOrders)
-        .set({ 
-          status: newStatus as any,
-          updatedAt: new Date()
-        })
+        .set({ status: newStatus, updatedAt: new Date() })
         .where(eq(subOrders.id, subOrderId))
         .returning();
 
-      // Audit Log entry
+      // 5. Audit & Logging
+      console.log(`[AUDIT-PLACEHOLDER] user=${actorUser.id} changed suborder=${subOrderId} from ${currentStatus} to ${newStatus}`);
+      
       await auditService.logEvent({
         actionType: "ORDER_STATUS_CHANGE",
         entityType: "suborder",
@@ -124,14 +113,16 @@ export class SubOrderService {
         performedByUserId: actorUser.id,
         performedByRole: actorUser.role,
         oldValue: { status: currentStatus },
-        newValue: { status: newStatus }
+        newValue: { status: newStatus },
+        metadata: { timestamp: new Date().toISOString() }
       });
-
-      console.log(`[AUDIT] Sub-order ${subOrderId} status updated to ${newStatus} by ${actorUser.role} (${actorUser.id})`);
 
       return updatedSubOrder;
     });
   }
 }
+
+export const subOrderService = new SubOrderService();
+
 
 export const subOrderService = new SubOrderService();
