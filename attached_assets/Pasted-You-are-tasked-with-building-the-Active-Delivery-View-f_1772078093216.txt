@@ -1,0 +1,124 @@
+You are tasked with building the **Active Delivery View** for drivers in the Mit Gaber Hyperlocal Marketplace. This page allows drivers to manage and track their **currently assigned deliveries**, generate OTPs for customers, and monitor delivery status in real-time, with **full RBAC, edge-case handling, and timing calculations**.
+
+---
+
+### 1️⃣ Page / Component
+
+- **Active Delivery Page** (`/driver/active-delivery`)  
+  - Display **currently assigned sub-order** for the logged-in driver  
+    - Order ID / Sub-order ID  
+    - Customer name and phone number  
+    - Items (quantity × product)  
+    - Delivery address / map integration if available  
+    - Total amount  
+    - Current status (PENDING → PICKED_UP → DELIVERED)  
+    - OTP code for delivery verification  
+    - Estimated delivery time / remaining time countdown  
+  - **Actions**:
+    - Generate OTP for customer (if not already generated)  
+    - Mark as **PICKED_UP**  
+    - Mark as **DELIVERED**  
+    - Call / contact customer  
+  - **Status badges**:
+    - PENDING → yellow  
+    - ACCEPTED / ASSIGNED → blue  
+    - PICKED_UP → purple  
+    - DELIVERED → green  
+
+---
+
+### 2️⃣ Data Fetching & API Integration
+
+| Action                          | Endpoint                          | Method | Notes |
+|---------------------------------|----------------------------------|--------|-------|
+| Fetch active delivery           | /api/suborders/active             | GET    | RBAC: DRIVER only; fetch currently assigned sub-order |
+| Generate OTP                    | /api/delivery/otp/generate/:id    | POST   | Return OTP code; only once per sub-order; RBAC enforced |
+| Update status                   | /api/suborders/:id/status         | PATCH  | Status transitions: ACCEPTED → PICKED_UP → DELIVERED; atomic |
+| Optional: fetch customer contact| /api/users/:id                    | GET    | For display / call action |
+
+- Use **React Query** for fetching and mutations  
+- Invalidate queries on status change or OTP generation  
+
+---
+
+### 3️⃣ UI / UX Details
+
+- Display **assigned sub-order card** prominently  
+- **Countdown timer** for estimated delivery time  
+- **OTP section**:
+  - Show generated OTP  
+  - Copy button to clipboard  
+  - Expiration / validity notice  
+- **Action buttons** clearly show allowed transitions  
+- **Loading spinner** on fetch / mutation  
+- **Toast notifications** for success, errors, or validation warnings  
+- **Accessibility**: ARIA labels, keyboard focus, color contrast for badges  
+
+---
+
+### 4️⃣ Calculations & Validations
+
+- Prevent marking **PICKED_UP** if:
+  - Status is not ASSIGNED  
+- Prevent marking **DELIVERED** if:
+  - Status is not PICKED_UP  
+  - OTP not confirmed by customer  
+- OTP validation:
+  - Must be unique per delivery  
+  - Expire after predefined time (e.g., 10 minutes)  
+- Display **remaining time** countdown for delivery  
+- Handle large distances or ETA unavailability gracefully  
+
+---
+
+### 5️⃣ Edge Cases
+
+- No assigned delivery → display "No active deliveries assigned"  
+- OTP already used → prevent re-generation  
+- Delivery already completed by another driver → show alert and refresh  
+- Network error → toast notification  
+- Partial / missing sub-order info → fallback to placeholders  
+- Timer reaches zero → highlight overdue delivery in UI  
+
+---
+
+### 6️⃣ Real-Time Enhancements
+
+- WebSocket / SSE updates for:
+  - Status changes made by system / admin  
+  - Customer confirmation of OTP  
+- Animate status badge updates  
+- Update countdown timer every second  
+
+---
+
+### 7️⃣ Testing Requirements
+
+- Unit tests:
+  - Render empty active delivery view  
+  - Render assigned sub-order with all fields  
+- Integration tests:
+  - OTP generation works and displays correctly  
+  - Status transition mutations update UI and backend  
+  - Countdown timer functions accurately  
+  - RBAC enforced (DRIVER only)  
+  - Edge-case handling: already delivered, network failure, OTP reuse  
+
+---
+
+### 8️⃣ Agent Execution Instructions
+
+1. Build **Active Delivery Page** at `/driver/active-delivery`  
+2. Fetch **currently assigned sub-order** via `/api/suborders/active`  
+3. Display sub-order details, delivery address, items, and customer info  
+4. Implement **Generate OTP button** with one-time generation and expiration  
+5. Implement **status transitions** (ASSIGNED → PICKED_UP → DELIVERED)  
+6. Display **countdown timer** for estimated delivery time  
+7. Add **toast notifications, loading spinners, and real-time updates**  
+8. Include **unit and integration tests**  
+9. Ensure **RBAC enforcement** (DRIVER only)  
+10. Log all status changes and OTP generation in **audit logging system** (Prompt 7)  
+
+---
+
+End of **Prompt 13**. Execute **step-by-step**, ensuring **secure RBAC, OTP generation, delivery tracking, real-time UI updates, countdown timer, and audit logging**.

@@ -1,0 +1,118 @@
+You are tasked with building the **Driver Available Tasks UI & Marketplace** for the Mit Gaber Hyperlocal Marketplace. This page allows drivers to view unassigned delivery tasks (sub-orders), submit offers, and claim assignments, with **full RBAC, edge-case handling, and real-time updates**.
+
+---
+
+### 1️⃣ Page / Component
+
+- **Driver Available Tasks Page** (`/driver/tasks`)  
+  - Display a **list of available sub-orders**  
+    - Columns:
+      - Order ID / Sub-order ID  
+      - Customer name  
+      - Items (quantity × product)  
+      - Total amount  
+      - Delivery location  
+      - Estimated time / distance (if available)  
+  - **Actions**:
+    - Submit an offer (proposed delivery fee, optional notes)  
+    - Accept task (claim it if no competing offers exist or via highest bid)  
+  - Real-time **status badges**:
+    - AVAILABLE → green  
+    - PENDING → yellow  
+    - ASSIGNED → blue  
+
+---
+
+### 2️⃣ Data Fetching & API Integration
+
+| Action                        | Endpoint                         | Method | Notes |
+|--------------------------------|---------------------------------|--------|-------|
+| Fetch available tasks          | /api/delivery/available-tasks   | GET    | RBAC: DRIVER only; filter sub-orders with no assigned driver |
+| Submit an offer                | /api/delivery/suborders/:id/offer | POST  | Include `proposedFee` and optional `notes` |
+| Claim / Accept task            | PATCH /api/suborders/:id/status  | PATCH  | Status change: PENDING → ASSIGNED; RBAC enforced for DRIVER |
+| Optional: fetch driver profile | /api/users/me                    | GET    | For display of rating, past completions |
+
+- Use **React Query for fetching and mutation**  
+- **Real-time refresh** (WebSocket or polling every 15–30s) for new available tasks  
+- Invalidate queries after submitting offers or accepting tasks  
+
+---
+
+### 3️⃣ UI / UX Details
+
+- **Responsive table** for sub-orders  
+- **Action buttons** clearly indicate available actions  
+- **Offer submission modal**:
+  - Input for proposed fee (validated positive number)  
+  - Optional text notes  
+  - Submit button disabled until valid  
+- **Loading spinner** on fetch  
+- **Toast notifications** for success or errors  
+- **Accessibility**: ARIA labels, focus management, keyboard navigation  
+
+---
+
+### 4️⃣ Calculations & Validations
+
+- Prevent offer submission if:
+  - Fee ≤ 0  
+  - Driver already submitted an offer for this task  
+- Prevent claiming task if:
+  - Already assigned  
+  - Offer exceeds allowed limits (optional business rules)  
+- Ensure task status updates are atomic (PATCH wrapped in transaction)  
+- Display correct **count of competing offers**  
+
+---
+
+### 5️⃣ Edge Cases
+
+- No available tasks → display "No tasks currently available"  
+- Multiple drivers competing → highlight current highest offer  
+- Network error → toast notification  
+- Task already claimed by another driver → show alert and refresh list  
+- Large number of tasks → table scroll or virtualized list  
+- Partial / incomplete data → graceful fallback  
+
+---
+
+### 6️⃣ Real-Time Enhancements
+
+- WebSocket / SSE updates for:
+  - New sub-orders added  
+  - Offers submitted by other drivers  
+  - Task assigned / status change  
+- Animate table row update for real-time status change  
+
+---
+
+### 7️⃣ Testing Requirements
+
+- Unit tests:
+  - Render empty task list  
+  - Render list with sample tasks  
+- Integration tests:
+  - Offer submission mutation works and updates UI  
+  - Accepting a task updates status and invalidates queries  
+  - Real-time updates reflected in UI  
+  - RBAC enforced (only DRIVER can access)  
+  - Edge-case handling: already claimed tasks, invalid offers, network failures  
+
+---
+
+### 8️⃣ Agent Execution Instructions
+
+1. Build **Driver Available Tasks Page** at `/driver/tasks`  
+2. Fetch **available tasks** via `/api/delivery/available-tasks`  
+3. Display tasks in a **responsive table** with status badges  
+4. Implement **submit offer modal** with validation  
+5. Implement **accept/claim task action**  
+6. Implement **real-time updates** (WebSocket or polling)  
+7. Add **loading spinners, toast notifications, and edge-case handling**  
+8. Include **unit and integration tests**  
+9. Ensure **RBAC enforcement** (DRIVER only)  
+10. Log all fetches and task mutations in **audit logging system** (Prompt 7)  
+
+---
+
+End of **Prompt 12**. Execute **step-by-step**, ensuring **secure RBAC, edge-case handling, offer submission, atomic status update, and real-time UI refresh**.

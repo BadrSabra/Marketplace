@@ -20,6 +20,7 @@ import StoreInventory from "@/pages/store/inventory";
 import StoreOrderDetails from "@/pages/store/order/[id]";
 import DriverDashboard from "@/pages/driver/dashboard";
 import DriverEarnings from "@/pages/driver/earnings";
+import DriverTasks from "@/pages/driver/tasks";
 import UsersPage from "@/pages/admin/users";
 import StoresPage from "@/pages/admin/stores";
 import ProductsPage from "@/pages/admin/products";
@@ -87,6 +88,9 @@ function Router() {
       {/* Driver Routes */}
       <Route path="/driver/earnings">
         {() => <ProtectedRoute component={DriverEarnings} roles={["DRIVER"]} />}
+      </Route>
+      <Route path="/driver/tasks">
+        {() => <ProtectedRoute component={DriverTasks} roles={["DRIVER"]} />}
       </Route>
       
       {/* Store Routes */}

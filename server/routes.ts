@@ -18,6 +18,7 @@ import { deliveryController } from "./modules/delivery/delivery.controller";
 import depositRouter from "./modules/deposits/deposits.controller";
 import ledgerRouter from "./modules/ledger/ledger.controller";
 import { auditMiddleware } from "./modules/audit/audit.middleware";
+import { deliveryOfferController } from "./modules/delivery/deliveryOffer.controller";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -30,6 +31,8 @@ export async function registerRoutes(
 
   // Delivery
   app.get("/api/delivery/available-tasks", authenticate, deliveryController.getAvailableTasks);
+  app.post("/api/delivery/suborders/:id/offer", authenticate, authorizeRole(["DRIVER"]), deliveryOfferController.submitOffer);
+  app.patch("/api/delivery/suborders/:id/accept", authenticate, authorizeRole(["DRIVER"]), deliveryOfferController.acceptTask);
   
   // Deposits
   app.use("/api", depositRouter);

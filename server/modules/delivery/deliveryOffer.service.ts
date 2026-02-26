@@ -1,74 +1,75 @@
 import { db } from "../../db";
-import { deliveryOffers, subOrders, orders, wallets, walletTransactions, users } from "@shared/schema";
-import { eq, and, ne } from "drizzle-orm";
-import { notificationService } from "../notifications/notification.service";
+import { deliveryOffers, subOrders, wallets, users } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
+import { auditService } from "../../services/auditService";
 
 export class DeliveryOfferService {
-  async submitOffer(subOrderId: string, driverId: string, offeredFee: string) {
-    const [subOrder] = await db.select().from(subOrders).where(eq(subOrders.id, subOrderId));
-    if (!subOrder) throw new Error("SubOrder not found");
-
-    const [offer] = await db.insert(deliveryOffers).values({
-      subOrderId,
-      driverId,
-      offeredFee,
-      status: "PENDING"
-    }).returning();
-
-    // Notify driver (optional based on requirements, but good for UX)
-    // Actually, task says "New Delivery Offer -> Driver notified", but usually it's the customer who gets notified of a new offer.
-    // I'll stick to the task: "New Delivery Offer -> Driver notified"
-    const [driver] = await db.select().from(users).where(eq(users.id, driverId));
-    if (driver) {
-      await notificationService.sendEmail(driver.email, "Offer Submitted", `Your offer of ${offeredFee} for sub-order ${subOrderId} has been submitted.`);
-    }
-
-    return offer;
-  }
-
-  async acceptOffer(offerId: string, customerId: string) {
+  async createOffer(subOrderId: string, driverId: string, data: { proposedFee: number; notes?: string }) {
     return await db.transaction(async (tx) => {
-      const [offer] = await tx.select().from(deliveryOffers).where(eq(deliveryOffers.id, offerId));
-      if (!offer) throw new Error("Offer not found");
+      const [subOrder] = await tx.select().from(subOrders).where(eq(subOrders.id, subOrderId)).for("update");
+      if (!subOrder || subOrder.status !== "READY") throw new Error("TASK_NOT_AVAILABLE");
 
-      const [subOrder] = await tx.select().from(subOrders).where(eq(subOrders.id, offer.subOrderId));
-      const [order] = await tx.select().from(orders).where(eq(orders.id, subOrder.orderId));
-      
-      if (order.customerId !== customerId) throw new Error("Unauthorized");
+      const [existing] = await tx
+        .select()
+        .from(deliveryOffers)
+        .where(and(eq(deliveryOffers.subOrderId, subOrderId), eq(deliveryOffers.driverId, driverId)));
+      if (existing) throw new Error("ALREADY_SUBMITTED");
 
-      // 1. Accept this offer
-      await tx.update(deliveryOffers).set({ status: "ACCEPTED" }).where(eq(deliveryOffers.id, offerId));
+      const [offer] = await tx.insert(deliveryOffers).values({
+        subOrderId,
+        driverId,
+        offeredFee: data.proposedFee.toString(),
+        status: "PENDING",
+      }).returning();
 
-      // 2. Reject others
-      await tx.update(deliveryOffers).set({ status: "REJECTED" }).where(and(eq(deliveryOffers.subOrderId, offer.subOrderId), ne(deliveryOffers.id, offerId)));
-
-      // 3. Hold funds for delivery fee
-      const [wallet] = await tx.select().from(wallets).where(eq(wallets.userId, customerId));
-      if (!wallet || parseFloat(wallet.balance) < parseFloat(offer.offeredFee)) {
-        throw new Error("Insufficient funds for delivery fee");
-      }
-
-      await tx.update(wallets)
-        .set({ balance: (parseFloat(wallet.balance) - parseFloat(offer.offeredFee)).toFixed(2) })
-        .where(eq(wallets.id, wallet.id));
-
-      await tx.insert(walletTransactions).values({
-        walletId: wallet.id,
-        type: "HOLD",
-        amount: offer.offeredFee,
-        relatedOrderId: order.id,
-        status: "PENDING"
+      await auditService.logEvent({
+        actionType: "DELIVERY_OFFER_SUBMITTED",
+        entityType: "delivery_offer",
+        entityId: offer.id,
+        performedByUserId: driverId,
+        performedByRole: "DRIVER",
+        metadata: { subOrderId, proposedFee: data.proposedFee }
       });
 
-      // 4. Notifications
-      const [driver] = await tx.select().from(users).where(eq(users.id, offer.driverId));
-      const [customer] = await tx.select().from(users).where(eq(users.id, customerId));
-      if (driver) {
-        await notificationService.sendEmail(driver.email, "Offer Accepted", `Your delivery offer for sub-order ${subOrder.id} has been accepted.`);
-      }
-      if (customer) {
-        await notificationService.sendEmail(customer.email, "Offer Accepted", `You have accepted a delivery offer for sub-order ${subOrder.id}.`);
-      }
+      return offer;
+    });
+  }
+
+  async acceptTask(subOrderId: string, driverId: string) {
+    return await db.transaction(async (tx) => {
+      const [subOrder] = await tx.select().from(subOrders).where(eq(subOrders.id, subOrderId)).for("update");
+      if (!subOrder) throw new Error("NOT_FOUND");
+      if (subOrder.assignedDriverId) throw new Error("ALREADY_ASSIGNED");
+
+      const [updatedSubOrder] = await tx
+        .update(subOrders)
+        .set({ 
+          assignedDriverId: driverId, 
+          status: "ASSIGNED",
+          updatedAt: new Date() 
+        })
+        .where(eq(subOrders.id, subOrderId))
+        .returning();
+
+      // Update delivery offers to set this one as ACCEPTED and others as REJECTED
+      await tx.update(deliveryOffers)
+        .set({ status: "ACCEPTED" })
+        .where(and(eq(deliveryOffers.subOrderId, subOrderId), eq(deliveryOffers.driverId, driverId)));
+      
+      await tx.update(deliveryOffers)
+        .set({ status: "REJECTED" })
+        .where(and(eq(deliveryOffers.subOrderId, subOrderId), ne(deliveryOffers.driverId, driverId)));
+
+      await auditService.logEvent({
+        actionType: "TASK_ACCEPTED",
+        entityType: "suborder",
+        entityId: subOrderId,
+        performedByUserId: driverId,
+        performedByRole: "DRIVER",
+        newValue: { status: "ASSIGNED", assignedDriverId: driverId }
+      });
+
+      return updatedSubOrder;
     });
   }
 }

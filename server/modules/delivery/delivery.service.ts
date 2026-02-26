@@ -33,6 +33,7 @@ export class DeliveryService {
         subtotal: subOrders.subtotal,
         created_at: subOrders.createdAt,
         status: subOrders.status,
+        assigned_driver_id: subOrders.assignedDriverId,
       })
       .from(subOrders)
       .innerJoin(orders, eq(subOrders.orderId, orders.id))
@@ -90,7 +91,7 @@ export class DeliveryService {
         subtotal: Number(res.subtotal),
         created_at: res.created_at.toISOString(),
         status: res.status as any,
-        assigned_driver_id: null
+        assigned_driver_id: res.assigned_driver_id
       };
     }));
 
