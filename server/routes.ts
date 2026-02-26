@@ -23,6 +23,8 @@ import { auditMiddleware } from "./modules/audit/audit.middleware";
 import { deliveryOfferController } from "./modules/delivery/deliveryOffer.controller";
 import { deliveryOtpController } from "./modules/delivery/deliveryOtp.controller";
 
+import { loginLimiter, orderLimiter, depositLimiter } from "./middleware/security";
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -42,7 +44,7 @@ export async function registerRoutes(
   // Deposits
   app.use("/api", depositRouter);
   // --- AUTH MODULE ---
-  app.post(api.auth.register.path, async (req, res) => {
+  app.post(api.auth.register.path, async (req, res, next) => {
     try {
       const input = api.auth.register.input.parse(req.body);
       
@@ -98,7 +100,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post(api.auth.login.path, async (req, res) => {
+  app.post(api.auth.login.path, loginLimiter, async (req, res, next) => {
     try {
       const input = api.auth.login.input.parse(req.body);
       const email = input.email;
@@ -389,12 +391,12 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/wallet/deposit", authenticate, walletController.deposit);
+  app.post("/api/wallet/deposit", authenticate, depositLimiter, walletController.deposit);
 
   // --- ORDERS MODULE ---
   app.get("/api/orders", authenticate, orderController.getMyOrders);
   app.get("/api/orders/:id", authenticate, orderController.get);
-  app.post("/api/orders", authenticate, orderController.create);
+  app.post("/api/orders", authenticate, orderLimiter, orderController.create);
   app.patch("/api/suborders/:id/cancel", authenticate, orderController.cancelSubOrder);
 
   // Ensure Admin account is ready
