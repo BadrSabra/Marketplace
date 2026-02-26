@@ -1,0 +1,54 @@
+{
+  "common": {
+    "loading": "جارٍ التحميل...",
+    "error": "حدث خطأ، حاول مرة أخرى",
+    "success": "تمت العملية بنجاح",
+    "confirm": "تأكيد",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "edit": "تعديل",
+    "delete": "حذف"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "register": "إنشاء حساب",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "name": "الاسم",
+    "role": "الدور",
+    "customer": "عميل",
+    "store_owner": "صاحب متجر",
+    "driver": "سائق"
+  },
+  "wallet": {
+    "balance": "الرصيد الحالي",
+    "deposit": "إيداع",
+    "withdraw": "سحب",
+    "insufficient": "الرصيد غير كافٍ",
+    "transactions": "سجل المعاملات",
+    "amount": "المبلغ"
+  },
+  "orders": {
+    "title": "الطلبات",
+    "id": "رقم الطلب",
+    "status": "الحالة",
+    "total": "الإجمالي",
+    "pending": "قيد الانتظار",
+    "accepted": "تم القبول",
+    "ready": "جاهز",
+    "picked_up": "تم الاستلام",
+    "delivered": "تم التوصيل",
+    "cancelled": "ملغي",
+    "accept": "قبول",
+    "reject": "رفض",
+    "mark_ready": "وضع جاهز",
+    "view_details": "عرض التفاصيل"
+  },
+  "dashboard": {
+    "title": "لوحة التحكم",
+    "store_earnings": "أرباح المتجر",
+    "active_orders": "الطلبات الحالية",
+    "transactions": "المعاملات",
+    "welcome": "مرحباً بك"
+  }
+}

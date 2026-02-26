@@ -36,8 +36,16 @@
 
     --radius: 0.75rem;
 
-    --font-sans: 'Inter', sans-serif;
-    --font-display: 'Plus Jakarta Sans', sans-serif;
+    --font-sans: 'Cairo', sans-serif;
+    --font-display: 'Cairo', sans-serif;
+  }
+
+  html {
+    direction: rtl;
+  }
+
+  body {
+    text-align: right;
   }
 
   .dark {

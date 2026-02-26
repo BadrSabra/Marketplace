@@ -1,0 +1,148 @@
+:
+
+
+---
+
+Prompt 25 – Arabic Frontend & UX Upgrade (Super-Optimized, Ready-to-Run)
+
+Goal: Fully translate the UI to Arabic, enable RTL layout, simplify the experience for non-technical Arabic users, and provide clear real-time notifications and feedback.
+
+Instructions for Replit Agent:
+
+1. Global i18n Setup
+
+Create an Arabic translation file locales/ar.json:
+
+
+{
+  "common": {
+    "loading": "جارٍ التحميل...",
+    "error": "حدث خطأ، حاول مرة أخرى",
+    "success": "تمت العملية بنجاح",
+    "confirm": "تأكيد",
+    "cancel": "إلغاء"
+  },
+  "wallet": {
+    "balance": "الرصيد الحالي",
+    "deposit": "إيداع",
+    "withdraw": "سحب",
+    "insufficient": "الرصيد غير كافٍ"
+  },
+  "orders": {
+    "pending": "قيد الانتظار",
+    "accepted": "تم القبول",
+    "ready": "جاهز",
+    "picked_up": "تم الاستلام",
+    "delivered": "تم التوصيل",
+    "cancelled": "ملغي",
+    "accept": "قبول",
+    "reject": "رفض",
+    "mark_ready": "وضع جاهز"
+  },
+  "dashboard": {
+    "store_earnings": "أرباح المتجر",
+    "active_orders": "الطلبات الحالية",
+    "transactions": "المعاملات"
+  }
+}
+
+
+2. RTL Support
+
+Add global CSS in globals.css or Tailwind configuration:
+
+
+html {
+  direction: rtl;
+}
+body {
+  text-align: right;
+  font-family: 'Cairo', Tahoma, sans-serif;
+}
+
+
+3. Wrap Components with i18n
+
+Use react-i18next for translations:
+
+
+import { useTranslation } from 'react-i18next';
+
+export default function WalletPage() {
+  const { t } = useTranslation('wallet');
+  return (
+    <div>
+      <h1>{t('balance')}</h1>
+      <button>{t('deposit')}</button>
+      <button>{t('withdraw')}</button>
+    </div>
+  );
+}
+
+
+4. Update Orders Table
+
+Replace all status text with translations:
+
+
+const statusBadge = (status: string) => {
+  const statusMap: Record<string, string> = {
+    PENDING: t('orders.pending'),
+    ACCEPTED: t('orders.accepted'),
+    READY: t('orders.ready'),
+    PICKED_UP: t('orders.picked_up'),
+    DELIVERED: t('orders.delivered'),
+    CANCELLED: t('orders.cancelled')
+  };
+  return <Badge>{statusMap[status]}</Badge>;
+};
+
+
+5. Simplify UI
+
+Add short Arabic tooltips for buttons:
+
+
+<Button title="اضغط هنا لقبول الطلب">{t('orders.accept')}</Button>
+
+
+6. Real-Time Feedback
+
+Use useToast with Arabic text for success/error:
+
+
+toast({
+  title: t('common.success'),
+  description: "تم تحديث حالة الطلب بنجاح",
+});
+
+
+7. Deliverables for Agent
+
+Translate all dashboard pages (Customer, Store, Driver, Admin) to Arabic.
+
+Replace all text/labels/buttons/errors with Arabic translations.
+
+Enable full RTL support in CSS/HTML.
+
+Simplify all interactions for non-technical Arabic users.
+
+Implement real-time, clear notifications in Arabic for critical operations (wallet, orders, admin overrides).
+
+
+
+
+
+---
+
+💡 After execution:
+
+The platform UI will be fully Arabic, RTL-compliant, with clear notifications and simplified UX for non-technical users.
+
+Fonts and text alignment will match Arabic reading conventions.
+
+All components are ready for immediate interaction without further modifications.
+
+
+
+-
