@@ -1,7 +1,8 @@
 import { db } from "../../db";
 import { wallets, walletTransactions } from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import type { WalletTransaction, InsertWalletTransaction } from "@shared/schema";
+import { auditService } from "../../services/auditService";
 
 export class LedgerService {
   /**
@@ -19,10 +20,13 @@ export class LedgerService {
         throw new Error("Insufficient funds");
       }
 
+      const oldBalance = wallet.balance;
+      const newBalance = (parseFloat(wallet.balance) - parseFloat(amount)).toFixed(2);
+
       // 2. Update wallet balance
       await tx.update(wallets)
         .set({ 
-          balance: sql`${wallets.balance} - ${amount}`,
+          balance: newBalance,
           updatedAt: new Date()
         })
         .where(eq(wallets.id, walletId));
@@ -36,6 +40,18 @@ export class LedgerService {
         status: "PENDING",
       }).returning();
 
+      // Log audit for wallet update (hold)
+      await auditService.logEvent({
+        actionType: "WALLET_UPDATE",
+        entityType: "wallet",
+        entityId: walletId,
+        performedByUserId: wallet.userId,
+        performedByRole: "SYSTEM",
+        oldValue: { balance: oldBalance },
+        newValue: { balance: newBalance },
+        metadata: { action: "HOLD", amount, relatedOrderId }
+      });
+
       return transaction;
     });
   }
@@ -47,10 +63,16 @@ export class LedgerService {
     if (parseFloat(amount) <= 0) throw new Error("Amount must be greater than 0");
 
     return await db.transaction(async (tx) => {
+      const [wallet] = await tx.select().from(wallets).where(eq(wallets.id, walletId));
+      if (!wallet) throw new Error("Wallet not found");
+
+      const oldBalance = wallet.balance;
+      const newBalance = (parseFloat(wallet.balance) + parseFloat(amount)).toFixed(2);
+
       // 1. Update wallet balance
       await tx.update(wallets)
         .set({ 
-          balance: sql`${wallets.balance} + ${amount}`,
+          balance: newBalance,
           updatedAt: new Date()
         })
         .where(eq(wallets.id, walletId));
@@ -64,6 +86,18 @@ export class LedgerService {
         status: "COMPLETED",
       }).returning();
 
+      // Log audit for wallet update (release)
+      await auditService.logEvent({
+        actionType: "WALLET_UPDATE",
+        entityType: "wallet",
+        entityId: walletId,
+        performedByUserId: wallet.userId,
+        performedByRole: "SYSTEM",
+        oldValue: { balance: oldBalance },
+        newValue: { balance: newBalance },
+        metadata: { action: "RELEASE", amount, relatedOrderId }
+      });
+
       return transaction;
     });
   }
@@ -75,9 +109,15 @@ export class LedgerService {
     if (parseFloat(amount) <= 0) throw new Error("Amount must be greater than 0");
 
     return await db.transaction(async (tx) => {
+      const [wallet] = await tx.select().from(wallets).where(eq(wallets.id, walletId));
+      if (!wallet) throw new Error("Wallet not found");
+
+      const oldBalance = wallet.balance;
+      const newBalance = (parseFloat(wallet.balance) + parseFloat(amount)).toFixed(2);
+
       await tx.update(wallets)
         .set({ 
-          balance: sql`${wallets.balance} + ${amount}`,
+          balance: newBalance,
           updatedAt: new Date()
         })
         .where(eq(wallets.id, walletId));
@@ -90,6 +130,18 @@ export class LedgerService {
         status: "COMPLETED",
       }).returning();
 
+      // Log audit for commission processed
+      await auditService.logEvent({
+        actionType: "COMMISSION_PROCESSED",
+        entityType: "wallet",
+        entityId: walletId,
+        performedByUserId: wallet.userId,
+        performedByRole: "SYSTEM",
+        oldValue: { balance: oldBalance },
+        newValue: { balance: newBalance },
+        metadata: { amount, relatedOrderId }
+      });
+
       return transaction;
     });
   }
@@ -101,9 +153,15 @@ export class LedgerService {
     if (parseFloat(amount) <= 0) throw new Error("Amount must be greater than 0");
 
     return await db.transaction(async (tx) => {
+      const [wallet] = await tx.select().from(wallets).where(eq(wallets.id, walletId));
+      if (!wallet) throw new Error("Wallet not found");
+
+      const oldBalance = wallet.balance;
+      const newBalance = (parseFloat(wallet.balance) + parseFloat(amount)).toFixed(2);
+
       await tx.update(wallets)
         .set({ 
-          balance: sql`${wallets.balance} + ${amount}`,
+          balance: newBalance,
           updatedAt: new Date()
         })
         .where(eq(wallets.id, walletId));
@@ -116,6 +174,18 @@ export class LedgerService {
         status: "COMPLETED",
       }).returning();
 
+      // Log audit for wallet update (refund)
+      await auditService.logEvent({
+        actionType: "WALLET_UPDATE",
+        entityType: "wallet",
+        entityId: walletId,
+        performedByUserId: wallet.userId,
+        performedByRole: "SYSTEM",
+        oldValue: { balance: oldBalance },
+        newValue: { balance: newBalance },
+        metadata: { action: "REFUND", amount, relatedOrderId }
+      });
+
       return transaction;
     });
   }
@@ -126,6 +196,7 @@ export class LedgerService {
   async processCommissions(subOrderId: string, orderId: string): Promise<void> {
     const { subOrders, orders, stores, users, wallets, deliveryOffers } = await import("@shared/schema");
     const { notificationService } = await import("../notifications/notification.service");
+    const { auditService } = await import("../../services/auditService");
 
     await db.transaction(async (tx) => {
       // 1. Get SubOrder details
@@ -151,7 +222,7 @@ export class LedgerService {
       // Get driver from accepted delivery offer
       const [deliveryOffer] = await tx.select()
         .from(deliveryOffers)
-        .where(and(eq(deliveryOffers.orderId, orderId), eq(deliveryOffers.status, "ACCEPTED")));
+        .where(and(eq(deliveryOffers.subOrderId, subOrderId), eq(deliveryOffers.status, "ACCEPTED")));
       const driverId = deliveryOffer?.driverId;
 
       // Helper to update balance and record ledger
@@ -160,8 +231,11 @@ export class LedgerService {
         const [wallet] = await tx.select().from(wallets).where(eq(wallets.userId, userId));
         if (!wallet) return;
 
+        const oldBalance = wallet.balance;
+        const newBalance = (parseFloat(wallet.balance) + parseFloat(commissionAmount)).toFixed(2);
+
         await tx.update(wallets)
-          .set({ balance: sql`${wallets.balance} + ${commissionAmount}`, updatedAt: new Date() })
+          .set({ balance: newBalance, updatedAt: new Date() })
           .where(eq(wallets.id, wallet.id));
 
         await tx.insert(walletTransactions).values({
@@ -170,6 +244,18 @@ export class LedgerService {
           amount: commissionAmount,
           relatedOrderId: orderId,
           status: "COMPLETED",
+        });
+
+        // Log audit for commission processed
+        await auditService.logEvent({
+          actionType: "COMMISSION_PROCESSED",
+          entityType: "wallet",
+          entityId: wallet.id,
+          performedByUserId: userId,
+          performedByRole: "SYSTEM",
+          oldValue: { balance: oldBalance },
+          newValue: { balance: newBalance },
+          metadata: { amount: commissionAmount, relatedOrderId: orderId, party: label }
         });
 
         const [user] = await tx.select().from(users).where(eq(users.id, userId));
@@ -193,5 +279,7 @@ export class LedgerService {
     });
   }
 }
+
+export const ledgerService = new LedgerService();
 
 export const ledgerService = new LedgerService();

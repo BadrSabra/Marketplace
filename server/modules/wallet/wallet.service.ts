@@ -1,9 +1,10 @@
 import { db } from "../../db";
-import { wallets, walletTransactions, users } from "@shared/schema";
+import { walletTransactions, users, wallets } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import type { Wallet, InsertWallet, WalletTransaction, InsertWalletTransaction } from "@shared/schema";
 import { notificationService } from "../notifications/notification.service";
 import { ledgerService } from "../ledger/ledger.service";
+import { auditService } from "../../services/auditService";
 
 export class WalletService {
   async getOrCreateWallet(userId: string): Promise<Wallet> {
@@ -79,14 +80,29 @@ export class WalletService {
         .where(eq(users.id, wallet.userId));
 
       // Update wallet balance using ledger service approach (but for deposit)
+      const oldBalance = wallet.balance;
+      const newBalance = (parseFloat(wallet.balance) + parseFloat(transaction.amount)).toFixed(2);
+      
       await tx.update(wallets)
-        .set({ balance: (parseFloat(wallet.balance) + parseFloat(transaction.amount)).toFixed(2) })
+        .set({ balance: newBalance })
         .where(eq(wallets.id, wallet.id));
 
       const [updatedTransaction] = await tx.update(walletTransactions)
         .set({ status: "COMPLETED" })
         .where(eq(walletTransactions.id, transactionId))
         .returning();
+
+      // Log audit for deposit approval
+      await auditService.logEvent({
+        actionType: "DEPOSIT_APPROVED",
+        entityType: "wallet_transaction",
+        entityId: transactionId,
+        performedByUserId: user?.id || wallet.userId,
+        performedByRole: user?.role || "ADMIN",
+        oldValue: { balance: oldBalance },
+        newValue: { balance: newBalance },
+        metadata: { amount: transaction.amount, walletId: wallet.id }
+      });
 
       if (user) {
         await notificationService.notifyDepositApproved(user.email, transaction.amount);
