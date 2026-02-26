@@ -2,6 +2,7 @@ import { db } from "../../db";
 import { subOrders, stores, orderItems, products } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import type { User, SubOrder } from "@shared/schema";
+import { auditService } from "../../services/auditService";
 
 export class SubOrderService {
   /**
@@ -115,7 +116,17 @@ export class SubOrderService {
         .where(eq(subOrders.id, subOrderId))
         .returning();
 
-      // TODO: Add audit log entry
+      // Audit Log entry
+      await auditService.logEvent({
+        actionType: "ORDER_STATUS_CHANGE",
+        entityType: "suborder",
+        entityId: subOrderId,
+        performedByUserId: actorUser.id,
+        performedByRole: actorUser.role,
+        oldValue: { status: currentStatus },
+        newValue: { status: newStatus }
+      });
+
       console.log(`[AUDIT] Sub-order ${subOrderId} status updated to ${newStatus} by ${actorUser.role} (${actorUser.id})`);
 
       return updatedSubOrder;
