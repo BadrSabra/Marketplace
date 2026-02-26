@@ -1,0 +1,183 @@
+You are tasked with implementing a Financial Integrity Guard Layer for Mit Gaber Hyperlocal Marketplace.
+
+IMPORTANT:
+- Do NOT refactor existing architecture.
+- Do NOT move files.
+- Do NOT modify unrelated logic.
+- Only add guards and validations around existing financial operations.
+- Changes must be minimal, localized, and safe for Fast Mode execution.
+
+------------------------------------------------------------
+OBJECTIVE
+------------------------------------------------------------
+
+Prevent:
+- Negative wallet balances
+- Duplicate financial transactions
+- Illegal commission calculations
+- Illegal SubOrder state transitions
+- Double deposit approvals
+
+The system must become financially safe without structural redesign.
+
+------------------------------------------------------------
+1️⃣ WALLET PROTECTION LAYER
+------------------------------------------------------------
+
+A. Prevent Negative Balance
+
+Before any wallet deduction:
+- Check current balance
+- If balance < deduction amount:
+    throw BUSINESS_RULE_VIOLATION
+    message: "Insufficient wallet balance"
+
+Do NOT allow negative values under any condition.
+
+B. Atomic Update Guard
+
+If wallet update is inside transaction:
+- Ensure balance check and deduction happen in same DB transaction.
+
+If transactions already exist:
+- Do not redesign them
+- Just ensure balance check happens immediately before update.
+
+------------------------------------------------------------
+2️⃣ IDEMPOTENCY PROTECTION (LIGHTWEIGHT)
+------------------------------------------------------------
+
+Add idempotency protection for:
+
+- Wallet deduction
+- Deposit approval
+- Commission processing
+
+Implementation rules:
+
+A. Require transactionId (or generate internal unique reference)
+
+B. Before creating ledger entry:
+    Check if transactionId already exists.
+    If exists:
+        Reject operation with:
+            code: DUPLICATE_TRANSACTION
+
+C. Add UNIQUE constraint if not already present on:
+    ledger.transactionId
+
+Do NOT redesign ledger schema.
+Only add guard logic.
+
+------------------------------------------------------------
+3️⃣ COMMISSION GUARD
+------------------------------------------------------------
+
+Before finalizing commission:
+
+Validate:
+- commission >= 0
+- commission <= order_total
+
+If violated:
+    log error
+    throw SYSTEM_ERROR
+
+If commission calculation exists:
+Do not rewrite calculation logic.
+Only validate result before saving.
+
+------------------------------------------------------------
+4️⃣ SUBORDER STATE TRANSITION GUARD
+------------------------------------------------------------
+
+Add validation function:
+
+validateSubOrderTransition(currentStatus, nextStatus)
+
+Allowed transitions example:
+PENDING → CONFIRMED
+CONFIRMED → PREPARING
+PREPARING → OUT_FOR_DELIVERY
+OUT_FOR_DELIVERY → DELIVERED
+
+Disallowed:
+DELIVERED → PREPARING
+CANCELLED → DELIVERED
+
+If illegal:
+    throw BUSINESS_RULE_VIOLATION
+    log blocked transition
+
+Attach this validation BEFORE updating status.
+
+Do not redesign state system.
+Only enforce guard before update.
+
+------------------------------------------------------------
+5️⃣ DEPOSIT DOUBLE APPROVAL PROTECTION
+------------------------------------------------------------
+
+Before approving deposit:
+
+Check:
+if deposit.status == APPROVED:
+    throw BUSINESS_RULE_VIOLATION
+    message: "Deposit already approved"
+
+Ensure:
+- Approval creates exactly ONE ledger entry
+- If ledger entry fails, deposit must not stay approved
+
+If transaction system exists:
+Use it.
+If not:
+Just ensure logic order:
+    1. Create ledger entry
+    2. Mark deposit approved
+
+------------------------------------------------------------
+6️⃣ LEDGER CONSISTENCY CHECK (LIGHTWEIGHT)
+------------------------------------------------------------
+
+Add optional utility function:
+
+verifyLedgerConsistency(userId)
+
+- Sum all ledger entries
+- Compare with wallet.balance
+- If mismatch:
+    log CRITICAL error
+
+Do NOT run automatically on every request.
+Only expose as admin debug endpoint.
+
+------------------------------------------------------------
+7️⃣ TEST REQUIREMENTS (MANDATORY)
+------------------------------------------------------------
+
+Add minimal tests for:
+
+- Negative balance attempt rejected
+- Duplicate transactionId rejected
+- Commission out of range rejected
+- Illegal status transition rejected
+- Double deposit approval rejected
+
+Tests can be simple but must exist.
+
+------------------------------------------------------------
+EXPECTED RESULT
+------------------------------------------------------------
+
+After implementation:
+
+✔ No wallet can go negative
+✔ No duplicate financial transaction possible
+✔ No illegal order state transition possible
+✔ No deposit can be approved twice
+✔ Commission cannot exceed order value
+✔ Financial corruption risk significantly reduced
+
+This must be implemented safely in Fast Mode.
+No architectural redesign allowed.
