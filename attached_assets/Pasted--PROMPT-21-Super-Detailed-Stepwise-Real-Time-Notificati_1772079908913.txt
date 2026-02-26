@@ -1,0 +1,154 @@
+
+---
+
+🔹 PROMPT 21 – Super-Detailed Stepwise Real-Time Notification Layer
+
+You are tasked with implementing a **Real-Time Notification Layer** for Mit Gaber Hyperlocal Marketplace in a stepwise, modular way so that it can be executed in lightweight mode, without requiring full autonomous execution. Your implementation must be precise, secure, and robust, while being broken down into small actionable steps.
+
+---
+
+### 1️⃣ Goal
+Enable real-time notifications for all users (Customer, Store Owner, Driver, Admin) in response to system events like order updates, delivery assignment, wallet transactions, deposit approvals, and system alerts.
+
+---
+
+### 2️⃣ Stepwise Implementation Plan
+
+#### Step 1 – WebSocket Connection Layer
+- Create a WebSocket server (`ws` or `socket.io`) endpoint: `/ws/notifications`
+- Authenticate each connection with JWT during handshake
+- Attach `userId` and `role` to socket session
+- Reject unauthorized or expired tokens
+- Keep connection lightweight and modular
+
+#### Step 2 – Role-Based Subscription Mapping
+- Map roles to events:
+  - **Customer**: own orders, wallet/deposit updates
+  - **Store Owner**: store orders, earnings updates
+  - **Driver**: available tasks, assigned deliveries, pickup/delivery updates
+  - **Admin**: global system alerts
+- Ensure users only receive events they are authorized to see
+
+#### Step 3 – Event Triggering
+- Trigger events **after DB commit** for atomicity
+- Event types:
+  - `ORDER_STATUS_UPDATE` → sub-order id, new status, timestamp
+  - `NEW_ORDER` → order id, customer info, items, timestamp
+  - `DEPOSIT_APPROVED` → user id, amount, timestamp
+  - `EARNINGS_UPDATE` → driver/store id, updated balance, timestamp
+  - `SYSTEM_ALERT` → admin, severity, message, timestamp
+- Example payload:
+```json
+{
+  "event": "ORDER_STATUS_UPDATE",
+  "data": {
+    "subOrderId": "abc123",
+    "newStatus": "READY",
+    "updatedBy": "STORE_OWNER",
+    "timestamp": "2026-02-26T12:00:00Z"
+  }
+}
+
+Step 4 – Offline & Reconnection Logic
+
+Queue events for clients disconnected temporarily
+
+Deliver queued events upon reconnection
+
+Implement simple retry for failed sends
+
+Avoid duplicates using unique event IDs
+
+
+Step 5 – Client-Side Integration
+
+Provide a reusable React hook:
+
+const { notifications, subscribe, unsubscribe } = useNotifications(userId, role);
+
+Auto-reconnect with exponential backoff
+
+Filter events by type if needed
+
+Simple event handler callback: onNotification(event)
+
+
+Step 6 – Security & Logging
+
+Validate JWT for every connection
+
+Enforce role-based filtering
+
+Log unauthorized access attempts
+
+Optionally log critical events to audit_logs table
+
+
+Step 7 – Testing
+
+Unit tests:
+
+Mock backend triggers; ensure events emitted only after DB commit
+
+Test RBAC filtering
+
+Test reconnection and retry logic
+
+
+Integration tests:
+
+Multiple clients receiving correct events
+
+Offline clients receive queued events
+
+
+Stress test:
+
+High concurrency simulation
+
+Ensure no missed events, no duplication, memory stable
+
+
+
+
+---
+
+3️⃣ Implementation Guidance for Edge Cases
+
+Ensure offline clients get events without losing order
+
+Handle rapid multiple updates gracefully (throttling if necessary)
+
+Fail gracefully if the WebSocket server restarts
+
+Avoid exposing other users’ events under any circumstances
+
+Provide clear error messages to the client in JSON format
+
+
+
+---
+
+✅ Output Expectations
+
+Fully functional WebSocket layer integrated into existing backend
+
+Reusable client-side React hook/service
+
+Atomic, secure event dispatching
+
+Logging of all critical events
+
+Testing scripts for unit, integration, and stress scenarios
+
+
+
+---
+
+Instruction to Replit Agent:
+
+> Implement the notification layer step by step as modular sub-tasks. Do not attempt full autonomous execution in one go. Start with the WebSocket connection and authentication, then proceed to event subscription, broadcasting, offline queue, client hook, security, and tests, in incremental steps, ensuring each module works independently before moving to the next.
+
+
+
+---
