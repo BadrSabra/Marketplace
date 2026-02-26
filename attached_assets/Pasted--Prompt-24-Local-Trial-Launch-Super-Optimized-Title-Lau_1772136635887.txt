@@ -1,0 +1,233 @@
+
+
+Prompt 24 – Local Trial Launch (Super-Optimized)
+
+Title: Launch Local Trial Environment – Full Production-Ready Core in Sandbox
+
+Objective:
+Set up a fully functional local instance of the Mit Gaber Hyperlocal Marketplace, Production-Ready Core, limited to a sandbox city scope. Ensure financial safety, full monitoring, reporting, rollback protection, and UI readiness for all user roles.
+
+Instructions for Replit Agent:
+
+
+---
+
+1️⃣ Environment Preparation
+
+1. Verify Node.js, PostgreSQL connection, and Drizzle ORM are active.
+
+
+2. Install missing dependencies:
+
+
+
+$ npm install uuid @types/uuid express-rate-limit helmet cors
+
+3. Ensure .env.local is correctly configured for a local database sandbox (DATABASE_URL).
+
+
+4. Create backup folder and verify writable:
+
+
+
+$ mkdir -p backups && ls -l backups
+
+
+---
+
+2️⃣ Database & Data Initialization
+
+1. Schema verification:
+
+shared/schema.ts must exist.
+
+Core tables: users, wallets, ledger, audit_logs, stores, products, orders, sub_orders, order_items, delivery_offers, delivery_otps.
+
+
+
+2. Controlled migration:
+
+Run migration script for ledger & audit logs.
+
+Ensure no destructive schema changes; skip dangerous operations.
+
+Create local test admin user if missing.
+
+
+
+3. Test data population:
+
+1 Admin, 2 Store Owners, 2 Drivers, 3 Customers.
+
+1 Store per Store Owner, with 5 products each.
+
+2 sample orders with sub-orders, linked to wallets with preloaded balances.
+
+
+
+
+
+---
+
+3️⃣ Safety & Financial Protections
+
+1. Wallet protections:
+
+Deduction cannot result in negative balance.
+
+Admin Override respects strict rules (no negative outcomes).
+
+
+
+2. Atomic transactions:
+
+All wallet and ledger updates wrapped in db.transaction and for("update").
+
+
+
+3. RBAC enforcement:
+
+Admin, Store Owner, Driver, Customer roles validated.
+
+
+
+4. Simulation test:
+
+Attempt invalid deduction (e.g., deduct 150 from 100) → must fail.
+
+Attempt Admin Override → must succeed/fail per role and balance rules.
+
+
+
+
+
+---
+
+4️⃣ Health & Monitoring
+
+1. Create health endpoint: /api/health returns:
+
+Database connection OK
+
+Latest backup timestamp
+
+Ledger vs wallets consistency
+
+Audit log count
+
+
+
+2. Run safety verification scripts:
+
+
+
+$ npx tsx server/scripts/test-wallet-protection.ts
+$ npx tsx server/scripts/test-admin-override.ts
+$ npx tsx server/scripts/test-integrity.ts
+
+3. Generate local trial report:
+
+
+
+logs/local-trial-report.json
+{
+  "timestamp": "NOW",
+  "database": "OK",
+  "backups": { "count": X, "latest": "db-YYYYMMDD-HHMMSS.sql" },
+  "ledgerConsistency": true,
+  "auditLogs": N,
+  "status": "PASS",
+  "warnings": 0,
+  "errors": 0
+}
+
+
+---
+
+5️⃣ UI & Functionality Checks
+
+1. Launch dashboards for all roles (Store Owner, Driver, Customer).
+
+
+2. Verify:
+
+Orders list updates in real-time.
+
+Wallet balance and transaction history visible.
+
+Products CRUD works with stock validation.
+
+Delivery offers / active delivery views functional.
+
+
+
+3. Flag any missing indicators or errors in logs/local-trial-ui-report.json.
+
+
+
+
+---
+
+6️⃣ Reporting & Rollback
+
+1. Ensure automatic backup of DB prior to trial launch:
+
+
+
+$ pg_dump "$DATABASE_URL" > backups/db-$(date +%Y%m%d-%H%M%S).sql
+
+2. Verify recovery workflow:
+
+Simulate ledger mismatch → system detects & recovers.
+
+Report results in logs/local-trial-recovery.json.
+
+
+
+
+
+---
+
+7️⃣ Final Confirmation
+
+Validate: all endpoints reachable, dashboards functional, wallets & ledger consistent, backups created.
+
+Summarize results in a master report: logs/local-trial-summary.json.
+
+Ready for internal local testing in a single city environment.
+
+
+
+---
+
+8️⃣ Safety Constraints
+
+Skip any destructive schema sync; confirm manually if needed.
+
+Do not connect to production services.
+
+Sandbox environment only.
+
+All scripts must log success/failure per action.
+
+Ensure atomicity and RBAC in all financial operations.
+
+
+
+---
+
+✅ Deliverable:
+
+Fully running local instance
+
+Sandbox dashboards functional for all roles
+
+Wallet & ledger integrity verified
+
+Health, safety, and recovery reports in /logs
+
+Ready for real-time local testing
+
+
+
+--
