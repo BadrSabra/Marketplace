@@ -24,6 +24,7 @@ import UsersPage from "@/pages/admin/users";
 import StoresPage from "@/pages/admin/stores";
 import ProductsPage from "@/pages/admin/products";
 import OrdersPage from "@/pages/admin/orders";
+import AdminAudit from "@/pages/admin/audit";
 
 function ProtectedRoute({ 
   component: Component, 

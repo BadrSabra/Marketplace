@@ -365,10 +365,23 @@ export async function registerRoutes(
   });
 
   app.get("/api/admin/audit", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
-    // Mock audit logs for now
-    res.json([
-      { id: 1, actionType: "SYSTEM_STARTUP", userRole: "SYSTEM", userId: "0", targetEntityId: "0", timestamp: new Date(), oldValue: null, newValue: "RUNNING" }
-    ]);
+    try {
+      const { auditService } = await import("./services/auditService");
+      const filters = {
+        userId: req.query.userId as string,
+        actionType: req.query.actionType as string,
+        startDate: req.query.startDate as string,
+        endDate: req.query.endDate as string,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
+        offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+      };
+
+      const result = await auditService.getAuditLogs(filters);
+      res.json(result);
+    } catch (err) {
+      console.error("Audit log fetch error:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
   });
 
   app.patch("/api/admin/users/:id/approve", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
