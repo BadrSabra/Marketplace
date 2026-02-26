@@ -16,6 +16,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 
 import { deliveryController } from "./modules/delivery/delivery.controller";
 import depositRouter from "./modules/deposits/deposits.controller";
+import ledgerRouter from "./modules/ledger/ledger.controller";
 import { auditMiddleware } from "./modules/audit/audit.middleware";
 
 export async function registerRoutes(
@@ -23,7 +24,10 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   app.use(auditMiddleware);
-  // ...
+  
+  // Ledger
+  app.use("/api", ledgerRouter);
+
   // Delivery
   app.get("/api/delivery/available-tasks", authenticate, deliveryController.getAvailableTasks);
   
