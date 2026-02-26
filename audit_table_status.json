@@ -1,0 +1,5 @@
+{
+  "step": "Audit Table Created",
+  "table": "audit_logs",
+  "status": "success"
+}

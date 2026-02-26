@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, integer, numeric, uuid, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, numeric, uuid, pgEnum, jsonb, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -148,6 +148,27 @@ export const deliveryOtps = pgTable("delivery_otps", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// AUDIT LOGS
+export const auditLogs = pgTable("audit_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  actionType: text("action_type").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: uuid("entity_id").notNull(),
+  performedByUserId: uuid("performed_by_user_id").notNull().references(() => users.id),
+  performedByRole: text("performed_by_role").notNull(),
+  oldValue: jsonb("old_value"),
+  newValue: jsonb("new_value"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    entityIdIdx: index("entity_id_idx").on(table.entityId),
+    performedByUserIdIdx: index("performed_by_user_id_idx").on(table.performedByUserId),
+    createdAtIdx: index("created_at_idx").on(table.createdAt),
+    actionTypeIdx: index("action_type_idx").on(table.actionType),
+  };
+});
+
 // ZOD SCHEMAS
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertWalletSchema = createInsertSchema(wallets).omit({ id: true, createdAt: true, updatedAt: true });
@@ -159,6 +180,7 @@ export const insertSubOrderSchema = createInsertSchema(subOrders).omit({ id: tru
 export const insertDeliveryOfferSchema = createInsertSchema(deliveryOffers).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertRatingSchema = createInsertSchema(ratings).omit({ id: true, createdAt: true });
 export const insertDeliveryOtpSchema = createInsertSchema(deliveryOtps).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ id: true, createdAt: true });
 
 // AUTH SCHEMAS
 export const registerSchema = z.object({
@@ -205,6 +227,7 @@ export type SubOrder = typeof subOrders.$inferSelect;
 export type DeliveryOffer = typeof deliveryOffers.$inferSelect;
 export type Rating = typeof ratings.$inferSelect;
 export type DeliveryOtp = typeof deliveryOtps.$inferSelect;
+export type AuditLog = typeof auditLogs.$inferSelect;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertWallet = z.infer<typeof insertWalletSchema>;
@@ -216,5 +239,6 @@ export type InsertSubOrder = z.infer<typeof insertSubOrderSchema>;
 export type InsertDeliveryOffer = z.infer<typeof insertDeliveryOfferSchema>;
 export type InsertRating = z.infer<typeof insertRatingSchema>;
 export type InsertDeliveryOtp = z.infer<typeof insertDeliveryOtpSchema>;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 
 export type AuthResponse = { token: string; user: Omit<User, "password"> };
