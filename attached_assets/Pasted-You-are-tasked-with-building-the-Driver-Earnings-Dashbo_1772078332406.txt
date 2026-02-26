@@ -1,0 +1,112 @@
+You are tasked with building the **Driver Earnings Dashboard** for the Mit Gaber Hyperlocal Marketplace. This page provides drivers with a full overview of their **wallet balance, completed transactions, and commission breakdowns**, with **secure RBAC, edge-case handling, filtering, and pagination**.
+
+---
+
+### 1️⃣ Page / Component
+
+- **Driver Earnings Page** (`/driver/earnings`)  
+  - Display **current wallet balance**  
+  - Display **total commissions earned**  
+  - Display **transaction history table** with:
+    - Date & time of transaction  
+    - Type: DEPOSIT, COMMISSION, REFUND, PAYMENT  
+    - Related Order ID (if applicable)  
+    - Amount (with + / - sign)  
+    - Status: PENDING, COMPLETED, FAILED  
+  - Filters:
+    - By **transaction type**  
+    - By **date range**  
+  - Pagination:
+    - Show 10–20 transactions per page  
+    - Navigate with next/prev buttons  
+
+---
+
+### 2️⃣ Data Fetching & API Integration
+
+| Action                     | Endpoint                      | Method | Notes |
+|-----------------------------|-------------------------------|--------|-------|
+| Fetch wallet balance        | /api/wallet                  | GET    | RBAC: DRIVER only |
+| Fetch transaction history   | /api/ledger/transactions      | GET    | Support query params: type, startDate, endDate, page, limit |
+| Optional: refresh data      | /api/ledger/transactions      | Polling/WebSocket | Real-time update for completed transactions |
+
+- Use **React Query** for fetching and mutation  
+- Invalidate queries after deposit, commission, or status update  
+
+---
+
+### 3️⃣ UI / UX Details
+
+- **Wallet balance card**: prominently display current balance  
+- **Total commission card**: sum of all COMPLETED COMMISSION transactions  
+- **Transaction table**:
+  - Highlight **green** for credits (DEPOSIT, COMMISSION)  
+  - Highlight **red** for debits (REFUND, PAYMENT)  
+  - Use **badge indicators** for status: PENDING → yellow, COMPLETED → green, FAILED → red  
+- **Filter panel**: type dropdown, date range picker  
+- **Pagination controls** at table bottom  
+- **Loading spinner** during fetch  
+- **Toast notifications** for errors  
+
+---
+
+### 4️⃣ Calculations & Validations
+
+- Commission total = sum of all COMPLETED COMMISSION transactions  
+- Balance = wallet balance endpoint value, ensure consistency with ledger sums  
+- Prevent rendering negative balance in UI (show warning if inconsistency detected)  
+- Validate filtering inputs (date formats, transaction types)  
+- Handle empty state gracefully: "No transactions found"  
+
+---
+
+### 5️⃣ Edge Cases
+
+- No transactions → empty table placeholder  
+- Transactions array too large → paginate properly  
+- Network errors → retry with toast notification  
+- Inconsistent ledger totals → display warning badge  
+- Transaction with missing related order → display "-"  
+
+---
+
+### 6️⃣ Real-Time Enhancements
+
+- Optional WebSocket updates:
+  - New completed transactions automatically appended to table  
+  - Wallet balance updates automatically  
+- Animate table rows on new transactions  
+- Auto-refresh every 30–60 seconds if WebSocket unavailable  
+
+---
+
+### 7️⃣ Testing Requirements
+
+- Unit tests:
+  - Wallet card renders correctly  
+  - Commission card sums correctly  
+  - Transaction table renders empty and non-empty states  
+- Integration tests:
+  - Filters and pagination work correctly  
+  - Status badges display properly for each transaction type  
+  - RBAC enforced: only DRIVER can access  
+  - Real-time updates update wallet balance and table  
+
+---
+
+### 8️⃣ Agent Execution Instructions
+
+1. Build **Driver Earnings Dashboard** at `/driver/earnings`  
+2. Fetch **wallet balance** from `/api/wallet`  
+3. Fetch **transaction history** from `/api/ledger/transactions` with filtering and pagination  
+4. Display **wallet balance, total commissions, and transactions table**  
+5. Implement **status badges, filter panel, and pagination controls**  
+6. Include **loading spinners, empty-state placeholders, and toast notifications**  
+7. Implement optional **real-time updates via WebSocket or polling**  
+8. Add **unit and integration tests**  
+9. Ensure **RBAC enforcement** (DRIVER only)  
+10. Log data fetch and errors in **audit logging system** (Prompt 7)  
+
+---
+
+End of **Prompt 14**. Execute **step-by-step**, ensuring **secure RBAC, real-time wallet & transaction updates, commission calculations, filtering, pagination, edge-case handling, and audit logging**.
