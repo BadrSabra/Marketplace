@@ -1,0 +1,143 @@
+
+---
+
+Prompt 25 – First Local User Test Flow (Super-Optimized)
+
+Goal: Perform an end-to-end local user simulation on the trial environment to validate core workflows, dashboards, financial operations, and real-time updates.
+
+Instructions for Replit Agent:
+
+1. Test Users & Roles
+
+Use seeded test users for each role: Admin, Store Owner, Driver, Customer.
+
+Ensure authentication and RBAC are enforced for each API and UI interaction.
+
+
+
+2. Core Workflows
+
+Customer:
+
+Create a new order with multiple sub-orders across products.
+
+Verify wallet deduction, balance check, and pending holds.
+
+Track order through all states: PENDING → ACCEPTED → READY → PICKED_UP → DELIVERED.
+
+
+Store Owner:
+
+Accept/reject sub-orders.
+
+Mark sub-orders as READY.
+
+Verify stock decrement occurs correctly.
+
+Check live status badges update in real-time.
+
+
+Driver:
+
+Claim available tasks.
+
+Track active deliveries, generate OTP, mark PICKED_UP and DELIVERED.
+
+Verify real-time updates on the dashboard.
+
+
+Admin:
+
+Perform a controlled Admin Override on wallet balances.
+
+Ensure audit logs capture the action.
+
+Verify ledger consistency after override.
+
+
+
+
+3. Financial Integrity Checks
+
+Verify wallet negative balance protection.
+
+Ensure commissions are calculated only after DELIVERED.
+
+Validate ledger total matches sum of wallet balances.
+
+Simulate concurrent operations to test atomicity of wallet and stock updates.
+
+
+
+4. UI/UX Validation
+
+Confirm dashboards render correctly for each role.
+
+Validate forms (product management, profile updates, deposits).
+
+Check status badges, notifications, and real-time elements.
+
+
+
+5. Monitoring & Reporting
+
+Capture system health status via /health endpoint.
+
+Generate a local test report in logs/local-user-test-report.json including:
+
+Orders processed, sub-orders status transitions.
+
+Wallet & ledger totals.
+
+Errors/warnings (if any).
+
+Role-based action verification (RBAC).
+
+
+
+
+6. Safety & Rollback
+
+If any transaction fails, rollback to the last consistent state.
+
+Log all rollback actions in audit logs for traceability.
+
+
+
+
+Output Requirements:
+
+Produce a structured JSON report at the end of the simulation:
+
+
+{
+  "timestamp": "YYYY-MM-DDTHH:mm:ss.sssZ",
+  "summary": {
+    "ordersTested": 0,
+    "subOrdersTested": 0,
+    "walletIntegrity": true,
+    "ledgerConsistency": true,
+    "uiErrors": 0,
+    "rbacErrors": 0
+  },
+  "details": {
+    "customerActions": [],
+    "storeOwnerActions": [],
+    "driverActions": [],
+    "adminActions": [],
+    "rollbackActions": []
+  }
+}
+
+Include any warnings, errors, or failed assertions clearly.
+
+
+Execution Instructions for Agent:
+
+Run the full simulation locally without altering production data.
+
+Verify all preconditions (wallet balances, stock levels, test users).
+
+Report completion with JSON and console summary.
+
+
