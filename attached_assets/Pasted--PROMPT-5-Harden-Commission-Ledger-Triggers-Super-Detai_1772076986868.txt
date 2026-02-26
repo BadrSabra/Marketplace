@@ -1,0 +1,199 @@
+
+---
+
+🔹 PROMPT 5 — Harden Commission & Ledger Triggers (Super-Detailed)
+
+You are implementing the **Commission & Ledger Triggers** for the Mit Gaber Hyperlocal Marketplace. The goal is to ensure that:
+
+- Commissions are processed **exactly once**, **after delivery is completed**.
+- Ledger entries are atomic, consistent, and resilient against race conditions or double-processing.
+
+---
+
+### 1️⃣ File & Structure
+
+- `server/modules/ledger/ledger.service.ts`
+- `server/modules/ledger/ledger.controller.ts`
+- `server/modules/ledger/ledger.types.ts`
+- `server/modules/ledger/ledger.spec.ts` (Unit & Integration Tests)
+
+---
+
+### 2️⃣ Trigger Point
+
+- Only after sub-order transitions to `DELIVERED`  
+- Must check: `sub_order.status === 'DELIVERED'` before triggering commissions  
+- Admin override allowed for corrections (optional flag: `force = true`)  
+
+---
+
+### 3️⃣ Ledger Schema / DTO
+
+```ts
+interface LedgerEntryDTO {
+  entry_id: string;
+  user_id: string;        // Store or Driver receiving commission
+  sub_order_id: string;
+  type: 'COMMISSION' | 'REFUND' | 'ADJUSTMENT';
+  amount: number;         // Positive or negative
+  currency: string;
+  status: 'COMPLETED' | 'PENDING';
+  created_at: string;
+  description?: string;
+}
+
+
+---
+
+4️⃣ Business Rules
+
+1. Process Commission Once:
+
+Check ledger table: sub_order_id + type = COMMISSION → if exists & status COMPLETED → skip
+
+
+
+2. Atomic Transactions:
+
+Wrap commission calculations & ledger insertion in a single DB transaction
+
+
+
+3. Store Commission:
+
+Percentage: 1% of subtotal goes to platform
+
+Remaining goes to store balance
+
+
+
+4. Driver Commission:
+
+Percentage: based on delivery fee
+
+
+
+5. Double-Processing Protection:
+
+Use unique constraint on (sub_order_id, type) in ledger table
+
+
+
+6. Error Handling:
+
+Transaction rollback if any insert/update fails
+
+Return HTTP 409 if commission already processed
+
+
+
+7. Concurrency Protection:
+
+Lock sub-order row during commission processing to prevent multiple triggers
+
+
+
+
+
+---
+
+5️⃣ Edge Cases
+
+Sub-order not in DELIVERED → 400 error
+
+Already processed → 409 Conflict
+
+Missing store or driver → 404
+
+Negative subtotal or fee → 422 Validation Error
+
+Admin override → allows processing even if DELIVERED not reached
+
+
+
+---
+
+6️⃣ Service Layer Responsibilities
+
+LedgerService.processCommissions(sub_order_id: string, force = false):
+
+
+1. Fetch sub-order
+2. Verify DELIVERED status (unless force=true)
+3. Check if commission already exists
+4. Calculate store & driver commissions
+5. Insert ledger entries in a single DB transaction
+6. Update store/driver wallet balances
+7. Return confirmation with ledger_entry_ids
+
+
+---
+
+7️⃣ Audit / Logging
+
+Log commission processing attempt:
+
+
+console.log(`[AUDIT-LEDGER] sub_order_id=${sub_order_id} processed_by=${user_id} force=${force}`);
+
+Placeholder for future global audit_logs integration
+
+
+
+---
+
+8️⃣ Unit / Integration Tests
+
+1. Commission successfully processed after DELIVERED
+
+
+2. Attempt before DELIVERED → 400
+
+
+3. Attempt double-processing → 409
+
+
+4. Negative subtotal → 422
+
+
+5. Missing store or driver → 404
+
+
+6. Admin override flag works
+
+
+7. Concurrency test: multiple triggers simultaneously → only one success, others fail gracefully
+
+
+8. Ledger entries correctly reflect amounts, types, and statuses
+
+
+
+
+---
+
+9️⃣ Agent Execution Instructions
+
+Only modify /server/modules/ledger/
+
+Implement service, types, controller, and unit tests
+
+Strictly enforce trigger only after DELIVERED
+
+Ensure atomic DB transactions
+
+Protect against double-processing
+
+Include logging placeholder
+
+Include concurrency-safe test scenarios
+
+Return only modified files
+
+
+
+---
+
+End of Prompt 5. Execute step-by-step, include unit tests, validation coverage, and concurrency-safe triggers.
+
+---
