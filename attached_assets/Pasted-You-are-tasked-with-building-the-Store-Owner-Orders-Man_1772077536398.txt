@@ -1,0 +1,120 @@
+You are tasked with building the **Store Owner Orders Management UI** for the Mit Gaber Hyperlocal Marketplace. The goal is to provide a **real-time, responsive, secure, and user-friendly interface** for store owners to manage incoming orders and sub-orders.
+
+---
+
+### 1️⃣ Pages / Components
+
+- **Store Orders Page** (`/store/orders`)  
+  - Displays all **incoming sub-orders** (flattened from parent orders)  
+  - Group by `status` (PENDING, ACCEPTED, READY, PICKED_UP, DELIVERED)  
+  - Include **Live Status Badges** with color coding:
+    - PENDING → yellow  
+    - ACCEPTED → blue  
+    - READY → purple  
+    - PICKED_UP → cyan  
+    - DELIVERED → green  
+    - CANCELLED → red  
+
+- **Order Row Details**:
+  - Sub-order ID (truncated for readability)  
+  - Customer Name  
+  - List of items: `quantity x product_name`  
+  - Subtotal / total price  
+  - Action buttons (depends on current status)  
+
+---
+
+### 2️⃣ Actions & Status Transitions
+
+| Current Status | Available Actions | Mutation Endpoint | Notes |
+|----------------|-----------------|-----------------|-------|
+| PENDING        | Accept, Cancel  | PATCH /api/suborders/:id/status | RBAC: STORE_OWNER only |
+| ACCEPTED       | Mark READY      | PATCH /api/suborders/:id/status | Stock already decremented |
+| READY          | No action       | -               | Wait for DRIVER pickup |
+| PICKED_UP      | No action       | -               | Tracking only |
+| DELIVERED      | No action       | -               | Completed |
+| CANCELLED      | No action       | -               | Disabled |
+
+- Show **loading indicator** for ongoing mutations  
+- Show **toast notifications** for success/error  
+
+---
+
+### 3️⃣ Data Fetching
+
+- Use **React Query** for fetching `/api/orders/my-store`  
+- Auto-refresh every **30 seconds** for live updates  
+- Flatten sub-orders from parent orders to show in a single table  
+- Handle empty state gracefully: "No orders found"  
+
+---
+
+### 4️⃣ Filtering & Sorting (UI-Ready)
+
+- Optional filtering by:
+  - Status (dropdown)  
+  - Customer name (search input)  
+  - Date range (from/to)  
+- Sorting by:
+  - Created date (asc/desc)  
+  - Total amount  
+
+---
+
+### 5️⃣ UI / UX Details
+
+- Table should have columns:
+  - Order Info (ID + createdAt)  
+  - Customer  
+  - Items (list)  
+  - Total  
+  - Status Badge  
+  - Actions (buttons)  
+- Buttons should **disable automatically** if a mutation is pending  
+- Badges **color-coded** per status  
+- Responsive design for mobile / desktop  
+- Accessibility (aria-labels, roles)  
+
+---
+
+### 6️⃣ Edge Cases
+
+- Sub-orders with zero items → display "No items"  
+- Network failures → show toast error  
+- Large number of sub-orders → table scroll / virtualized list  
+- Unauthorized access → redirect to login or show 403  
+- Status already updated → mutation must refresh cache and show latest status  
+- Multiple users acting on same order → handle **race conditions** gracefully (refetch query on mutation success)  
+
+---
+
+### 7️⃣ Testing Requirements
+
+- Unit tests:
+  - Render empty table  
+  - Render multiple sub-orders  
+  - Action buttons trigger correct mutation  
+  - Status badge displays correct color per status  
+- Integration tests:
+  - Mutation updates reflect in UI  
+  - Auto-refresh every 30 seconds  
+  - Unauthorized user blocked from actions  
+
+---
+
+### 8️⃣ Agent Execution Instructions
+
+1. Build **Store Orders Page** at `/store/orders`  
+2. Use **React Query** for fetching `/api/orders/my-store`  
+3. Flatten sub-orders, display in table with **badges and actions**  
+4. Integrate **PATCH /api/suborders/:id/status** for status transitions  
+5. Auto-refresh table every 30 seconds  
+6. Include **toasts** for success/error  
+7. Ensure **responsive design**  
+8. Implement **unit & integration tests**  
+9. Only modify `/client/src/pages/store/orders.tsx` (and related UI components)  
+10. Log each action in **audit logging system** (Prompt 7)  
+
+---
+
+End of **Prompt 9**. Execute **step-by-step**, ensure **real-time, actionable, fully RBAC-protected Store Orders UI** with **status badges, proper edge handling, and test coverage**.
