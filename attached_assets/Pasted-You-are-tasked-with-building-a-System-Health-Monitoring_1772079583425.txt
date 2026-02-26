@@ -1,0 +1,107 @@
+You are tasked with building a **System Health Monitoring Endpoint** for the Mit Gaber Hyperlocal Marketplace backend. This endpoint will provide real-time metrics for admins to ensure the system is running correctly. It must be secure, RBAC-protected (ADMIN only), robust, and cover all critical components. Include comprehensive validation, error handling, and structured JSON output for frontend consumption.
+
+---
+
+### 1️⃣ Endpoint Details
+
+- **Endpoint URL**: `/api/admin/system-health`
+- **Method**: GET
+- **RBAC**: Only ADMIN users can access
+- **Authentication**: JWT via `authenticate` middleware
+- **Response Content-Type**: `application/json`
+- **Response Fields**:
+  - `status`: `"OK"` or `"DEGRADED"` or `"DOWN"`
+  - `timestamp`: current server time (ISO 8601)
+  - `components`: object detailing sub-systems
+    - `database`: `{ status: "OK|DOWN", responseTimeMs: number, error?: string }`
+    - `memory`: `{ usedMb: number, totalMb: number, status: "OK|WARN|CRITICAL" }`
+    - `cpu`: `{ loadPercent: number, status: "OK|WARN|CRITICAL" }`
+    - `disk`: `{ freeMb: number, totalMb: number, status: "OK|WARN|CRITICAL" }`
+    - `cache` (if used, e.g., Redis): `{ status: "OK|DOWN", responseTimeMs: number, error?: string }`
+    - `externalApis` (optional): array of `{ name, status, responseTimeMs, error? }`
+  - `alerts`: array of string messages for degraded/critical components
+
+---
+
+### 2️⃣ Functional Requirements
+
+- **Database connectivity**:
+  - Perform a lightweight query (e.g., `SELECT 1`) to ensure DB is reachable
+  - Measure query response time
+  - Catch and report errors
+
+- **Memory & CPU monitoring**:
+  - Retrieve current usage stats (Node.js `process.memoryUsage()` and OS-level CPU load)
+  - Set thresholds for `WARN` and `CRITICAL` statuses
+
+- **Disk usage**:
+  - Check free disk space on critical partitions
+  - Set thresholds for `WARN` and `CRITICAL` statuses
+
+- **Cache check** (if Redis/Memcached used):
+  - Ping cache and measure response time
+  - Catch connection errors
+
+- **External APIs** (optional):
+  - Ping critical third-party APIs (payment gateways, delivery services)
+  - Measure response time and status
+
+- **Aggregate health**:
+  - `status` = `OK` if all components are healthy
+  - `status` = `DEGRADED` if one or more WARN
+  - `status` = `DOWN` if one or more CRITICAL/DOWN
+
+---
+
+### 3️⃣ Edge Cases & Error Handling
+
+- Database unreachable → status `DOWN`, include `error` field  
+- Cache timeout → status `DEGRADED` or `DOWN`, include `error`  
+- Memory or CPU thresholds exceeded → mark as `WARN`/`CRITICAL`  
+- Disk space critically low → mark as `CRITICAL`  
+- Partial failures → include `alerts` array with descriptive messages  
+- JSON response must **always** conform to schema, even on failures
+
+---
+
+### 4️⃣ Security & RBAC
+
+- Only **ADMIN** users allowed  
+- Verify JWT and enforce RBAC in route middleware  
+- Do not expose sensitive system info to non-admin users  
+- Optional: log each admin health check in `audit_logs` (Prompt 7)
+
+---
+
+### 5️⃣ Testing Requirements
+
+- Unit tests:
+  - Mock DB, cache, disk, CPU, memory to simulate OK, WARN, CRITICAL, DOWN  
+  - Ensure JSON schema always valid
+- Integration tests:
+  - Endpoint returns proper `status` per component states  
+  - RBAC: non-admin requests return 403  
+  - Error handling works for DB/cache/network failures
+
+---
+
+### 6️⃣ Agent Execution Instructions
+
+1. Create GET endpoint `/api/admin/system-health`  
+2. Implement health checks for:
+   - Database connectivity with response time
+   - Memory usage
+   - CPU load
+   - Disk space
+   - Cache ping (if applicable)
+   - External APIs (optional)
+3. Aggregate component statuses into overall `status`  
+4. Include `alerts` for any WARN/CRITICAL/DOWN components  
+5. Return structured JSON output, always conforming to schema  
+6. Enforce **RBAC: ADMIN only** via middleware  
+7. Add unit and integration tests for all health scenarios  
+8. Optional: log admin health check in `audit_logs` table
+
+---
+
+End of **Prompt 20**. Execute step-by-step, ensuring **robust health reporting, RBAC enforcement, structured JSON, and proper error handling** for production readiness.
