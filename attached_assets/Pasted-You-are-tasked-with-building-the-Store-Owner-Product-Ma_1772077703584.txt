@@ -1,0 +1,126 @@
+You are tasked with building the **Store Owner Product Management UI** for the Mit Gaber Hyperlocal Marketplace. The goal is to provide a **secure, responsive, fully-featured interface** for store owners to **Add, Edit, Delete, and Update stock** of their products, with full validation, RBAC, and UI-ready feedback.
+
+---
+
+### 1️⃣ Pages / Components
+
+- **Store Products Page** (`/store/products`)  
+  - Displays a table of all products owned by the store  
+  - Columns:
+    - Product Name  
+    - SKU / ID  
+    - Price  
+    - Stock Quantity  
+    - Status (Active / Inactive)  
+    - Actions (Edit, Delete)  
+
+- **Add Product Modal / Form**:
+  - Inputs:
+    - Name (required, min 3 chars)  
+    - Description (optional, max 500 chars)  
+    - Price (positive number, max 2 decimals)  
+    - Stock (integer ≥ 0)  
+    - Status (Active / Inactive)  
+  - Validation: via **Zod schema**  
+  - Submit triggers **POST /api/products**  
+
+- **Edit Product Modal / Form**:
+  - Pre-fill existing values  
+  - Validation same as Add  
+  - Submit triggers **PUT /api/products/:id**  
+
+- **Delete Product Confirmation**:
+  - Triggers **DELETE /api/products/:id**  
+  - Show **toast confirmation**  
+  - Soft delete optional (mark inactive)  
+
+---
+
+### 2️⃣ Actions & API Integration
+
+| Action        | Endpoint                 | Method | Notes |
+|---------------|-------------------------|--------|-------|
+| Add Product   | /api/products           | POST   | RBAC: STORE_OWNER only |
+| Edit Product  | /api/products/:id       | PUT    | RBAC: STORE_OWNER only |
+| Delete Product| /api/products/:id       | DELETE | Confirm modal; soft delete optional |
+| Update Stock  | /api/products/:id       | PUT    | Only positive integers; prevent overselling |
+
+- Use **React Query mutations**  
+- On success: **invalidate query** `/api/products` to refresh table  
+- On error: show **toast notification**  
+
+---
+
+### 3️⃣ Data Fetching
+
+- Fetch products via **GET /api/products?storeId=<currentStore>**  
+- Auto-refresh optional (manual refresh button available)  
+- Handle empty state: "No products found"  
+
+---
+
+### 4️⃣ Filtering, Sorting, and Searching (UI-Ready)
+
+- Filter by:
+  - Status (Active / Inactive)  
+  - Stock level (Low stock < 5)  
+- Search by product name  
+- Sort by:
+  - Price  
+  - Stock quantity  
+
+---
+
+### 5️⃣ UI / UX Details
+
+- Responsive table for mobile / desktop  
+- Actions buttons (Edit/Delete) **disabled for unauthorized roles**  
+- Modals close on success, reset form  
+- Loading spinner on submit  
+- Inline **form validation messages**  
+- Accessibility: ARIA labels, focus trap in modals  
+
+---
+
+### 6️⃣ Edge Cases
+
+- Duplicate product name → show validation error  
+- Negative stock → blocked  
+- Price = 0 → blocked  
+- Long description → truncate in table  
+- Network errors → toast notification  
+- Large number of products → table scroll / virtualized list  
+
+---
+
+### 7️⃣ Testing Requirements
+
+- Unit tests:
+  - Render empty table  
+  - Render table with multiple products  
+  - Add/Edit/Delete forms validate correctly  
+- Integration tests:
+  - Mutation updates reflect in UI  
+  - Toasts shown on success/error  
+  - RBAC: only STORE_OWNER can see action buttons  
+  - Search/filter/sort works as expected  
+
+---
+
+### 8️⃣ Agent Execution Instructions
+
+1. Build **Store Products Page** at `/store/products`  
+2. Fetch products via **GET /api/products?storeId=<currentStore>**  
+3. Implement **Add Product Modal/Form** with Zod validation and POST mutation  
+4. Implement **Edit Product Modal/Form** with PUT mutation  
+5. Implement **Delete Product Confirmation** with DELETE mutation  
+6. Ensure **stock editing safeguards**  
+7. Include **toast notifications** for success/error  
+8. Implement **unit & integration tests**  
+9. Responsive and accessible design  
+10. Only modify `/client/src/pages/store/products.tsx` and related UI components  
+11. Log all product CRUD actions in **audit logging system** (Prompt 7)  
+
+---
+
+End of **Prompt 10**. Execute **step-by-step**, ensure **full CRUD capability, RBAC protection, validation, edge-case handling, and test coverage**.
