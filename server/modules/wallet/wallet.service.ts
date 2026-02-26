@@ -84,6 +84,11 @@ export class WalletService {
       // 1️⃣ WALLET PROTECTION LAYER: Prevent Negative Balance
       const amountNum = parseFloat(transaction.amount);
       const oldBalanceNum = parseFloat(wallet.balance);
+      
+      if (amountNum < 0) {
+        throw new Error("BUSINESS_RULE_VIOLATION: Negative deduction amount not allowed");
+      }
+
       const newBalanceNum = oldBalanceNum + amountNum;
 
       if (newBalanceNum < 0) {
@@ -122,12 +127,21 @@ export class WalletService {
   }
 
   async deductBalance(userId: string, amount: string, referenceId?: string): Promise<void> {
+    const deductAmount = parseFloat(amount);
+    if (deductAmount < 0) {
+      throw new Error("BUSINESS_RULE_VIOLATION: Negative deduction amount not allowed");
+    }
+    if (deductAmount === 0) return;
+
     await db.transaction(async (tx) => {
       const wallet = await this.getOrCreateWallet(userId);
       const [lockedWallet] = await tx.select().from(wallets).where(eq(wallets.id, wallet.id)).for("update");
       
+      if (!lockedWallet) {
+        throw new Error("NOT_FOUND: Wallet not found");
+      }
+
       const currentBalance = parseFloat(lockedWallet.balance);
-      const deductAmount = parseFloat(amount);
 
       if (currentBalance < deductAmount) {
         throw new Error("BUSINESS_RULE_VIOLATION: Insufficient wallet balance");
