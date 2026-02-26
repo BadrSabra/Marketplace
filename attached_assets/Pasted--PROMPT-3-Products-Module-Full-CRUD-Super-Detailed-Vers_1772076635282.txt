@@ -1,0 +1,203 @@
+
+
+---
+
+🔹 PROMPT 3 — Products Module Full CRUD (Super-Detailed Version)
+
+You are implementing the **Products Module** for the Mit Gaber Hyperlocal Marketplace project. This module must support **Full CRUD** (Create, Read, Update, Delete) operations, include **RBAC enforcement**, **stock safeguards**, **input validation**, and **UI-ready DTOs**. Follow instructions precisely.
+
+---
+
+### 1️⃣ Files & Structure
+
+- `server/modules/products/products.controller.ts`
+- `server/modules/products/products.service.ts`
+- `server/modules/products/products.types.ts` (DTOs / Types)
+- `server/modules/products/products.spec.ts` (Unit Tests)
+
+---
+
+### 2️⃣ RBAC Rules
+
+| Action        | Role Allowed   |
+|---------------|---------------|
+| Create        | STORE_OWNER   |
+| Read          | STORE_OWNER, ADMIN |
+| Update        | STORE_OWNER   |
+| Delete        | STORE_OWNER   |
+| Unauthorized  | All others → HTTP 403 |
+
+- Must verify **STORE_OWNER owns the store** that the product belongs to
+- ADMIN can bypass ownership check
+
+---
+
+### 3️⃣ CRUD Endpoints
+
+1. **Create Product**
+   - POST `/api/products`
+   - Body DTO: see section 5
+   - Validate:
+     - `name` (non-empty)
+     - `price` (>0)
+     - `stock` (>=0)
+     - `description` (optional, max 500 chars)
+     - `category` (must exist)
+   - Response: 201 Created + Product DTO
+
+2. **Read Products**
+   - GET `/api/products`
+   - Query params: `store_id` optional, `category` optional, pagination (`page`, `limit`)
+   - Return list of Product DTOs
+   - GET `/api/products/:id`
+   - Return single Product DTO, 404 if not found
+
+3. **Update Product**
+   - PATCH `/api/products/:id`
+   - Allow partial updates (name, price, stock, description, category)
+   - Validate fields as in create
+   - Stock cannot go negative
+   - Unauthorized → 403
+   - Product not found → 404
+
+4. **Delete Product**
+   - DELETE `/api/products/:id`
+   - Only STORE_OWNER of the product's store
+   - Return 204 No Content
+   - Product not found → 404
+
+---
+
+### 4️⃣ Stock Safeguards
+
+- Stock decrement handled by **SubOrder logic (Prompt 2)**  
+- Updates must ensure stock >= 0  
+- Reject PATCH with negative stock → HTTP 400  
+
+---
+
+### 5️⃣ DTOs / Types (UI-ready)
+
+```ts
+// products.types.ts
+export interface ProductDTO {
+  product_id: string;
+  store_id: string;
+  name: string;
+  price: number;
+  stock: number;
+  description?: string;
+  category: string;
+  created_at: string; // ISO
+  updated_at: string; // ISO
+}
+
+export interface CreateProductDTO {
+  name: string;
+  price: number;
+  stock: number;
+  description?: string;
+  category: string;
+}
+
+export interface UpdateProductDTO {
+  name?: string;
+  price?: number;
+  stock?: number;
+  description?: string;
+  category?: string;
+}
+
+
+---
+
+6️⃣ Validation Rules
+
+Use Zod for API input validation
+
+Constraints:
+
+name: string, min 2, max 100
+
+price: number > 0
+
+stock: integer ≥ 0
+
+description: optional string ≤ 500
+
+category: string, must exist in DB
+
+
+Return detailed errors if validation fails (HTTP 400)
+
+
+
+---
+
+7️⃣ Edge Cases
+
+Product ID invalid → 404
+
+Negative stock in update → 400
+
+Store mismatch → 403
+
+Category not existing → 400
+
+Concurrent updates → atomic transactions recommended
+
+Admin override allowed for update and delete
+
+
+
+---
+
+8️⃣ Audit / Logging Placeholders
+
+Log all CREATE, UPDATE, DELETE actions in structured console logs:
+
+
+console.log(`[AUDIT-PRODUCT] user=${user_id} action=${action} product_id=${product_id} store_id=${store_id}`);
+
+Placeholder for future audit table integration
+
+
+
+---
+
+9️⃣ Unit Testing Requirements
+
+Successful CRUD for STORE_OWNER
+
+Validation errors trigger correct HTTP responses
+
+Unauthorized roles → 403
+
+Stock validation enforced
+
+Admin override tests
+
+Concurrency test for PATCH stock updates
+
+
+
+---
+
+1️⃣0️⃣ Agent Execution Instructions
+
+Only modify /server/modules/products/
+
+Implement controller, service, types, and unit tests
+
+Follow strict RBAC
+
+Ensure all responses use ProductDTO
+
+Wrap updates in DB transaction to prevent race conditions
+
+
+
+---
+
+End of Prompt 3. Execute step-by-step, return only modified files, include unit tests and validation coverage.
+

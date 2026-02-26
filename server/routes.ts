@@ -9,6 +9,8 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { eq, sql, and } from "drizzle-orm";
 import { authenticate, authorizeRole } from "./middleware/auth";
+import { productsController } from "./modules/products/products.controller";
+import { subOrderController } from "./modules/orders/suborder.controller";
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 
@@ -158,151 +160,14 @@ export async function registerRoutes(
   });
 
   // --- PRODUCTS MODULE ---
-  app.get(api.products.list.path, async (req, res) => {
-    const storeId = req.query.storeId as string;
-    if (storeId) {
-      const products = await storage.getProductsByStoreId(storeId);
-      return res.json(products);
-    }
-    const products = await storage.getProducts();
-    res.json(products);
-  });
-
-  app.post("/api/products", authenticate, authorizeRole(["STORE_OWNER"]), async (req, res) => {
-    try {
-      const { insertProductSchema } = await import("@shared/schema");
-      const input = insertProductSchema.parse(req.body);
-      const product = await storage.createProduct(input);
-      res.status(201).json(product);
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return res.status(400).json({ message: err.errors[0].message });
-      }
-      res.status(500).json({ message: "Internal error" });
-    }
-  });
-
-  app.put("/api/products/:id", authenticate, authorizeRole(["STORE_OWNER"]), async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { insertProductSchema } = await import("@shared/schema");
-      const input = insertProductSchema.partial().parse(req.body);
-      const product = await storage.updateProduct(id, input);
-      if (!product) return res.status(404).json({ message: "Product not found" });
-      res.json(product);
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return res.status(400).json({ message: err.errors[0].message });
-      }
-      res.status(500).json({ message: "Internal error" });
-    }
-  });
-
-  app.delete("/api/products/:id", authenticate, authorizeRole(["STORE_OWNER"]), async (req, res) => {
-    try {
-      const { id } = req.params;
-      await storage.deleteProduct(id);
-      res.sendStatus(204);
-    } catch (err) {
-      res.status(500).json({ message: "Internal error" });
-    }
-  });
-
-  app.patch("/api/products/:id/stock", authenticate, authorizeRole(["STORE_OWNER"]), async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { stock } = z.object({ stock: z.number().int().nonnegative() }).parse(req.body);
-      const product = await storage.updateProductStock(id, stock);
-      if (!product) return res.status(404).json({ message: "Product not found" });
-      res.json(product);
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return res.status(400).json({ message: err.errors[0].message });
-      }
-      res.status(500).json({ message: "Internal error" });
-    }
-  });
-
-  // --- ORDERS MODULE ---
-  app.get("/api/orders/my-orders", authenticate, authorizeRole(["CUSTOMER"]), async (req, res) => {
-    const { orderController } = await import("./modules/orders/order.controller");
-    return orderController.getMyOrders(req, res);
-  });
-
-  app.get("/api/orders/my-store", authenticate, authorizeRole(["STORE_OWNER"]), async (req, res) => {
-    const { orderController } = await import("./modules/orders/order.controller");
-    return orderController.getMyStoreOrders(req, res);
-  });
-
-  app.get(api.orders.list.path, authenticate, async (req, res) => {
-    const orders = await storage.getOrders();
-    res.json(orders);
-  });
-
-  // --- WALLET MODULE ---
-  app.get("/api/wallet", authenticate, async (req, res) => {
-    const { walletController } = await import("./modules/wallet/wallet.controller");
-    return walletController.getBalance(req, res);
-  });
-
-  app.post("/api/wallet/deposit", authenticate, authorizeRole(["CUSTOMER"]), async (req, res) => {
-    const { walletController } = await import("./modules/wallet/wallet.controller");
-    return walletController.deposit(req, res);
-  });
-
-  app.get("/api/wallet/deposits", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
-    const { walletController } = await import("./modules/wallet/wallet.controller");
-    return walletController.getPendingDeposits(req, res);
-  });
-
-  app.post("/api/wallet/deposits/:id/approve", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
-    const { walletController } = await import("./modules/wallet/wallet.controller");
-    return walletController.approveDeposit(req, res);
-  });
-
-  // --- DELIVERY MODULE ---
-  app.post("/api/delivery/otp/generate", authenticate, authorizeRole(["ADMIN", "DRIVER"]), async (req, res) => {
-    const { deliveryOtpController } = await import("./modules/delivery/deliveryOtp.controller");
-    return deliveryOtpController.generate(req, res);
-  });
-
-  app.post("/api/delivery/otp/verify", authenticate, authorizeRole(["CUSTOMER"]), async (req, res) => {
-    const { deliveryOtpController } = await import("./modules/delivery/deliveryOtp.controller");
-    return deliveryOtpController.verify(req, res);
-  });
-
-  // --- ORDERS MODULE ---
-  app.post("/api/orders", authenticate, authorizeRole(["CUSTOMER"]), async (req, res) => {
-    const { orderController } = await import("./modules/orders/order.controller");
-    return orderController.create(req, res);
-  });
-
-  app.get("/api/orders/:id", authenticate, async (req, res) => {
-    const { orderController } = await import("./modules/orders/order.controller");
-    return orderController.get(req, res);
-  });
-
-  app.post("/api/suborders/:id/cancel", authenticate, authorizeRole(["CUSTOMER"]), async (req, res) => {
-    const { orderController } = await import("./modules/orders/order.controller");
-    return orderController.cancelSubOrder(req, res);
-  });
-
-  // --- DELIVERY OFFERS ---
-  app.post("/api/delivery/offers", authenticate, authorizeRole(["DRIVER"]), async (req, res) => {
-    const { deliveryOfferController } = await import("./modules/delivery/deliveryOffer.controller");
-    return deliveryOfferController.submit(req, res);
-  });
-
-  app.post("/api/delivery/offers/:id/accept", authenticate, authorizeRole(["CUSTOMER"]), async (req, res) => {
-    const { deliveryOfferController } = await import("./modules/delivery/deliveryOffer.controller");
-    return deliveryOfferController.accept(req, res);
-  });
+  app.get("/api/products", productsController.getAll);
+  app.post("/api/products", authenticate, productsController.create);
+  app.get("/api/products/:id", productsController.getOne);
+  app.patch("/api/products/:id", authenticate, productsController.update);
+  app.delete("/api/products/:id", authenticate, productsController.delete);
 
   // --- SUBORDERS STATUS MANAGEMENT ---
-  app.patch("/api/suborders/:id/status", authenticate, authorizeRole(["STORE_OWNER", "DRIVER", "ADMIN"]), async (req, res) => {
-    const { subOrderController } = await import("./modules/orders/suborder.controller");
-    return subOrderController.updateStatus(req, res);
-  });
+  app.patch("/api/suborders/:id/status", authenticate, authorizeRole(["STORE_OWNER", "DRIVER", "ADMIN"]), subOrderController.updateStatus);
 
   // --- ADMIN MODULE ---
   app.get("/api/admin/stats", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
