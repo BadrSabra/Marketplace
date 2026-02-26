@@ -1,0 +1,115 @@
+You are tasked with building the **Store Owner Earnings Dashboard** for the Mit Gaber Hyperlocal Marketplace. The goal is to provide a **secure, real-time, fully-featured interface** for store owners to view their **wallet balance, commission earned, held funds, and transaction history**, with full RBAC and ledger integration.
+
+---
+
+### 1️⃣ Page / Component
+
+- **Store Earnings Page** (`/store/earnings`)  
+  - Display **wallet balance**  
+  - Display **total commissions earned**  
+  - Display **held funds** (pending deposits or refunds)  
+  - Table of **ledger transactions**  
+    - Columns:
+      - Date  
+      - Transaction Type (SALE, COMMISSION, REFUND, ADJUSTMENT)  
+      - Related Order ID  
+      - Amount (+/-)  
+      - Status (COMPLETED, PENDING, FAILED)  
+  - Real-time **status badges** for pending/completed transactions  
+
+---
+
+### 2️⃣ Data Fetching & API Integration
+
+| Action                  | Endpoint                   | Method | Notes |
+|-------------------------|---------------------------|--------|-------|
+| Fetch Wallet Balance     | /api/wallet               | GET    | RBAC: STORE_OWNER only |
+| Fetch Ledger Transactions| /api/ledger/transactions  | GET    | Filter by storeId=<currentStore> |
+| Fetch Commissions        | Calculated from ledger    | GET    | Only after DELIVERED orders |
+
+- Use **React Query for fetching**  
+- Polling optional (every 30s) for live updates  
+- On ledger mutation (refund or adjustment) → invalidate queries  
+
+---
+
+### 3️⃣ Calculations
+
+- **Total Commissions Earned**:
+  - Sum of ledger transactions of type `COMMISSION` with status `COMPLETED`  
+- **Held Funds**:
+  - Sum of transactions pending admin approval (`status = PENDING`)  
+- **Balance Validation**:
+  - Ensure balance = sum of completed sales + commissions - refunds/adjustments  
+  - Prevent negative balance display  
+
+---
+
+### 4️⃣ Filtering, Searching & Sorting (UI-Ready)
+
+- Filter by:
+  - Transaction Type (SALE, COMMISSION, REFUND, ADJUSTMENT)  
+  - Status (COMPLETED, PENDING, FAILED)  
+  - Date range  
+- Search by Order ID  
+- Sort by:
+  - Date  
+  - Amount  
+
+---
+
+### 5️⃣ UI / UX Details
+
+- Cards for **Balance, Commissions, Held Funds**  
+- Responsive table for ledger transactions  
+- Loading spinner on fetch  
+- Toast notifications for errors  
+- Inline **status badges**:
+  - PENDING → yellow  
+  - COMPLETED → green  
+  - FAILED → red  
+- Accessibility: ARIA labels, focus management  
+
+---
+
+### 6️⃣ Edge Cases
+
+- No transactions → display "No earnings found"  
+- Zero commissions → show 0.00  
+- Negative amounts → indicate with red text  
+- Partial admin approval → pending shown separately  
+- Network errors → toast notification  
+- Large number of transactions → table scroll / virtualized list  
+
+---
+
+### 7️⃣ Testing Requirements
+
+- Unit tests:
+  - Render empty dashboard  
+  - Render dashboard with sample transactions  
+- Integration tests:
+  - Ledger transactions fetched and displayed correctly  
+  - Calculations for total commissions and held funds are correct  
+  - Filter, search, sort works correctly  
+  - RBAC: only STORE_OWNER can access  
+  - Toast shown on fetch errors  
+
+---
+
+### 8️⃣ Agent Execution Instructions
+
+1. Build **Store Earnings Page** at `/store/earnings`  
+2. Fetch **wallet balance** via `/api/wallet`  
+3. Fetch **ledger transactions** via `/api/ledger/transactions` filtered by storeId  
+4. Calculate **total commissions earned** and **held funds**  
+5. Display all data in **responsive cards and table**  
+6. Implement **filtering, sorting, and search**  
+7. Implement **loading spinners, toast notifications, and status badges**  
+8. Include **unit and integration tests**  
+9. Ensure **RBAC enforcement** (STORE_OWNER only)  
+10. Log all fetches and data mutations in **audit logging system** (Prompt 7)  
+
+---
+
+End of **Prompt 11**. Execute **step-by-step**, ensuring **secure ledger integration, accurate commission calculation, RBAC, edge-case handling, and test coverage**.
