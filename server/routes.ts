@@ -391,6 +391,8 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/admin/wallets/:walletId/override", authenticate, authorizeRole(["ADMIN"]), walletController.adminOverride);
+
   app.post("/api/wallet/deposit", authenticate, depositLimiter, walletController.deposit);
 
   // --- ORDERS MODULE ---

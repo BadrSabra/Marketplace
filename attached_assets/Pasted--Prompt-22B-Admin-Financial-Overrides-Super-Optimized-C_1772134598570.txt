@@ -1,0 +1,155 @@
+
+---
+
+🔹 Prompt 22B – Admin & Financial Overrides (Super-Optimized)
+
+Context for Agent:
+We are implementing the Production Safety Layer for the Mit Gaber Hyperlocal Marketplace. The wallet negative balance guard is already in place (Prompt 22A). Now we need to implement Admin and Financial Overrides safely, ensuring no integrity violations and full audit logging.
+
+
+---
+
+Objectives:
+
+1. Admin Override Functionality:
+
+Only ADMIN users can perform overrides.
+
+Overrides can adjust balances (increase/decrease) or approve deposits manually.
+
+Overrides must never violate the rule that user wallets cannot go negative.
+
+Overrides must require justification (reason string) stored in the audit log.
+
+
+
+2. RBAC Enforcement:
+
+STORE_OWNER: cannot override balances.
+
+DRIVER: cannot override balances.
+
+CUSTOMER: cannot override balances.
+
+ADMIN: full override permissions, with mandatory audit logging.
+
+
+
+3. Atomic Transactions:
+
+Any override (increase/decrease balance, approve deposit) must occur inside a single database transaction.
+
+Use for update / row locking to prevent concurrent conflicts.
+
+
+
+4. Audit Logging:
+
+Log every override in the audit_logs table:
+
+actor_id (ADMIN performing the override)
+
+target_wallet_id (wallet being affected)
+
+old_balance
+
+new_balance
+
+amount_changed
+
+reason (mandatory)
+
+timestamp
+
+operation_type ("ADMIN_OVERRIDE")
+
+
+Ensure logs are immutable and cannot be bypassed.
+
+
+
+5. Validation & Edge Cases:
+
+Reject any override that would result in negative balances, even for ADMIN.
+
+Reject zero-value overrides.
+
+Ensure concurrent overrides on the same wallet serialize safely.
+
+Ensure ledger entries reflect the override accurately (amount, type, timestamp).
+
+Proper error codes:
+
+403 FORBIDDEN if non-admin attempts override.
+
+400 BAD_REQUEST for invalid amounts or missing reason.
+
+BUSINESS_RULE_VIOLATION if operation would cause negative balance.
+
+
+
+
+6. Testing Requirements:
+
+Write mandatory test cases covering:
+
+ADMIN successfully overriding wallet balances (increase/decrease).
+
+Attempted override by non-admin is rejected.
+
+Override that would result in negative balance is rejected.
+
+Concurrent overrides on same wallet maintain correct balance.
+
+Audit logs correctly record all override attempts.
+
+Ledger updates reflect override correctly.
+
+
+
+
+7. Code/Service Structure Guidelines:
+
+Create a dedicated method in WalletService e.g., adminOverride(walletId, amount, reason, actorId).
+
+Wrap in transaction and row-lock logic.
+
+Update ledger after successful balance change.
+
+Create controller endpoint:
+
+PATCH /api/admin/wallets/:walletId/override
+
+Body: { "amount": number, "reason": string }
+
+
+Apply middleware to verify ADMIN role.
+
+Return updated balance in response.
+
+
+
+
+
+---
+
+Deliverable to Agent:
+
+> Implement Admin Override functionality for wallet balances with strict RBAC, atomic transactions, audit logging, ledger consistency, validation, and full automated test coverage.
+Ensure all edge cases are handled. Provide a single commit that includes:
+
+Updated WalletService with adminOverride method.
+
+Controller endpoint for ADMIN override.
+
+Audit logging integration.
+
+Ledger updates.
+
+Mandatory automated tests for all edge cases.
+
+
+
+
+
+-

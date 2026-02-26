@@ -58,6 +58,41 @@ export class WalletController {
       res.status(400).json({ message: error.message });
     }
   }
+
+  async adminOverride(req: Request, res: Response) {
+    try {
+      const { walletId } = req.params;
+      const actorId = (req.user as any).id;
+      const { amount, reason } = req.body;
+
+      if (!amount || isNaN(parseFloat(amount))) {
+        return res.status(400).json({ message: "Invalid amount" });
+      }
+      if (!reason || typeof reason !== 'string' || reason.trim().length < 5) {
+        return res.status(400).json({ message: "Valid reason (min 5 chars) is required" });
+      }
+
+      const newBalance = await walletService.adminOverride(
+        walletId,
+        amount.toString(),
+        reason,
+        actorId
+      );
+
+      res.json({ balance: newBalance });
+    } catch (error: any) {
+      if (error.message.startsWith("FORBIDDEN")) {
+        return res.status(403).json({ message: error.message });
+      }
+      if (error.message.startsWith("NOT_FOUND")) {
+        return res.status(404).json({ message: error.message });
+      }
+      if (error.message.startsWith("BUSINESS_RULE_VIOLATION") || error.message.startsWith("BAD_REQUEST")) {
+        return res.status(400).json({ message: error.message });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  }
 }
 
 export const walletController = new WalletController();

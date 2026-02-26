@@ -1,5 +1,5 @@
 import { db } from "../../db";
-import { walletTransactions, users, wallets } from "@shared/schema";
+import { walletTransactions, users, wallets, ledger } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import type { Wallet, InsertWallet, WalletTransaction, InsertWalletTransaction } from "@shared/schema";
 import { notificationService } from "../notifications/notification.service";
@@ -123,6 +123,67 @@ export class WalletService {
       }
 
       return updatedTransaction;
+    });
+  }
+
+  async adminOverride(walletId: string, amount: string, reason: string, actorId: string): Promise<string> {
+    const amountNum = parseFloat(amount);
+    if (amountNum === 0) {
+      throw new Error("BAD_REQUEST: Override amount cannot be zero");
+    }
+
+    return await db.transaction(async (tx) => {
+      const [wallet] = await tx.select().from(wallets).where(eq(wallets.id, walletId)).for("update");
+      if (!wallet) {
+        throw new Error("NOT_FOUND: Wallet not found");
+      }
+
+      const [actor] = await tx.select().from(users).where(eq(users.id, actorId));
+      if (!actor || actor.role !== "ADMIN") {
+        throw new Error("FORBIDDEN: Only admins can perform overrides");
+      }
+
+      const oldBalanceNum = parseFloat(wallet.balance);
+      const newBalanceNum = oldBalanceNum + amountNum;
+
+      if (newBalanceNum < 0) {
+        throw new Error("BUSINESS_RULE_VIOLATION: Override would result in negative balance");
+      }
+
+      const newBalance = newBalanceNum.toFixed(2);
+
+      // Update Wallet
+      await tx.update(wallets)
+        .set({ balance: newBalance, updatedAt: new Date() })
+        .where(eq(wallets.id, walletId));
+
+      // Update Ledger
+      await tx.insert(ledger).values({
+        referenceId: null, // Admin override doesn't have a specific order ref
+        creditUserId: amountNum > 0 ? wallet.userId : null,
+        debitUserId: amountNum < 0 ? wallet.userId : null,
+        amount: Math.abs(amountNum).toFixed(2),
+        type: amountNum > 0 ? "DEPOSIT" : "WITHDRAWAL",
+      });
+
+      // Log Audit
+      await auditService.logEvent({
+        actionType: "ADMIN_OVERRIDE",
+        entityType: "wallet",
+        entityId: walletId,
+        performedByUserId: actorId,
+        performedByRole: "ADMIN",
+        oldValue: { balance: wallet.balance },
+        newValue: { balance: newBalance },
+        metadata: { 
+          amount, 
+          reason,
+          amountChanged: amount,
+          targetWalletId: walletId
+        }
+      });
+
+      return newBalance;
     });
   }
 
