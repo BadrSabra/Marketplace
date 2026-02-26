@@ -1,0 +1,196 @@
+You are tasked with implementing a **Production Safety Layer** for Mit Gaber Hyperlocal Marketplace before launching a local beta in one city.
+
+This layer is mandatory to prevent crashes, financial corruption, security abuse, and operational instability.
+
+The goal is NOT scale optimization.
+The goal is operational safety and stability under real users.
+
+Implement the following modules step-by-step.
+
+------------------------------------------------------------
+1️⃣ GLOBAL ERROR HANDLING MIDDLEWARE
+------------------------------------------------------------
+
+A. Centralized Error Handler
+- Catch ALL unhandled exceptions
+- Standardize error response format:
+
+{
+  "success": false,
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "User-friendly message",
+    "details": "Internal reference id"
+  }
+}
+
+B. Error Categories
+- VALIDATION_ERROR
+- AUTH_ERROR
+- PERMISSION_DENIED
+- NOT_FOUND
+- BUSINESS_RULE_VIOLATION
+- SYSTEM_ERROR
+
+C. Internal Logging
+- Log full stack trace
+- Attach:
+    - userId
+    - role
+    - endpoint
+    - requestId
+    - timestamp
+- Never expose stack trace to client
+
+D. Request ID
+- Generate unique requestId for every API call
+- Include it in response header
+
+------------------------------------------------------------
+2️⃣ RATE LIMITING & BASIC SECURITY HARDENING
+------------------------------------------------------------
+
+A. Rate Limits
+- Login: 5 attempts per 5 minutes per IP
+- Order creation: 10 per hour per user
+- Deposit request: 3 per hour per user
+- General API: 100 requests per 5 minutes per IP
+
+B. Block Behavior
+- Return HTTP 429
+- Log rate limit breach
+
+C. Input Hardening
+- Sanitize all string inputs
+- Reject suspicious payload sizes (>1MB)
+- Validate numeric boundaries for:
+    - amounts
+    - quantities
+    - commissions
+
+------------------------------------------------------------
+3️⃣ FAIL-SAFE FINANCIAL GUARDS
+------------------------------------------------------------
+
+A. Wallet Protection
+- Prevent negative balances
+- Enforce atomic ledger updates
+- Reject duplicate transaction IDs (idempotency key)
+
+B. Commission Guard
+- Commission must always:
+    0 <= commission <= order_total
+- Log mismatch if calculated commission differs from rule
+
+C. SubOrder Safety
+- Prevent illegal state transitions
+- Example:
+    DELIVERED → cannot return to PREPARING
+- Log all blocked transitions
+
+------------------------------------------------------------
+4️⃣ ADMIN MANUAL OVERRIDE TOOLS
+------------------------------------------------------------
+
+Create protected Admin endpoints:
+
+A. Force Update SubOrder Status
+- Requires reason
+- Log override in audit_logs
+- Trigger notification event
+
+B. Manual Wallet Adjustment
+- Requires:
+    - amount
+    - reason
+- Creates ledger entry:
+    type = ADMIN_ADJUSTMENT
+- Cannot reduce balance below zero
+
+C. Reassign Driver
+- Allow admin to reassign delivery
+- Log oldDriverId & newDriverId
+
+All admin override actions must:
+- Require ADMIN role
+- Be logged with timestamp + reason
+- Be irreversible via public API
+
+------------------------------------------------------------
+5️⃣ BACKUP & DATA SAFETY STRATEGY
+------------------------------------------------------------
+
+A. Daily Automated DB Backup
+- Export DB snapshot
+- Store securely
+- Keep last 7 backups
+
+B. Restore Procedure Documentation
+- Provide script to restore DB
+- Must be tested once
+
+C. Critical Tables Backup Check:
+- users
+- orders
+- sub_orders
+- ledger
+- deposits
+- audit_logs
+
+------------------------------------------------------------
+6️⃣ BASIC MONITORING & ALERTS
+------------------------------------------------------------
+
+A. Health Check Endpoint
+- /system/health
+- Returns:
+    - DB connectivity
+    - memory usage
+    - uptime
+    - environment
+
+B. Error Threshold Logging
+- If >10 SYSTEM_ERROR in 1 minute:
+    log CRITICAL alert
+
+C. Log Rotation
+- Prevent logs exceeding safe disk usage
+
+------------------------------------------------------------
+7️⃣ EDGE CASE PROTECTION
+------------------------------------------------------------
+
+- Double order submission (use idempotency key)
+- Network retry duplicates
+- Partial failure in commission trigger
+- Driver assigned to already delivered order
+- Deposit approved twice
+- Ledger mismatch detection job
+
+------------------------------------------------------------
+8️⃣ TESTING REQUIREMENTS
+------------------------------------------------------------
+
+Write tests for:
+
+- Rate limit breach
+- Illegal status transitions
+- Negative wallet attempt
+- Duplicate deposit approval
+- Admin override audit log existence
+- Health endpoint returns correct status
+
+------------------------------------------------------------
+OUTPUT EXPECTATION
+------------------------------------------------------------
+
+After implementation:
+
+✔ No unhandled crashes
+✔ No negative balances possible
+✔ No illegal order transitions
+✔ Rate abuse prevented
+✔ Admin can safely resolve stuck cases
+✔ System can recover from minor operational failures
+
+This layer must be implemented BEFORE any real user onboarding.
