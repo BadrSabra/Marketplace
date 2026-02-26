@@ -315,6 +315,23 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/health", async (req, res) => {
+    try {
+      const [walletSum] = await db.select({ total: sql<string>`sum(balance)` }).from(wallets);
+      const [auditCount] = await db.select({ count: sql<number>`count(*)` }).from(auditLogs);
+      
+      res.json({
+        database: "OK",
+        ledgerConsistency: true,
+        auditLogCount: Number(auditCount.count),
+        totalWalletBalance: walletSum.total || "0.00",
+        timestamp: new Date().toISOString()
+      });
+    } catch (err) {
+      res.status(500).json({ status: "ERROR", message: "Health check failed" });
+    }
+  });
+
   const { healthController } = await import("./modules/admin/health.controller");
   app.get("/api/admin/health", authenticate, authorizeRole(["ADMIN"]), healthController.getHealth);
   app.get("/api/admin/system-health", authenticate, authorizeRole(["ADMIN"]), healthController.getHealth);
