@@ -1,0 +1,144 @@
+You are tasked with building the **Customer Order Details Page** for the Mit Gaber Hyperlocal Marketplace. This page allows a customer to view all details of a specific order, including sub-orders, store information, and delivery status. It must integrate with backend APIs, enforce **RBAC**, handle **edge cases**, and provide **full validation**.
+
+---
+
+### 1️⃣ Page / Component
+
+- **Customer Order Details Page** (`/customer/order/[orderId]`)  
+  - **Order Header**:
+    - Order ID  
+    - Order date & time  
+    - Overall status (Pending, Accepted, Ready, Picked Up, Delivered, Cancelled)  
+  - **Sub-Orders List**:
+    - Each sub-order:
+      - Sub-order ID  
+      - Store name & contact info  
+      - Items breakdown:
+        - Product name  
+        - Quantity  
+        - Price per item  
+        - Subtotal  
+      - Sub-order total  
+      - Status badge (color-coded)  
+  - **Delivery Info**:
+    - Assigned driver (name, phone)  
+    - Delivery status (with progress tracker)  
+    - Estimated delivery time  
+    - OTP (if generated for pickup)  
+  - **Financial Summary**:
+    - Subtotals per store  
+    - Total order amount  
+    - Wallet/credit used (if applicable)  
+
+---
+
+### 2️⃣ Data Fetching & API Integration
+
+| Action                        | Endpoint                          | Method | Notes |
+|--------------------------------|---------------------------------|--------|-------|
+| Fetch order details            | /api/orders/:id                  | GET    | RBAC: CUSTOMER only, include sub_orders, items, store info, delivery status, assigned driver |
+| Optional real-time update      | /api/orders/:id/subscribe        | GET/WebSocket | Receive live status updates on order/sub-orders/delivery |
+
+- Use **React Query** or **SWR** for fetching  
+- Poll or WebSocket for live status updates (optional)  
+
+---
+
+### 3️⃣ UI / UX Details
+
+- **Order Header**:
+  - Show order ID, date/time, overall status badge  
+- **Sub-Orders List**:
+  - Accordion or collapsible panels per store/sub-order  
+  - Items table:
+    - Name, qty, price, subtotal  
+    - Highlight items out-of-stock or cancelled  
+  - Sub-order total displayed clearly  
+- **Status Badges**:
+  - PENDING → yellow  
+  - ACCEPTED → blue  
+  - READY → purple  
+  - PICKED_UP → cyan  
+  - DELIVERED → green  
+  - CANCELLED → red  
+- **Delivery Info Section**:
+  - Driver name & phone  
+  - Delivery progress bar with steps (ACCEPTED → READY → PICKED_UP → DELIVERED)  
+  - OTP display if available  
+- **Financial Summary Section**:
+  - Total amount  
+  - Payment breakdown  
+  - Wallet/credit usage  
+- **Loading states**:
+  - Spinner for order fetch  
+  - Skeletons for sub-order and delivery info  
+- **Empty/Error states**:
+  - If order not found → show "Order not found"  
+  - If delivery info missing → "Delivery not yet assigned"  
+
+---
+
+### 4️⃣ Calculations & Validations
+
+- Subtotals per sub-order = sum of (qty × price)  
+- Total order amount = sum of all sub-order totals  
+- Validate presence of store info, items, and delivery info  
+- Ensure status progression matches allowed transitions:  
+  `PENDING → ACCEPTED → READY → PICKED_UP → DELIVERED`  
+
+---
+
+### 5️⃣ Edge Cases
+
+- Partial cancellation:
+  - Some sub-orders cancelled, others active → show properly  
+- No delivery assigned → show placeholder  
+- Multiple stores → aggregate subtotals per store  
+- Order fully delivered → show completion badge  
+- OTP missing → hide OTP section gracefully  
+- Network errors → toast + retry button  
+
+---
+
+### 6️⃣ Real-Time Enhancements
+
+- Optional WebSocket for:
+  - Sub-order status updates  
+  - Delivery status updates  
+  - OTP generation/validation  
+- Polling fallback every 30–60 seconds if WebSocket unavailable  
+
+---
+
+### 7️⃣ Testing Requirements
+
+- Unit tests:
+  - Sub-order totals calculated correctly  
+  - Status badges render correct colors  
+  - Delivery info shows correct driver & status  
+- Integration tests:
+  - Fetch order details flow  
+  - Handle multiple sub-orders & stores  
+  - Delivery info updates reflected in UI  
+  - Edge cases: partial cancellations, missing delivery, multiple stores  
+  - RBAC enforced: CUSTOMER only  
+
+---
+
+### 8️⃣ Agent Execution Instructions
+
+1. Build **Customer Order Details Page** at `/customer/order/[orderId]`  
+2. Fetch order details from `/api/orders/:id` including sub-orders, items, store info, and delivery info  
+3. Display **order header, sub-order breakdown, and delivery section**  
+4. Include **financial summary per sub-order and total**  
+5. Show **status badges** per sub-order  
+6. Display **driver info & delivery progress**, OTP if available  
+7. Implement **loading states, skeletons, error handling, and empty placeholders**  
+8. Optional: **WebSocket or polling for real-time updates**  
+9. Add **unit and integration tests** for all sections  
+10. Enforce **RBAC (CUSTOMER only)**  
+11. Log important events in **audit logging system** (Prompt 7)  
+
+---
+
+End of **Prompt 16**. Execute **step-by-step**, ensuring **full sub-order breakdown, store info, delivery tracking, OTP handling, financial summary, edge-case handling, real-time updates, and audit logging**.

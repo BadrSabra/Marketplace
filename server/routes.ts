@@ -12,6 +12,7 @@ import { authenticate, authorizeRole } from "./middleware/auth";
 import { productsController } from "./modules/products/products.controller";
 import { subOrderController } from "./modules/orders/suborder.controller";
 import { walletController } from "./modules/wallet/wallet.controller";
+import { orderController } from "./modules/orders/order.controller";
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 
@@ -338,6 +339,12 @@ export async function registerRoutes(
   });
 
   app.post("/api/wallet/deposit", authenticate, walletController.deposit);
+
+  // --- ORDERS MODULE ---
+  app.get("/api/orders", authenticate, orderController.getMyOrders);
+  app.get("/api/orders/:id", authenticate, orderController.get);
+  app.post("/api/orders", authenticate, orderController.create);
+  app.patch("/api/suborders/:id/cancel", authenticate, orderController.cancelSubOrder);
 
   // Ensure Admin account is ready
   async function ensureAdminAccount() {
