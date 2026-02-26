@@ -63,7 +63,8 @@ export class WalletService {
     return await db.transaction(async (tx) => {
       const [transaction] = await tx.select()
         .from(walletTransactions)
-        .where(eq(walletTransactions.id, transactionId));
+        .where(eq(walletTransactions.id, transactionId))
+        .for("update");
 
       if (!transaction || transaction.type !== "DEPOSIT" || transaction.status !== "PENDING") {
         throw new Error("Invalid or already processed deposit");
@@ -71,7 +72,8 @@ export class WalletService {
 
       const [wallet] = await tx.select()
         .from(wallets)
-        .where(eq(wallets.id, transaction.walletId));
+        .where(eq(wallets.id, transaction.walletId))
+        .for("update");
 
       if (!wallet) throw new Error("Wallet not found");
 
@@ -79,9 +81,16 @@ export class WalletService {
         .from(users)
         .where(eq(users.id, wallet.userId));
 
-      // Update wallet balance using ledger service approach (but for deposit)
-      const oldBalance = wallet.balance;
-      const newBalance = (parseFloat(wallet.balance) + parseFloat(transaction.amount)).toFixed(2);
+      // 1️⃣ WALLET PROTECTION LAYER: Prevent Negative Balance
+      const amountNum = parseFloat(transaction.amount);
+      const oldBalanceNum = parseFloat(wallet.balance);
+      const newBalanceNum = oldBalanceNum + amountNum;
+
+      if (newBalanceNum < 0) {
+        throw new Error("BUSINESS_RULE_VIOLATION: Insufficient wallet balance");
+      }
+
+      const newBalance = newBalanceNum.toFixed(2);
       
       await tx.update(wallets)
         .set({ balance: newBalance })
@@ -99,7 +108,7 @@ export class WalletService {
         entityId: transactionId,
         performedByUserId: user?.id || wallet.userId,
         performedByRole: user?.role || "ADMIN",
-        oldValue: { balance: oldBalance },
+        oldValue: { balance: wallet.balance },
         newValue: { balance: newBalance },
         metadata: { amount: transaction.amount, walletId: wallet.id }
       });
@@ -109,6 +118,37 @@ export class WalletService {
       }
 
       return updatedTransaction;
+    });
+  }
+
+  async deductBalance(userId: string, amount: string, referenceId?: string): Promise<void> {
+    await db.transaction(async (tx) => {
+      const wallet = await this.getOrCreateWallet(userId);
+      const [lockedWallet] = await tx.select().from(wallets).where(eq(wallets.id, wallet.id)).for("update");
+      
+      const currentBalance = parseFloat(lockedWallet.balance);
+      const deductAmount = parseFloat(amount);
+
+      if (currentBalance < deductAmount) {
+        throw new Error("BUSINESS_RULE_VIOLATION: Insufficient wallet balance");
+      }
+
+      const newBalance = (currentBalance - deductAmount).toFixed(2);
+
+      await tx.update(wallets)
+        .set({ balance: newBalance, updatedAt: new Date() })
+        .where(eq(wallets.id, lockedWallet.id));
+
+      await auditService.logEvent({
+        actionType: "WALLET_DEDUCTION",
+        entityType: "wallet",
+        entityId: lockedWallet.id,
+        performedByUserId: userId,
+        performedByRole: "SYSTEM",
+        oldValue: { balance: lockedWallet.balance },
+        newValue: { balance: newBalance },
+        metadata: { amount, referenceId }
+      });
     });
   }
 }

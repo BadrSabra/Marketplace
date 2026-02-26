@@ -19,6 +19,11 @@ export class DepositService {
 
       if (!deposit) throw new Error("DEPOSIT_NOT_FOUND");
 
+      // 5️⃣ DEPOSIT DOUBLE APPROVAL PROTECTION
+      if (!force && deposit.status === "APPROVED") {
+        throw new Error("BUSINESS_RULE_VIOLATION: Deposit already approved");
+      }
+
       // 2. Validate status
       if (!force && deposit.status !== "PENDING") {
         throw new Error("ALREADY_PROCESSED");
@@ -33,6 +38,20 @@ export class DepositService {
 
       const [customer] = await tx.select().from(users).where(eq(users.id, deposit.customerId));
       if (!customer) throw new Error("CUSTOMER_NOT_FOUND");
+
+      // 6. Insert ledger entry (Order changed to ensure atomicity and guard)
+      // 2️⃣ IDEMPOTENCY: Check if ledger entry already exists for this reference
+      const [existingLedger] = await tx.select().from(ledger).where(and(eq(ledger.referenceId, depositId), eq(ledger.type, "DEPOSIT"))).for("update");
+      if (existingLedger) {
+         throw new Error("DUPLICATE_TRANSACTION: Deposit ledger entry already exists");
+      }
+
+      const [ledgerEntry] = await tx.insert(ledger).values({
+        referenceId: depositId,
+        creditUserId: deposit.customerId,
+        amount: deposit.amount,
+        type: "DEPOSIT",
+      }).returning();
 
       // 4. Update deposit status
       await tx.update(deposits)
@@ -58,14 +77,6 @@ export class DepositService {
           updatedAt: new Date()
         })
         .where(eq(wallets.id, wallet.id));
-
-      // 6. Insert ledger entry
-      const [ledgerEntry] = await tx.insert(ledger).values({
-        referenceId: depositId,
-        creditUserId: deposit.customerId,
-        amount: deposit.amount,
-        type: "DEPOSIT",
-      }).returning();
 
       // 7. Audit log
       await auditService.logEvent({

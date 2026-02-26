@@ -9,9 +9,23 @@ import { emitNotification } from "../notifications/notification.emitter";
 export class SubOrderService {
   // ... (existing code)
 
+  validateSubOrderTransition(currentStatus: string, nextStatus: string) {
+    const allowed: Record<string, string[]> = {
+      'PENDING': ['ACCEPTED', 'CANCELLED'],
+      'ACCEPTED': ['IN_TRANSIT', 'CANCELLED'],
+      'IN_TRANSIT': ['DELIVERED'],
+      'DELIVERED': [],
+      'CANCELLED': []
+    };
+
+    if (!allowed[currentStatus]?.includes(nextStatus)) {
+      console.error(`[BLOCK] Illegal status transition: ${currentStatus} -> ${nextStatus}`);
+      throw new Error(`BUSINESS_RULE_VIOLATION: Illegal state transition from ${currentStatus} to ${nextStatus}`);
+    }
+  }
+
   async updateSubOrderStatus(subOrderId: string, newStatus: any, actorUser: User): Promise<any> {
     return await db.transaction(async (tx) => {
-      // ... (existing code)
       const [subOrder] = await tx
         .select()
         .from(subOrders)
@@ -19,6 +33,9 @@ export class SubOrderService {
         .for("update");
 
       if (!subOrder) throw new Error("NOT_FOUND");
+
+      // 4️⃣ SUBORDER STATE TRANSITION GUARD
+      this.validateSubOrderTransition(subOrder.status, newStatus);
 
       const [parentOrder] = await tx.select().from(orders).where(eq(orders.id, subOrder.orderId));
       const [customer] = await tx.select().from(users).where(eq(users.id, parentOrder.customerId));

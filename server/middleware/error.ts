@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "crypto";
 
 export interface AppError extends Error {
   code: string;
@@ -13,7 +13,7 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ) => {
-  const requestId = (req as any).requestId || uuidv4();
+  const requestId = (req as any).requestId || randomUUID();
   const status = err.status || err.statusCode || 500;
   
   let code = err.code || "SYSTEM_ERROR";
@@ -52,7 +52,7 @@ export const errorHandler = (
 };
 
 export const requestIdMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  const requestId = uuidv4();
+  const requestId = randomUUID();
   (req as any).requestId = requestId;
   res.setHeader("X-Request-ID", requestId);
   next();

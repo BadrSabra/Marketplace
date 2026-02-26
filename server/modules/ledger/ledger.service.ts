@@ -124,6 +124,22 @@ export class LedgerService {
     console.log(`[AUDIT-LEDGER] sub_order_id=${subOrderId} force=${force}`);
 
     return await db.transaction(async (tx) => {
+      // 2️⃣ IDEMPOTENCY PROTECTION: Check if already processed
+      const [existingLedger] = await tx
+        .select()
+        .from(ledger)
+        .where(
+          and(
+            eq(ledger.referenceId, subOrderId),
+            eq(ledger.type, "COMMISSION")
+          )
+        )
+        .for("update");
+
+      if (existingLedger) {
+        throw new Error("DUPLICATE_TRANSACTION: Commission already processed for this sub-order");
+      }
+
       // 1. Lock sub-order row for concurrency protection
       const [subOrder] = await tx
         .select()
@@ -138,21 +154,6 @@ export class LedgerService {
       // 2. Verify status
       if (!force && subOrder.status !== "DELIVERED") {
         throw new Error("INVALID_STATUS");
-      }
-
-      // 3. Check for existing commission
-      const [existingLedger] = await tx
-        .select()
-        .from(ledger)
-        .where(
-          and(
-            eq(ledger.referenceId, subOrderId),
-            eq(ledger.type, "COMMISSION")
-          )
-        );
-
-      if (existingLedger) {
-        throw new Error("ALREADY_PROCESSED");
       }
 
       // 4. Fetch store details
@@ -172,19 +173,28 @@ export class LedgerService {
       const storeAmount = subtotalNum - platformCommission;
       const driverAmount = deliveryFeeNum;
 
+      // 3️⃣ COMMISSION GUARD: Validate results
+      const totalCommission = platformCommission + (subOrder.assignedDriverId ? driverAmount : 0);
+      const orderTotal = subtotalNum + deliveryFeeNum;
+
+      if (storeAmount < 0 || storeAmount > orderTotal || (subOrder.assignedDriverId && driverAmount < 0) || totalCommission < 0 || totalCommission > orderTotal) {
+        console.error(`[COMMISSION_GUARD] Invalid commission values for subOrder ${subOrderId}`, { storeAmount, driverAmount, platformCommission, orderTotal });
+        throw new Error("SYSTEM_ERROR: Invalid commission calculation");
+      }
+
       const ledgerEntries: string[] = [];
 
       // 6. Process Store Commission
       const [storeLedger] = await tx.insert(ledger).values({
         referenceId: subOrderId,
         creditUserId: store.ownerId,
-        amount: storeAmount.toString(),
+        amount: storeAmount.toFixed(2),
         type: "COMMISSION",
       }).returning();
       ledgerEntries.push(storeLedger.id);
 
       // Update Store Wallet
-      const [storeWallet] = await tx.select().from(wallets).where(eq(wallets.userId, store.ownerId));
+      const [storeWallet] = await tx.select().from(wallets).where(eq(wallets.userId, store.ownerId)).for("update");
       if (storeWallet) {
         const oldBalance = storeWallet.balance;
         const newBalance = (parseFloat(oldBalance) + storeAmount).toFixed(2);
@@ -213,12 +223,12 @@ export class LedgerService {
         const [driverLedger] = await tx.insert(ledger).values({
           referenceId: subOrderId,
           creditUserId: subOrder.assignedDriverId,
-          amount: driverAmount.toString(),
+          amount: driverAmount.toFixed(2),
           type: "COMMISSION",
         }).returning();
         ledgerEntries.push(driverLedger.id);
 
-        const [driverWallet] = await tx.select().from(wallets).where(eq(wallets.userId, subOrder.assignedDriverId));
+        const [driverWallet] = await tx.select().from(wallets).where(eq(wallets.userId, subOrder.assignedDriverId)).for("update");
         if (driverWallet) {
           const oldBalance = driverWallet.balance;
           const newBalance = (parseFloat(oldBalance) + driverAmount).toFixed(2);
@@ -245,6 +255,44 @@ export class LedgerService {
 
       return { ledger_entry_ids: ledgerEntries };
     });
+  }
+
+  async verifyLedgerConsistency(userId: string) {
+    const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, userId));
+    if (!wallet) throw new Error("Wallet not found");
+
+    const credits = await db.select({ sum: sql<string>`sum(amount)` }).from(ledger).where(eq(ledger.creditUserId, userId));
+    const debits = await db.select({ sum: sql<string>`sum(amount)` }).from(ledger).where(eq(ledger.debitUserId, userId));
+
+    const totalCredits = parseFloat(credits[0]?.sum || "0");
+    const totalDebits = parseFloat(debits[0]?.sum || "0");
+    const calculatedBalance = (totalCredits - totalDebits).toFixed(2);
+
+    if (calculatedBalance !== parseFloat(wallet.balance).toFixed(2)) {
+      console.error(`[CRITICAL] Ledger inconsistency for user ${userId}: Wallet=${wallet.balance}, Calculated=${calculatedBalance}`);
+      return { consistent: false, walletBalance: wallet.balance, calculatedBalance };
+    }
+
+    return { consistent: true, balance: wallet.balance };
+  }
+
+  async verifyLedgerConsistency(userId: string) {
+    const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, userId));
+    if (!wallet) throw new Error("Wallet not found");
+
+    const credits = await db.select({ sum: sql<string>`sum(amount)` }).from(ledger).where(eq(ledger.creditUserId, userId));
+    const debits = await db.select({ sum: sql<string>`sum(amount)` }).from(ledger).where(eq(ledger.debitUserId, userId));
+
+    const totalCredits = parseFloat(credits[0]?.sum || "0");
+    const totalDebits = parseFloat(debits[0]?.sum || "0");
+    const calculatedBalance = (totalCredits - totalDebits).toFixed(2);
+
+    if (calculatedBalance !== parseFloat(wallet.balance).toFixed(2)) {
+      console.error(`[CRITICAL] Ledger inconsistency for user ${userId}: Wallet=${wallet.balance}, Calculated=${calculatedBalance}`);
+      return { consistent: false, walletBalance: wallet.balance, calculatedBalance };
+    }
+
+    return { consistent: true, balance: wallet.balance };
   }
 }
 
