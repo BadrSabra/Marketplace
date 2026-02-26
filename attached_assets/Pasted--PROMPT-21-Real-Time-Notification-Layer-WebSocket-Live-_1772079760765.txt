@@ -1,0 +1,209 @@
+
+
+🔹 PROMPT 21 — Real-Time Notification Layer (WebSocket/Live Updates)
+
+You are tasked with building a **Real-Time Notification Layer** for the Mit Gaber Hyperlocal Marketplace to ensure all roles (Customer, Store Owner, Driver, Admin) receive live updates about relevant events. This layer must be robust, RBAC-protected, scalable, and fail-safe. Include full edge case handling, reconnection logic, and testing instructions.
+
+---
+
+### 1️⃣ Core Objectives
+
+- Enable live notifications for:
+  - **Customers**: order status updates, wallet deposit approvals
+  - **Store Owners**: new incoming orders, sub-order status changes, commission updates
+  - **Drivers**: available tasks, assigned deliveries, order pickup/delivery updates
+  - **Admins**: audit alerts, system notifications
+- Provide structured JSON payloads for each event type
+- Ensure **secure role-based access control (RBAC)**
+- Include reconnection and retry logic for reliability
+
+---
+
+### 2️⃣ Architecture & Endpoint
+
+- **Protocol**: WebSocket (ws/wss)
+- **Server-side**: Node.js (or existing backend framework)
+- **Client-side**: Subscribe via WebSocket or WebSocket wrapper library
+- **Authentication**:
+  - JWT sent during WebSocket handshake
+  - Middleware validates token & enforces RBAC
+- **Event Types**:
+  - `ORDER_STATUS_UPDATE` → sub-order id, new status, timestamp
+  - `NEW_ORDER` → order id, customer info, items, timestamp
+  - `DEPOSIT_APPROVED` → user id, amount, timestamp
+  - `EARNINGS_UPDATE` → driver/store id, updated balance, timestamp
+  - `SYSTEM_ALERT` → admin, severity, message, timestamp
+- **Payload Example**:
+```json
+{
+  "event": "ORDER_STATUS_UPDATE",
+  "data": {
+    "subOrderId": "abc123",
+    "newStatus": "READY",
+    "updatedBy": "STORE_OWNER",
+    "timestamp": "2026-02-26T12:00:00Z"
+  }
+}
+
+
+---
+
+3️⃣ Functional Requirements
+
+1. Connection Management
+
+Accept WebSocket connections only from authenticated users
+
+Validate JWT and attach userId and role to socket session
+
+Disconnect unauthorized or expired connections
+
+
+
+2. Role-based Subscriptions
+
+Customers receive only their own orders & wallet updates
+
+Store Owners receive only their store orders & earnings
+
+Drivers receive only their assigned deliveries and available tasks
+
+Admins receive global system notifications
+
+
+
+3. Event Broadcasting
+
+Emit event immediately upon backend state changes:
+
+Order status transition
+
+Deposit approval
+
+Wallet/ledger updates
+
+New incoming orders for store
+
+Delivery assignment for driver
+
+Admin system alerts
+
+
+Ensure atomicity: event only fires after DB transaction commits
+
+
+
+4. Edge Cases
+
+Retry sending if WebSocket temporarily unavailable
+
+Queue offline events and deliver upon reconnection
+
+Prevent duplicate events
+
+Handle concurrent updates safely (race conditions)
+
+Graceful fallback if server memory/cache fails
+
+
+
+5. Client-side Integration
+
+Expose a reusable WebSocket hook/service for React:
+
+useNotifications(userId, role) returns real-time event stream
+
+
+Auto-reconnect with exponential backoff
+
+Provide event filters by type if needed
+
+
+
+
+
+---
+
+4️⃣ Security & RBAC
+
+Validate JWT for every connection
+
+Attach role and permissions to session
+
+Restrict emitted events to authorized users only
+
+Log unauthorized access attempts
+
+Optional: integrate with audit_logs for critical system notifications
+
+
+
+---
+
+5️⃣ Testing Requirements
+
+Unit tests:
+
+Mock DB triggers and ensure events emitted only after commit
+
+Test RBAC filters: customers cannot see others’ orders
+
+Test reconnection & retry logic
+
+
+Integration tests:
+
+Multiple clients receive correct live events
+
+Offline clients receive queued events after reconnect
+
+High-frequency updates do not cause duplication
+
+
+Stress test:
+
+Simulate many concurrent connections (store + drivers + customers)
+
+Ensure performance, no memory leaks, no missed events
+
+
+
+
+---
+
+6️⃣ Agent Execution Instructions
+
+1. Create a WebSocket server integrated with existing backend
+
+
+2. Implement JWT authentication during handshake
+
+
+3. Map roles to subscriptions: Customer, Store Owner, Driver, Admin
+
+
+4. Trigger events on backend state changes after DB commit
+
+
+5. Broadcast events to authorized connected clients only
+
+
+6. Implement offline event queue & reconnection logic
+
+
+7. Expose client-side hook/service for React apps
+
+
+8. Write unit, integration, and stress tests for all cases
+
+
+9. Optionally log critical notifications to audit_logs table
+
+
+
+
+---
+
+End of Prompt 21. Execute step-by-step, ensuring secure, real-time, role-based notifications with reconnection support, reliable event delivery, and testing coverage for production readiness.
+
+---
