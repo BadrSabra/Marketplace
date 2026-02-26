@@ -22,6 +22,8 @@ export const users = pgTable("users", {
   role: roleEnum("role").notNull().default("CUSTOMER"),
   isApproved: boolean("is_approved").notNull().default(false),
   transportType: text("transport_type"),
+  avatarUrl: text("avatar_url"),
+  addresses: jsonb("addresses").$type<string[]>().default([]),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

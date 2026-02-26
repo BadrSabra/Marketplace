@@ -85,6 +85,8 @@ export async function initializeDatabase() {
     console.log("[DB] Checking columns...");
     const columnChecks = [
       { table: 'users', column: 'transport_type', type: 'VARCHAR' },
+      { table: 'users', column: 'avatar_url', type: 'TEXT' },
+      { table: 'users', column: 'addresses', type: 'JSONB DEFAULT \'[]\'' },
       { table: 'stores', column: 'description', type: 'TEXT' },
       { table: 'stores', column: 'location_text', type: 'TEXT' }
     ];

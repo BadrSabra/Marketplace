@@ -14,6 +14,7 @@ import AdminDashboard from "@/pages/admin/dashboard";
 import CustomerDashboard from "@/pages/customer/dashboard";
 import CustomerWallet from "@/pages/customer/wallet";
 import CustomerTransactions from "@/pages/customer/transactions";
+import CustomerProfile from "@/pages/customer/profile";
 import StoreDashboard from "@/pages/store/dashboard";
 import StoreOrders from "@/pages/store/orders";
 import StoreEarnings from "@/pages/store/earnings";
@@ -89,6 +90,9 @@ function Router() {
       </Route>
       <Route path="/customer/transactions">
         {() => <ProtectedRoute component={CustomerTransactions} roles={["CUSTOMER"]} />}
+      </Route>
+      <Route path="/customer/profile">
+        {() => <ProtectedRoute component={CustomerProfile} roles={["CUSTOMER"]} />}
       </Route>
       <Route path="/customer/order/:id">
         {() => <ProtectedRoute component={CustomerOrderDetails} roles={["CUSTOMER"]} />}

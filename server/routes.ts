@@ -154,6 +154,53 @@ export async function registerRoutes(
   });
 
   // --- USERS MODULE ---
+  app.get("/api/customer/profile", authenticate, authorizeRole(["CUSTOMER"]), async (req, res) => {
+    const user = await storage.getUser((req as any).user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    const { password, ...cleanUser } = user;
+    res.json(cleanUser);
+  });
+
+  app.patch("/api/customer/profile", authenticate, authorizeRole(["CUSTOMER"]), async (req, res) => {
+    try {
+      const userId = (req as any).user.id;
+      const updateSchema = z.object({
+        name: z.string().min(1).max(50).regex(/^[a-zA-Z\s]*$/, "Name can only contain letters").optional(),
+        phone: z.string().min(10).max(15).regex(/^\d+$/, "Phone must be numeric").optional(),
+        transportType: z.string().optional(),
+        avatarUrl: z.string().url().or(z.literal("")).optional(),
+        addresses: z.array(z.string().min(1)).optional(),
+      });
+
+      const input = updateSchema.parse(req.body);
+      const oldUser = await storage.getUser(userId);
+      
+      const [updatedUser] = await db.update(users)
+        .set({ ...input, updatedAt: new Date() })
+        .where(eq(users.id, userId))
+        .returning();
+
+      const { auditService } = await import("./services/auditService");
+      await auditService.logEvent({
+        actionType: "PROFILE_UPDATE",
+        entityType: "user",
+        entityId: userId,
+        performedByUserId: userId,
+        performedByRole: "CUSTOMER",
+        oldValue: oldUser,
+        newValue: updatedUser,
+      });
+
+      const { password, ...cleanUser } = updatedUser;
+      res.json(cleanUser);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Internal error" });
+    }
+  });
+
   app.get(api.users.list.path, authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
     const users = await storage.getUsers();
     const cleanUsers = users.map(u => {
