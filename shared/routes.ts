@@ -72,6 +72,16 @@ export const api = {
         400: errorSchemas.validation,
         401: errorSchemas.unauthorized,
       }
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/stores/:id' as const,
+      responses: {
+        200: z.object({ success: z.boolean(), message: z.string() }),
+        400: z.object({ success: z.boolean(), message: z.string() }),
+        401: errorSchemas.unauthorized,
+        403: errorSchemas.forbidden,
+      }
     }
   },
   products: {

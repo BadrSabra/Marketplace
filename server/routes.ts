@@ -234,6 +234,23 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/stores/:id", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteStore(id);
+      if (!success) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Cannot delete store: dependent records (products or orders) exist" 
+        });
+      }
+      res.json({ success: true, message: "Store deleted successfully" });
+    } catch (err) {
+      console.error("Delete store error:", err);
+      res.status(500).json({ success: false, message: "Internal server error" });
+    }
+  });
+
   // --- PRODUCTS MODULE ---
   app.get("/api/products", productsController.getAll);
   app.post("/api/products", authenticate, productsController.create);

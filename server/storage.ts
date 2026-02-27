@@ -19,6 +19,7 @@ export interface IStorage {
   updateProduct(id: string, product: any): Promise<any>;
   deleteProduct(id: string): Promise<void>;
   updateProductStock(id: string, stock: number): Promise<any>;
+  deleteStore(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -103,6 +104,20 @@ export class DatabaseStorage implements IStorage {
       .where(eq(products.id, id))
       .returning();
     return product;
+  }
+
+  async deleteStore(id: string): Promise<boolean> {
+    const { subOrders, products } = await import("@shared/schema");
+    
+    // Check for dependent records
+    const [subOrder] = await db.select().from(subOrders).where(eq(subOrders.storeId, id)).limit(1);
+    if (subOrder) return false;
+
+    const [product] = await db.select().from(products).where(eq(products.storeId, id)).limit(1);
+    if (product) return false;
+
+    await db.delete(stores).where(eq(stores.id, id));
+    return true;
   }
 }
 

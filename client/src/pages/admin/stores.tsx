@@ -1,19 +1,31 @@
 import { useState } from "react";
 import { AdminLayout } from "@/components/layout/admin-layout";
-import { useStores, useCreateStore } from "@/hooks/use-stores";
+import { useStores, useCreateStore, useDeleteStore } from "@/hooks/use-stores";
 import { Spinner } from "@/components/ui/spinner";
 import { format } from "date-fns";
-import { Plus, Store as StoreIcon, MapPin } from "lucide-react";
+import { Plus, Store as StoreIcon, MapPin, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function StoresPage() {
   const { data: stores, isLoading } = useStores();
   const { user } = useAuth();
   const createStore = useCreateStore();
+  const deleteStore = useDeleteStore();
   const { toast } = useToast();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [storeToDelete, setStoreToDelete] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -38,6 +50,23 @@ export default function StoresPage() {
         description: error.message || "Failed to create store", 
         variant: "destructive" 
       });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!storeToDelete) return;
+
+    try {
+      await deleteStore.mutateAsync(storeToDelete);
+      toast({ title: "Success", description: "Store deleted successfully." });
+    } catch (error: any) {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to delete store", 
+        variant: "destructive" 
+      });
+    } finally {
+      setStoreToDelete(null);
     }
   };
 
@@ -68,14 +97,23 @@ export default function StoresPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 p-6">
             {stores.map((store) => (
-              <div key={store.id} className="group border border-border/60 rounded-xl p-5 hover:border-primary/30 hover:shadow-md transition-all bg-background">
+              <div key={store.id} className="group border border-border/60 rounded-xl p-5 hover:border-primary/30 hover:shadow-md transition-all bg-background relative">
                 <div className="flex items-start justify-between mb-4">
                   <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                     <StoreIcon className="w-5 h-5" />
                   </div>
-                  <span className="text-xs font-mono text-muted-foreground bg-secondary px-2 py-1 rounded">
-                    {store.id.slice(0, 6)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setStoreToDelete(store.id)}
+                      className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+                      title="Delete Store"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    <span className="text-xs font-mono text-muted-foreground bg-secondary px-2 py-1 rounded">
+                      {store.id.slice(0, 6)}
+                    </span>
+                  </div>
                 </div>
                 <h3 className="text-lg font-bold text-foreground mb-1">{store.name}</h3>
                 <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
@@ -90,6 +128,25 @@ export default function StoresPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!storeToDelete} onOpenChange={(open) => !open && setStoreToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the store
+              and remove its data from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Create Store Dialog */}
       {isDialogOpen && (
