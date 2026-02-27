@@ -211,6 +211,7 @@
       "items_subtitle": "تفاصيل المنتجات في هذا الطلب",
       "sub_order_number": "طلب فرعي رقم",
       "subtotal": "المجموع الفرعي",
+      "store_id": "معرف المتجر",
       "table": {
         "product": "المنتج",
         "qty": "الكمية",
@@ -309,6 +310,7 @@
       "no_history": "لم يتم العثور على سجل أرباح."
     },
     "dashboard": {
+      "your_store": "متجرك",
       "overview": "نظرة عامة على المتجر",
       "welcome": "مرحباً بك مجدداً، {{name}}. إليك ما يحدث في {{store}}.",
       "wallet_balance": "رصيد المحفظة",

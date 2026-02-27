@@ -1,10 +1,9 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { DollarSign } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { t } from "@/i18n";
 
 export default function DriverDashboard() {
-  const { t } = useTranslation();
   return (
     <div className="p-8 rtl:text-right" dir="auto">
       <div className="flex justify-between items-center mb-4 rtl:flex-row-reverse">

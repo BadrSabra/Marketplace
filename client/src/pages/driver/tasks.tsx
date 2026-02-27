@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { t } from "@/i18n";
 
 interface Task {
   sub_order_id: string;
@@ -26,7 +26,6 @@ interface Task {
 }
 
 export default function DriverTasks() {
-  const { t } = useTranslation();
   const { toast } = useToast();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [proposedFee, setProposedFee] = useState("");

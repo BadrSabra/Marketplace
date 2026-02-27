@@ -11,7 +11,7 @@ import { StoreLayout } from "@/components/layout/store-layout";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 
 type LedgerResponse = {
@@ -21,7 +21,6 @@ type LedgerResponse = {
 };
 
 export default function StoreEarnings() {
-  const { t } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");

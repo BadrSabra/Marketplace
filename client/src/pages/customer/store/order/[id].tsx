@@ -10,10 +10,9 @@ import { Loader2, Check, Package, X, Clock, ArrowLeft, User, MapPin, Phone, Mail
 import { format } from "date-fns";
 import { StoreLayout } from "@/components/layout/store-layout";
 import { useAuth } from "@/hooks/use-auth";
-import { useTranslation } from "react-i18next";
+import { t } from '@/i18n';
 
 export default function StoreOrderDetails() {
-  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -138,7 +137,7 @@ export default function StoreOrderDetails() {
                           <h3 className="font-bold text-lg">{t('store.order_details.sub_order_number')} #{sub.sub_order_id.split("-")[0]}</h3>
                           {getStatusBadge(sub.status)}
                         </div>
-                        <p className="text-xs text-muted-foreground">Store ID: {sub.store_id}</p>
+                        <p className="text-xs text-muted-foreground">{t('store.order_details.store_id')}: {sub.store_id}</p>
                       </div>
                       <div className="text-right rtl:text-left">
                         <p className="text-[10px] uppercase font-bold text-muted-foreground">{t('store.order_details.subtotal')}</p>

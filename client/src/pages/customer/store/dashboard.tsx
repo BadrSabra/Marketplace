@@ -6,12 +6,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { StoreLayout } from "@/components/layout/store-layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
-import { useTranslation } from "react-i18next";
+import { t } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export default function StoreDashboard() {
-  const { t } = useTranslation();
   const { user } = useAuth();
   
   const { data: stores } = useQuery<any[]>({
@@ -54,7 +53,7 @@ export default function StoreDashboard() {
         <header className="rtl:text-right">
           <h1 className="text-3xl font-bold tracking-tight">{t('store.dashboard.overview')}</h1>
           <p className="text-muted-foreground mt-1">
-            {t('store.dashboard.welcome', { name: user?.name, store: myStore?.name || 'your store' })}
+            {t('store.dashboard.welcome', { name: user?.name, store: myStore?.name || t('store.dashboard.your_store') })}
           </p>
         </header>
 

@@ -38,7 +38,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useTranslation } from "react-i18next";
+import { t } from "@/i18n";
 
 const productFormSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -54,7 +54,6 @@ const productFormSchema = z.object({
 type ProductFormValues = z.infer<typeof productFormSchema>;
 
 export default function StoreInventory() {
-  const { t } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -214,7 +213,7 @@ export default function StoreInventory() {
     <StoreLayout>
       <div className="space-y-6 rtl:text-right" dir="auto">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 rtl:flex-row-reverse">
-          <div>
+          <div className="rtl:text-right">
             <h1 className="text-3xl font-bold tracking-tight">{t('store.inventory.title')}</h1>
             <p className="text-muted-foreground">{t('store.inventory.subtitle')}</p>
           </div>
@@ -467,7 +466,7 @@ export default function StoreInventory() {
                       <TableCell colSpan={6} className="text-center py-16 text-muted-foreground">
                         <div className="flex flex-col items-center gap-2">
                           <Package className="h-12 w-12 opacity-20" />
-                          <p className="text-lg font-medium">{t('store.inventory.no_history')}</p>
+                          <p className="text-lg font-medium">{t('store.earnings.no_history')}</p>
                         </div>
                       </TableCell>
                     </TableRow>

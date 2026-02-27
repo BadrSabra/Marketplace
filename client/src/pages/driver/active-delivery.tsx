@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { useTranslation } from "react-i18next";
+import { t } from "@/i18n";
 
 interface ActiveTask {
   id: string;
@@ -21,7 +21,6 @@ interface ActiveTask {
 }
 
 export default function ActiveDelivery() {
-  const { t } = useTranslation();
   const { toast } = useToast();
   const [timeLeft, setTimeLeft] = useState(1800); // 30 mins default
 

@@ -1,21 +1,13 @@
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
-import Backend from 'i18next-http-backend';
+import translations from "./locales/ar/translation.json";
 
-i18n
-  .use(Backend)
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
-    fallbackLng: 'en',
-    debug: false,
-    interpolation: {
-      escapeValue: false,
-    },
-    backend: {
-      loadPath: '/src/locales/{{lng}}/{{ns}}.json',
-    },
-  });
+export function t(key: string) {
+  const keys = key.split(".");
+  let value: any = translations;
+  for (const k of keys) {
+    if (value && value[k] !== undefined) value = value[k];
+    else return key;
+  }
+  return value;
+}
 
-export default i18n;
+export default { t };

@@ -13,10 +13,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useTranslation } from "react-i18next";
+import { t } from '@/i18n';
 
 export default function StoreOrders() {
-  const { t } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");

@@ -8,10 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useTranslation } from "react-i18next";
+import { t } from "@/i18n";
 
 export default function DriverEarnings() {
-  const { t } = useTranslation();
   const [page, setPage] = useState(0);
   const [type, setType] = useState<string>("ALL");
   const limit = 10;
