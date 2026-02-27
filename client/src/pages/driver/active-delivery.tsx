@@ -84,8 +84,8 @@ export default function ActiveDelivery() {
   };
 
   return (
-    <div className="p-8 max-w-2xl mx-auto space-y-6 rtl:text-right" dir="auto">
-      <div className="flex justify-between items-center rtl:flex-row-reverse">
+    <div className="p-8 max-w-2xl mx-auto space-y-6 text-right" dir="rtl">
+      <div className="flex justify-between items-center flex-row-reverse">
         <h1 className="text-3xl font-bold tracking-tight">{t('driver.active_delivery.title')}</h1>
         <Badge className={cn(
           "px-3 py-1 text-xs font-bold",
@@ -97,31 +97,31 @@ export default function ActiveDelivery() {
         </Badge>
       </div>
 
-      <Card className="border-2 rtl:text-right">
-        <CardHeader className="rtl:text-right">
-          <div className="flex justify-between items-start rtl:flex-row-reverse">
-            <div className="rtl:text-right">
+      <Card className="border-2 text-right">
+        <CardHeader className="text-right">
+          <div className="flex justify-between items-start flex-row-reverse">
+            <div className="text-right">
               <CardTitle className="text-2xl">{t('store.order_details.order_number')} #{task.orderId.split("-")[0]}</CardTitle>
               <CardDescription>{t('driver.active_delivery.estimated_delivery', { time: formatTime(timeLeft) })}</CardDescription>
             </div>
-            <div className="text-right rtl:text-left">
+            <div className="text-left">
               <div className="text-2xl font-bold text-primary">${task.subtotal}</div>
               <div className="text-xs text-muted-foreground">{t('driver.active_delivery.total_value')}</div>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 gap-4 rtl:flex-row-reverse">
-            <div className="space-y-1 rtl:text-right">
-              <div className="text-xs font-medium text-muted-foreground flex items-center gap-1 rtl:flex-row-reverse">
+          <div className="grid grid-cols-2 gap-4 flex-row-reverse">
+            <div className="space-y-1 text-right">
+              <div className="text-xs font-medium text-muted-foreground flex items-center gap-1 flex-row-reverse">
                 <Clock className="h-3 w-3" /> {t('driver.active_delivery.remaining_time')}
               </div>
               <div className={cn("text-xl font-bold", timeLeft < 300 ? "text-red-500 animate-pulse" : "text-foreground")}>
                 {formatTime(timeLeft)}
               </div>
             </div>
-            <div className="space-y-1 rtl:text-right">
-              <div className="text-xs font-medium text-muted-foreground flex items-center gap-1 rtl:flex-row-reverse">
+            <div className="space-y-1 text-right">
+              <div className="text-xs font-medium text-muted-foreground flex items-center gap-1 flex-row-reverse">
                 <Key className="h-3 w-3" /> {t('driver.active_delivery.delivery_otp')}
               </div>
               <div className="text-xl font-mono font-bold tracking-widest text-primary">
@@ -130,35 +130,35 @@ export default function ActiveDelivery() {
             </div>
           </div>
 
-          <div className="space-y-4 rtl:text-right">
-            <div className="flex items-start gap-3 rtl:flex-row-reverse">
+          <div className="space-y-4 text-right">
+            <div className="flex items-start gap-3 flex-row-reverse">
               <div className="bg-primary/10 p-2 rounded-full">
                 <MapPin className="h-4 w-4 text-primary" />
               </div>
-              <div className="rtl:text-right">
+              <div className="text-right">
                 <div className="font-bold">{task.customerName}</div>
-                <div className="text-sm text-muted-foreground flex items-center gap-1 rtl:flex-row-reverse">
+                <div className="text-sm text-muted-foreground flex items-center gap-1 flex-row-reverse">
                   <Phone className="h-3 w-3" /> {task.customerPhone}
                 </div>
               </div>
             </div>
 
-            <div className="bg-muted/50 rounded-lg p-4 space-y-2 rtl:text-right">
+            <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-right">
               <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('store.order_details.items_title')}</div>
               {task.items.map((item, i) => (
-                <div key={i} className="flex justify-between text-sm rtl:flex-row-reverse">
-                  <span>{item.productName}</span>
+                <div key={i} className="flex justify-between text-sm flex-row-reverse">
+                  <span className="text-right">{item.productName}</span>
                   <span className="font-bold">x{item.quantity}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 rtl:flex-row-reverse">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 flex-row-reverse">
             {!task.otp && (
               <Button 
                 variant="outline" 
-                className="w-full gap-2 rtl:flex-row-reverse"
+                className="w-full gap-2 flex-row-reverse"
                 onClick={() => otpMutation.mutate(task.id)}
                 disabled={otpMutation.isPending}
               >
@@ -167,7 +167,7 @@ export default function ActiveDelivery() {
             )}
             {task.status === "ASSIGNED" && (
               <Button 
-                className="w-full gap-2 rtl:flex-row-reverse"
+                className="w-full gap-2 flex-row-reverse"
                 onClick={() => statusMutation.mutate("PICKED_UP")}
                 disabled={statusMutation.isPending}
               >
@@ -176,14 +176,14 @@ export default function ActiveDelivery() {
             )}
             {task.status === "PICKED_UP" && (
               <Button 
-                className="w-full gap-2 bg-green-600 hover:bg-green-700 rtl:flex-row-reverse"
+                className="w-full gap-2 bg-green-600 hover:bg-green-700 flex-row-reverse"
                 onClick={() => statusMutation.mutate("DELIVERED")}
                 disabled={statusMutation.isPending}
               >
                 <CheckCircle className="h-4 w-4" /> {t('driver.active_delivery.actions.confirm_delivery')}
               </Button>
             )}
-            <Button variant="secondary" className="w-full gap-2 rtl:flex-row-reverse" asChild>
+            <Button variant="secondary" className="w-full gap-2 flex-row-reverse" asChild>
               <a href={`tel:${task.customerPhone}`}>
                 <Phone className="h-4 w-4" /> {t('driver.active_delivery.actions.call_customer')}
               </a>

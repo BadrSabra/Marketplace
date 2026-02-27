@@ -57,11 +57,11 @@ export default function DriverEarnings() {
   const isInconsistent = false; // Placeholder for logic checking consistency
 
   return (
-    <div className="container mx-auto p-6 space-y-6 rtl:text-right" dir="auto">
-      <div className="flex justify-between items-center rtl:flex-row-reverse">
+    <div className="container mx-auto p-6 space-y-6 text-right" dir="rtl">
+      <div className="flex justify-between items-center flex-row-reverse">
         <h1 className="text-3xl font-bold">{t('driver.earnings.title')}</h1>
         {isInconsistent && (
-          <Badge variant="destructive" className="flex gap-1 rtl:flex-row-reverse">
+          <Badge variant="destructive" className="flex gap-1 flex-row-reverse">
             <AlertCircle className="h-3 w-3" />
             {t('driver.earnings.inconsistency_alert')}
           </Badge>
@@ -69,18 +69,18 @@ export default function DriverEarnings() {
       </div>
 
       {parseFloat(balanceData?.balance || "0") < 0 && (
-        <Alert variant="destructive" className="rtl:text-right">
-          <AlertCircle className="h-4 w-4 rtl:left-auto rtl:right-4" />
-          <AlertTitle className="rtl:pr-7">{t('driver.earnings.warning_title')}</AlertTitle>
-          <AlertDescription className="rtl:pr-7">
+        <Alert variant="destructive" className="text-right">
+          <AlertCircle className="h-4 w-4 left-auto right-4" />
+          <AlertTitle className="pr-7">{t('driver.earnings.warning_title')}</AlertTitle>
+          <AlertDescription className="pr-7">
             {t('driver.earnings.negative_balance_warning')}
           </AlertDescription>
         </Alert>
       )}
       
-      <div className="grid md:grid-cols-2 gap-6 rtl:flex-row-reverse">
-        <Card data-testid="card-wallet-balance" className="rtl:text-right">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 rtl:flex-row-reverse">
+      <div className="grid md:grid-cols-2 gap-6 flex-row-reverse">
+        <Card data-testid="card-wallet-balance" className="text-right">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 flex-row-reverse">
             <CardTitle className="text-sm font-medium">{t('driver.earnings.available_balance')}</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -89,8 +89,8 @@ export default function DriverEarnings() {
           </CardContent>
         </Card>
 
-        <Card data-testid="card-commission-total" className="rtl:text-right">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 rtl:flex-row-reverse">
+        <Card data-testid="card-commission-total" className="text-right">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 flex-row-reverse">
             <CardTitle className="text-sm font-medium">{t('driver.earnings.total_commissions')}</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -101,11 +101,11 @@ export default function DriverEarnings() {
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between rtl:flex-row-reverse">
-          <CardTitle className="flex items-center rtl:flex-row-reverse">
-            <History className="mr-2 h-5 w-5 rtl:mr-0 rtl:ml-2" /> {t('driver.earnings.history_title')}
+        <CardHeader className="flex flex-row items-center justify-between flex-row-reverse">
+          <CardTitle className="flex items-center flex-row-reverse">
+            <History className="ml-2 h-5 w-5 ml-0 mr-2" /> {t('driver.earnings.history_title')}
           </CardTitle>
-          <div className="flex items-center gap-2 rtl:flex-row-reverse">
+          <div className="flex items-center gap-2 flex-row-reverse">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <Select value={type} onValueChange={(val) => { setType(val); setPage(0); }}>
               <SelectTrigger className="w-[180px]" data-testid="select-transaction-type">
@@ -124,12 +124,12 @@ export default function DriverEarnings() {
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow className="rtl:flex-row-reverse">
-                <TableHead className="rtl:text-right">{t('driver.earnings.table.date')}</TableHead>
-                <TableHead className="rtl:text-right">{t('driver.earnings.table.type')}</TableHead>
-                <TableHead className="rtl:text-right">{t('driver.earnings.table.order_id')}</TableHead>
-                <TableHead className="rtl:text-right">{t('driver.earnings.table.amount')}</TableHead>
-                <TableHead className="rtl:text-right">{t('driver.earnings.table.status')}</TableHead>
+              <TableRow className="flex-row-reverse">
+                <TableHead className="text-right">{t('driver.earnings.table.date')}</TableHead>
+                <TableHead className="text-right">{t('driver.earnings.table.type')}</TableHead>
+                <TableHead className="text-right">{t('driver.earnings.table.order_id')}</TableHead>
+                <TableHead className="text-right">{t('driver.earnings.table.amount')}</TableHead>
+                <TableHead className="text-right">{t('driver.earnings.table.status')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -141,17 +141,17 @@ export default function DriverEarnings() {
                 </TableRow>
               ) : (
                 transactions.map((tx: any) => (
-                  <TableRow key={tx.id} data-testid={`row-transaction-${tx.id}`} className="rtl:flex-row-reverse">
-                    <TableCell className="rtl:text-right">{format(new Date(tx.createdAt), "MMM d, yyyy HH:mm")}</TableCell>
-                    <TableCell className="font-medium rtl:text-right">{t(`customer.wallet.types.${tx.type}`)}</TableCell>
-                    <TableCell className="text-xs font-mono rtl:text-right">{tx.referenceId || "-"}</TableCell>
+                  <TableRow key={tx.id} data-testid={`row-transaction-${tx.id}`} className="flex-row-reverse">
+                    <TableCell className="text-right">{format(new Date(tx.createdAt), "MMM d, yyyy HH:mm")}</TableCell>
+                    <TableCell className="font-medium text-right">{t(`customer.wallet.types.${tx.type}`)}</TableCell>
+                    <TableCell className="text-xs font-mono text-right">{tx.referenceId || "-"}</TableCell>
                     <TableCell className={cn(
-                      "font-medium rtl:text-right",
+                      "font-medium text-right",
                       tx.type === 'DEPOSIT' || tx.type === 'COMMISSION' ? 'text-green-600' : 'text-red-600'
                     )}>
                       {tx.type === 'DEPOSIT' || tx.type === 'COMMISSION' ? '+' : '-'}${parseFloat(tx.amount).toFixed(2)}
                     </TableCell>
-                    <TableCell className="rtl:text-right">
+                    <TableCell className="text-right">
                       <Badge variant={
                         tx.status === 'COMPLETED' ? 'outline' : 
                         tx.status === 'PENDING' ? 'secondary' : 'destructive'
@@ -169,7 +169,7 @@ export default function DriverEarnings() {
           </Table>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-end space-x-2 py-4 rtl:flex-row-reverse rtl:space-x-reverse">
+            <div className="flex items-center justify-end space-x-2 py-4 flex-row-reverse space-x-reverse">
               <Button
                 variant="outline"
                 size="sm"
@@ -177,7 +177,7 @@ export default function DriverEarnings() {
                 disabled={page === 0}
                 data-testid="button-prev-page"
               >
-                <ChevronLeft className="h-4 w-4 rtl:rotate-180" /> {t('customer.wallet.previous')}
+                <ChevronLeft className="h-4 w-4 rotate-180" /> {t('customer.wallet.previous')}
               </Button>
               <div className="text-sm font-medium">
                 {t('customer.wallet.page_info', { page: page + 1, total: totalPages })}
@@ -189,7 +189,7 @@ export default function DriverEarnings() {
                 disabled={page >= totalPages - 1}
                 data-testid="button-next-page"
               >
-                {t('customer.wallet.next')} <ChevronRight className="h-4 w-4 rtl:rotate-180" />
+                {t('customer.wallet.next')} <ChevronRight className="h-4 w-4 rotate-180" />
               </Button>
             </div>
           )}

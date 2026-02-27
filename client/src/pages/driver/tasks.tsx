@@ -81,36 +81,36 @@ export default function DriverTasks() {
   const tasks = tasksData?.tasks || [];
 
   return (
-    <div className="p-8 space-y-6 rtl:text-right" dir="auto">
-      <div className="rtl:text-right">
+    <div className="p-8 space-y-6 rtl:text-right" dir="rtl">
+      <div className="text-right">
         <h1 className="text-3xl font-bold">{t('driver.tasks.title')}</h1>
         <p className="text-muted-foreground">{t('driver.tasks.subtitle')}</p>
       </div>
 
       <Card>
-        <CardHeader className="rtl:text-right">
+        <CardHeader className="text-right">
           <CardTitle>{t('driver.tasks.marketplace_title')}</CardTitle>
           <CardDescription>{t('driver.tasks.marketplace_subtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow className="rtl:flex-row-reverse">
-                <TableHead className="rtl:text-right">{t('driver.tasks.table.order_id')}</TableHead>
-                <TableHead className="rtl:text-right">{t('driver.tasks.table.customer')}</TableHead>
-                <TableHead className="rtl:text-right">{t('driver.tasks.table.items')}</TableHead>
-                <TableHead className="rtl:text-right">{t('driver.tasks.table.location')}</TableHead>
-                <TableHead className="rtl:text-right">{t('driver.tasks.table.status')}</TableHead>
-                <TableHead className="text-right rtl:text-left">{t('driver.tasks.table.actions')}</TableHead>
+              <TableRow className="flex-row-reverse">
+                <TableHead className="text-right">{t('driver.tasks.table.order_id')}</TableHead>
+                <TableHead className="text-right">{t('driver.tasks.table.customer')}</TableHead>
+                <TableHead className="text-right">{t('driver.tasks.table.items')}</TableHead>
+                <TableHead className="text-right">{t('driver.tasks.table.location')}</TableHead>
+                <TableHead className="text-right">{t('driver.tasks.table.status')}</TableHead>
+                <TableHead className="text-left">{t('driver.tasks.table.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {tasks.length > 0 ? (
                 tasks.map((task) => (
-                  <TableRow key={task.sub_order_id} data-testid={`row-task-${task.sub_order_id}`} className="rtl:flex-row-reverse">
-                    <TableCell className="font-mono text-xs rtl:text-right">#{task.order_id.split("-")[0]}</TableCell>
-                    <TableCell className="font-medium rtl:text-right">{task.customer_name}</TableCell>
-                    <TableCell className="rtl:text-right">
+                  <TableRow key={task.sub_order_id} data-testid={`row-task-${task.sub_order_id}`} className="flex-row-reverse">
+                    <TableCell className="font-mono text-xs text-right">#{task.order_id.split("-")[0]}</TableCell>
+                    <TableCell className="font-medium text-right">{task.customer_name}</TableCell>
+                    <TableCell className="text-right">
                       <div className="flex flex-col gap-1">
                         {task.items.map((item, i) => (
                           <span key={i} className="text-xs text-muted-foreground">
@@ -119,22 +119,22 @@ export default function DriverTasks() {
                         ))}
                       </div>
                     </TableCell>
-                    <TableCell className="rtl:text-right">
-                      <div className="flex items-center gap-1 text-xs rtl:flex-row-reverse">
+                    <TableCell className="text-right">
+                      <div className="flex items-center gap-1 text-xs flex-row-reverse">
                         <MapPin className="h-3 w-3 text-muted-foreground" />
                         {task.customer_address}
                       </div>
                     </TableCell>
-                    <TableCell className="rtl:text-right">
+                    <TableCell className="text-right">
                       <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                         {t('driver.tasks.statuses.AVAILABLE')}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right space-x-2 rtl:space-x-reverse rtl:text-left">
+                    <TableCell className="text-left space-x-2 space-x-reverse">
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        className="gap-2 rtl:flex-row-reverse"
+                        className="gap-2 flex-row-reverse"
                         onClick={() => setSelectedTask(task)}
                         data-testid={`button-offer-${task.sub_order_id}`}
                       >
@@ -143,7 +143,7 @@ export default function DriverTasks() {
                       </Button>
                       <Button 
                         size="sm" 
-                        className="gap-2 rtl:flex-row-reverse"
+                        className="gap-2 flex-row-reverse"
                         onClick={() => acceptMutation.mutate(task.sub_order_id)}
                         disabled={acceptMutation.isPending}
                         data-testid={`button-claim-${task.sub_order_id}`}
@@ -167,12 +167,12 @@ export default function DriverTasks() {
       </Card>
 
       <Dialog open={!!selectedTask} onOpenChange={(open) => !open && setSelectedTask(null)}>
-        <DialogContent className="rtl:text-right">
-          <DialogHeader className="rtl:text-right">
+        <DialogContent className="text-right">
+          <DialogHeader className="text-right">
             <DialogTitle>{t('driver.tasks.offer_dialog.title')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2 rtl:text-right">
+            <div className="space-y-2 text-right">
               <Label htmlFor="fee">{t('driver.tasks.offer_dialog.fee_label')}</Label>
               <Input
                 id="fee"
@@ -181,10 +181,10 @@ export default function DriverTasks() {
                 value={proposedFee}
                 onChange={(e) => setProposedFee(e.target.value)}
                 data-testid="input-proposed-fee"
-                className="rtl:text-right"
+                className="text-right"
               />
             </div>
-            <div className="space-y-2 rtl:text-right">
+            <div className="space-y-2 text-right">
               <Label htmlFor="notes">{t('driver.tasks.offer_dialog.notes_label')}</Label>
               <Textarea
                 id="notes"
@@ -192,11 +192,11 @@ export default function DriverTasks() {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 data-testid="input-notes"
-                className="rtl:text-right"
+                className="text-right"
               />
             </div>
           </div>
-          <DialogFooter className="rtl:flex-row-reverse gap-2">
+          <DialogFooter className="flex-row-reverse gap-2">
             <Button variant="outline" onClick={() => setSelectedTask(null)}>{t('driver.tasks.offer_dialog.cancel')}</Button>
             <Button 
               onClick={() => offerMutation.mutate({ 
@@ -207,7 +207,7 @@ export default function DriverTasks() {
               disabled={!proposedFee || parseFloat(proposedFee) <= 0 || offerMutation.isPending}
               data-testid="button-submit-offer"
             >
-              {offerMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin rtl:mr-0 rtl:ml-2" />}
+              {offerMutation.isPending && <Loader2 className="h-4 w-4 ml-2 animate-spin ml-0 mr-2" />}
               {t('driver.tasks.offer_dialog.submit')}
             </Button>
           </DialogFooter>
