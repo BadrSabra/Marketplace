@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { initializeDatabase } from "./bootstrap/database.bootstrap";
+import { autoVerifyDatabase } from "./bootstrap/db-auto-verify";
 import { errorHandler, requestIdMiddleware } from "./middleware/error";
 import { securityMiddleware, generalLimiter, payloadSizeLimit } from "./middleware/security";
 
@@ -69,9 +69,9 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    await initializeDatabase();
+    await autoVerifyDatabase();
   } catch (err) {
-    console.error("Failed to initialize database:", err);
+    console.error("Failed to verify database:", err);
     process.exit(1);
   }
   

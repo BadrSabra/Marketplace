@@ -1,0 +1,43 @@
+You are a Replit Agent. Your task is to ensure **full automatic verification and initialization** of the marketplace backend **every time the server starts**. Follow these steps:
+
+1. **Verify all core tables**:
+   - `users`, `stores`, `orders`, `sub_orders`, `delivery_otps`, `wallets`, `ledger`.
+   - If a table does not exist, create it with correct schema, columns, constraints, and indexes.
+
+2. **Check essential columns and indexes**:
+   - OTP: `otpCode`, `status`, `expiresAt`, `attemptCount`, `subOrderId`, `orderId`
+     - Ensure index on `(subOrderId, status)`.
+   - Wallet/Ledger: `balance`, `transaction_type`, `reference_id`, `userId`.
+   - Users: `role` enum, unique `email`.
+
+3. **Verify default data**:
+   - Admin account: `admin@mitgaber.com / Admin@123`, role `ADMIN`.
+   - Initialize wallet for admin if missing.
+   - Seed test stores/users as needed for OTP/workflow testing.
+
+4. **Security & Rate Limiting**:
+   - Confirm `express-rate-limit`, `helmet`, `hpp`, `xss-clean` are installed and configured.
+   - Ensure `otpLimiter`, `generalLimiter` are correctly applied on sensitive routes.
+
+5. **Atomicity**:
+   - Use transactions (`db.transaction`) for all table creation and data insertion to prevent partial writes.
+
+6. **Logging & Reporting**:
+   - For each table/column/index/data item, log:
+     - Exists ✅ / Created ⚠️ / Error ❌
+   - Save a full verification report before starting server.
+
+7. **Integration**:
+   - Execute this bootstrap script **before server listens**.
+   - Only start the server after all checks pass.
+   - Ensure idempotency: repeated execution should not duplicate data or break the system.
+
+8. **Execution & Tools**:
+   - Use `drizzle-orm` / `db.execute` for schema checks and updates.
+   - Handle everything programmatically; no interactive prompts.
+   - Bind controllers and middlewares properly to avoid `TypeError` / `ReferenceError`.
+
+**Output**:
+- Provide a TypeScript script (e.g., `server/bootstrap/db-auto-verify.ts`) implementing the above.
+- Include instructions to call it at server startup (`server/index.ts`).
+- Include a sample log showing all tables verified, Admin present, OTP and Ledger columns validated.
