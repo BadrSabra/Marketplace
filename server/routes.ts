@@ -241,7 +241,7 @@ export async function registerRoutes(
       if (!success) {
         return res.status(400).json({ 
           success: false, 
-          message: "Cannot delete store: dependent records (products or orders) exist" 
+          message: "Cannot delete store with linked products or sub-orders" 
         });
       }
       res.json({ success: true, message: "Store deleted successfully" });

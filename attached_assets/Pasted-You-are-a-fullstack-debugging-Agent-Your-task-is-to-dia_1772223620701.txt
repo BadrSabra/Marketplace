@@ -1,0 +1,49 @@
+You are a fullstack debugging Agent. Your task is to **diagnose and fix the Internal Server Error** that occurs when deleting a store in the Admin Stores page.
+
+Follow these steps automatically:
+
+1. **Intercept Delete Request**
+   - Monitor `DELETE /api/stores/:id` requests.
+   - Log the exact server error, stack trace, and failing line in the backend.
+
+2. **Inspect deleteStore Method**
+   - Open `server/storage.ts` and locate `deleteStore(id)`.
+   - Check that the queries verifying linked `products` and `sub_orders` are correct and awaited.
+   - Ensure that if dependent records exist, deletion is blocked with a clear error message, not a server crash.
+
+3. **Fix Backend Route Handler**
+   - In `server/routes.ts`, wrap the call to `storage.deleteStore(id)` in try/catch.
+   - Return proper HTTP status codes:
+     - `200` if deleted successfully.
+     - `400` with a message `"Cannot delete store with linked products or sub-orders"` if blocked.
+   - Ensure no uncaught exceptions propagate to the client.
+
+4. **Validate Database Constraints**
+   - Check that `products.store_id` and `sub_orders.store_id` are properly foreign-keyed to `stores.id`.
+   - Confirm no other constraints can trigger a DB-level error on deletion.
+
+5. **Test End-to-End**
+   - Create a new test store.
+   - Attempt to delete it (should succeed).
+   - Attempt to delete a store with linked products/sub_orders (should be blocked gracefully).
+   - Log the results of both tests.
+
+6. **Frontend Sync**
+   - Confirm that `StoresPage.tsx` toast or alert shows the correct success or error message from the backend.
+
+7. **Report**
+   - Generate a structured JSON report including:
+     - `storeId`, `action` (`DELETE`), `result` (`SUCCESS` or `BLOCKED`), `error` (if any).
+     - Backend error stack trace if applicable.
+     - Confirmation that frontend shows correct messages.
+
+**Constraints**
+- Do not bypass dependency checks; all deletions must respect existing products/orders.
+- Ensure database integrity and no data loss.
+
+**Output**
+- Print a clear diagnostic report.
+- Print the test results table.
+- Print final confirmation: `"Store deletion functionality fixed and fully operational."`
+
+Execute all changes automatically, then run the verification tests, and provide a complete result report.

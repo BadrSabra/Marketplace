@@ -107,15 +107,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteStore(id: string): Promise<boolean> {
-    const { subOrders, products } = await import("@shared/schema");
+    const schema = await import("@shared/schema");
+    const { subOrders, products, stores } = schema;
     
     // Check for dependent records
-    const [subOrder] = await db.select().from(subOrders).where(eq(subOrders.storeId, id)).limit(1);
-    if (subOrder) return false;
+    const subOrder = await db.select().from(subOrders).where(eq(subOrders.storeId, id)).limit(1);
+    if (subOrder.length > 0) return false;
 
-    const [product] = await db.select().from(products).where(eq(products.storeId, id)).limit(1);
-    if (product) return false;
+    const product = await db.select().from(products).where(eq(products.storeId, id)).limit(1);
+    if (product.length > 0) return false;
 
+    // Use the stores table from schema
     await db.delete(stores).where(eq(stores.id, id));
     return true;
   }
