@@ -1,0 +1,104 @@
+You are now entering ADVANCED SYSTEM VERIFICATION MODE.
+
+Your task is to perform a DEEP CONSISTENCY, TRANSACTION, AND SECURITY VERIFICATION.
+
+Do NOT modify any code.
+Only analyze and report.
+
+-----------------------------------------
+1. DATABASE CONSTRAINT VERIFICATION
+-----------------------------------------
+
+For each table:
+- List actual foreign key constraints.
+- List unique constraints.
+- List indexes (including composite).
+- Identify missing constraints.
+
+Specifically verify:
+- delivery_offers uniqueness safety.
+- email & phone uniqueness in users.
+- sub_orders relational integrity.
+
+-----------------------------------------
+2. TRANSACTION BOUNDARIES
+-----------------------------------------
+
+Identify all places where DB transactions are used.
+
+For each:
+- What operations are inside the transaction?
+- What happens on failure?
+- Is rollback guaranteed?
+
+Specifically inspect:
+- Delivery offer acceptance.
+- Order creation.
+- Wallet updates.
+- Ledger writes.
+
+-----------------------------------------
+3. OTP SECURITY DEEP CHECK
+-----------------------------------------
+
+- Is OTP stored hashed?
+- Expiration time?
+- Retry limits?
+- Brute-force protection?
+- Is OTP invalidated after use?
+- Is OTP bound to driver & sub_order?
+
+-----------------------------------------
+4. WALLET & LEDGER CONSISTENCY
+-----------------------------------------
+
+- Is accounting double-entry?
+- Can wallet balance be modified directly?
+- Are admin overrides logged?
+- Can negative balances occur?
+- Is there reconciliation validation?
+
+-----------------------------------------
+5. AUTHORIZATION EDGE CASE TEST
+-----------------------------------------
+
+Simulate malicious attempts:
+- Store accessing other store's sub_orders.
+- Driver accepting already accepted order.
+- Customer viewing another customer's wallet.
+
+Report if ownership validation exists beyond role check.
+
+-----------------------------------------
+6. PRODUCTION HARDENING
+-----------------------------------------
+
+Check:
+- NODE_ENV mode.
+- JWT expiration.
+- Helmet usage.
+- Global rate limiting.
+- CORS restrictions.
+- Debug logs enabled?
+- Hardcoded secrets.
+
+-----------------------------------------
+7. PERFORMANCE RISK MAP
+-----------------------------------------
+
+- Identify N+1 query patterns.
+- Identify full-table scans.
+- Identify missing pagination.
+- Identify heavy endpoints.
+- Identify memory-heavy operations.
+
+-----------------------------------------
+Output:
+
+- Critical Risks
+- High Risks
+- Medium Risks
+- Safe Areas
+- True Launch Readiness %
+
+Be brutally honest.
