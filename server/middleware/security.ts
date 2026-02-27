@@ -12,8 +12,17 @@ export const securityMiddleware = [
 
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { success: false, error: { code: "TOO_MANY_REQUESTS", message: "Too many requests from this IP" } }
+  max: 1000, // Increased for development/resource loading
+  message: { success: false, error: { code: "TOO_MANY_REQUESTS", message: "Too many requests from this IP" } },
+  skip: (req) => {
+    // Skip rate limiting for static assets and vite HMR
+    return req.path.includes('/@vite/') || 
+           req.path.includes('/@fs/') || 
+           req.path.includes('/src/') ||
+           req.path.endsWith('.js') ||
+           req.path.endsWith('.css') ||
+           req.path.endsWith('.ts');
+  }
 });
 
 export const loginLimiter = rateLimit({
