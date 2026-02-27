@@ -1,0 +1,54 @@
+TASK: Phase 2 – Arabic Localization & RTL for Common UI Components
+MODE: Fast Mode (lightweight, safe, read-write limited)
+PRIORITY: Safe rollout, avoid breaking layouts
+TARGET: React 18 + Tailwind CSS 3.x/4.x components
+SCOPE: /client/src/components/ui and layout
+
+STRICT RULES:
+- Only modify hardcoded user-facing text (headings, buttons, table headers, form labels, alerts, toasts)
+- Do NOT modify business logic or backend calls
+- Do NOT delete any file
+- Work incrementally for safe rollout
+- Maintain full RTL compatibility
+- Ensure all toast messages and alerts use Arabic translations
+- Only update Tailwind classes related to direction (text-left/right, pl/pr, ml/mr, left/right) for RTL
+- Keep original English keys for i18n mapping
+
+OBJECTIVES:
+1. Extract all hardcoded strings in UI components under /client/src/components/ui and layout.
+2. Replace all strings with i18n keys, following the pattern already used in Auth pages.
+3. Create or update Arabic translation JSON:
+   - Path: client/src/locales/ar/translation.json
+   - Include all extracted strings mapped to Arabic equivalents
+4. Update all directional Tailwind classes for proper RTL layout:
+   - pl → pr, ml → mr, text-left → text-right, left → right
+5. Adjust icons and indicators if they have directional meaning (arrows, chevrons, etc.)
+6. Map toast messages in each component to their Arabic translation keys
+
+OUTPUT FORMAT (strict JSON for verification only):
+{
+  "components_localized": [
+    {
+      "component_path": "",
+      "total_strings_localized": 0,
+      "rtl_classes_fixed": 0,
+      "toast_messages_mapped": 0
+    }
+  ],
+  "summary": {
+    "total_components": 0,
+    "total_strings_localized": 0,
+    "total_rtl_classes_fixed": 0,
+    "total_toast_messages_mapped": 0,
+    "next_step_suggestion": "Phase 3: Customer Dashboard localization"
+  }
+}
+
+ADDITIONAL NOTES:
+- Start with small components first (Buttons, Alerts, Toasts, Table headers)
+- Ensure backward compatibility with existing English UI for non-Arabic locale
+- Only commit changes component by component to minimize risk
+- Log each modification for verification
+- Do NOT attempt full dashboard pages yet (Phase 3 will handle dashboards)
+
+END OF PROMPT

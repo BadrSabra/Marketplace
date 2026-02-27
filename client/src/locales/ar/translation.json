@@ -47,5 +47,21 @@
       "failed_title": "فشل التسجيل",
       "failed_desc": "فشل في إنشاء الحساب"
     }
+  },
+  "ui": {
+    "alert": {
+      "default_title": "تنبيه",
+      "error_title": "خطأ"
+    },
+    "table": {
+      "no_results": "لا توجد نتائج.",
+      "loading": "جاري التحميل..."
+    },
+    "toast": {
+      "close": "إغلاق"
+    },
+    "select": {
+      "placeholder": "اختر خياراً..."
+    }
   }
 }
