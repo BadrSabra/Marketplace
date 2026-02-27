@@ -1,0 +1,45 @@
+You are a Replit Agent. Your task is to implement **automatic database verification and initialization** for the "Mit Gaber Hyperlocal Marketplace" full-stack app before the server starts. Follow these instructions precisely:
+
+1. **Verify Tables**:
+   - Check existence of the following tables:
+     - `users`, `stores`, `orders`, `sub_orders`, `delivery_otps`, `wallets`, `ledger`
+   - If any table is missing, create it with the proper schema (columns, types, constraints).
+
+2. **Verify Critical Columns & Indexes**:
+   - `delivery_otps`: must have `expiresAt`, `attemptCount`, `status`, `otpCode`, `subOrderId`, `orderId`.
+     - Add an index on `(subOrderId, status)` if missing.
+   - `wallets` and `ledger`: ensure all necessary foreign keys, balances, transaction types exist.
+   - `users`: must have `role` column, unique `email`.
+
+3. **Seed Default Data**:
+   - Ensure at least one Admin exists:
+     - Email: `admin@mitgaber.com`
+     - Password: hashed version of `Admin@123`
+     - Role: `ADMIN`
+   - If missing, insert automatically.
+   - Ensure any critical store or customer test data exists (optional, if needed for OTP tests).
+
+4. **Atomic Operations**:
+   - Each creation or modification must be inside a transaction (`db.transaction`) to prevent partial writes.
+
+5. **Logging & Reporting**:
+   - After verification, log a detailed report:
+     - ✅ Table exists / created
+     - ✅ Columns exist / added
+     - ✅ Indexes exist / created
+     - ✅ Admin user exists / created
+   - If any operation fails, log the error clearly but continue verifying remaining tables.
+
+6. **Integration**:
+   - This verification must run **every time the server starts**, before any API endpoints are active.
+   - Only after all verification steps pass should the server start listening on the port.
+
+7. **Execution**:
+   - Use `drizzle-orm` / `db.execute` for schema checks and modifications.
+   - Do not require interactive input; handle all operations programmatically.
+   - Ensure idempotency: running multiple times should not break anything or duplicate data.
+
+**Your Output**:
+- Provide a fully working TypeScript script (e.g., `server/bootstrap/db-check.ts`) that performs all above checks.
+- Include instructions for integrating this script to run automatically on server start (`server/index.ts` or main bootstrap file).
+- Include sample logs that would appear when the verification runs (for each table and data item).
