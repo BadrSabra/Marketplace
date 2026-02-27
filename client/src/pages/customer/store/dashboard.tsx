@@ -6,8 +6,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { StoreLayout } from "@/components/layout/store-layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default function StoreDashboard() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   
   const { data: stores } = useQuery<any[]>({
@@ -46,128 +50,128 @@ export default function StoreDashboard() {
 
   return (
     <StoreLayout>
-      <div className="space-y-8">
-        <header>
-          <h1 className="text-3xl font-bold tracking-tight">Store Overview</h1>
+      <div className="space-y-8 rtl:text-right" dir="auto">
+        <header className="rtl:text-right">
+          <h1 className="text-3xl font-bold tracking-tight">{t('store.dashboard.overview')}</h1>
           <p className="text-muted-foreground mt-1">
-            Welcome back, {user?.name}. Here's what's happening with {myStore?.name || 'your store'}.
+            {t('store.dashboard.welcome', { name: user?.name, store: myStore?.name || 'your store' })}
           </p>
         </header>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="relative overflow-hidden group border-primary/20 bg-primary/5">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Wallet Balance</CardTitle>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 rtl:flex-row-reverse">
+          <Card className="relative overflow-hidden group border-primary/20 bg-primary/5 rtl:text-right">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 rtl:flex-row-reverse">
+              <CardTitle className="text-sm font-medium">{t('store.dashboard.wallet_balance')}</CardTitle>
               <Wallet className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">${parseFloat(wallet?.balance || "0").toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground mt-1">Available for withdrawal</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('store.earnings.balance_note')}</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
+          <Card className="rtl:text-right">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 rtl:flex-row-reverse">
+              <CardTitle className="text-sm font-medium">{t('store.dashboard.pending_orders')}</CardTitle>
               <ShoppingBag className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{pendingOrders.length}</div>
-              <p className="text-xs text-muted-foreground mt-1">Requires your attention</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('store.dashboard.attention_note')}</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Products</CardTitle>
+          <Card className="rtl:text-right">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 rtl:flex-row-reverse">
+              <CardTitle className="text-sm font-medium">{t('store.dashboard.active_products')}</CardTitle>
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{products?.length || 0}</div>
-              <p className="text-xs text-muted-foreground mt-1">Total items in catalog</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('store.dashboard.catalog_note')}</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Inventory Health</CardTitle>
+          <Card className="rtl:text-right">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 rtl:flex-row-reverse">
+              <CardTitle className="text-sm font-medium">{t('store.dashboard.inventory_health')}</CardTitle>
               <AlertTriangle className={cn("h-4 w-4", lowStockProducts.length + outOfStockProducts.length > 0 ? "text-yellow-500" : "text-green-500")} />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{outOfStockProducts.length}</div>
-              <p className="text-xs text-muted-foreground mt-1">Out of stock items</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('store.dashboard.out_of_stock_note')}</p>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="col-span-full lg:col-span-4">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 rtl:flex-row-reverse">
+          <Card className="col-span-full lg:col-span-4 rtl:text-right">
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Frequently used management tools</CardDescription>
+              <CardTitle>{t('store.dashboard.quick_actions')}</CardTitle>
+              <CardDescription>{t('store.dashboard.actions_subtitle')}</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
+            <CardContent className="grid gap-4 sm:grid-cols-2 rtl:flex-row-reverse">
               <Link href="/store/dashboard/orders">
-                <Button className="w-full justify-start h-16 gap-4" variant="outline">
+                <Button className="w-full justify-start h-16 gap-4 rtl:flex-row-reverse" variant="outline">
                   <div className="bg-primary/10 p-2 rounded-lg text-primary">
                     <ShoppingBag className="h-5 w-5" />
                   </div>
-                  <div className="text-left">
-                    <div className="font-semibold">Manage Orders</div>
-                    <div className="text-xs text-muted-foreground">Process incoming requests</div>
+                  <div className="text-left rtl:text-right">
+                    <div className="font-semibold">{t('store.dashboard.manage_orders')}</div>
+                    <div className="text-xs text-muted-foreground">{t('store.dashboard.process_note')}</div>
                   </div>
                 </Button>
               </Link>
               <Link href="/store/inventory">
-                <Button className="w-full justify-start h-16 gap-4" variant="outline">
+                <Button className="w-full justify-start h-16 gap-4 rtl:flex-row-reverse" variant="outline">
                   <div className="bg-blue-500/10 p-2 rounded-lg text-blue-500">
                     <Package className="h-5 w-5" />
                   </div>
-                  <div className="text-left">
-                    <div className="font-semibold">Product Catalog</div>
-                    <div className="text-xs text-muted-foreground">Add and edit products</div>
+                  <div className="text-left rtl:text-right">
+                    <div className="font-semibold">{t('store.dashboard.product_catalog')}</div>
+                    <div className="text-xs text-muted-foreground">{t('store.dashboard.edit_note')}</div>
                   </div>
                 </Button>
               </Link>
               <Link href="/store/earnings">
-                <Button className="w-full justify-start h-16 gap-4" variant="outline">
+                <Button className="w-full justify-start h-16 gap-4 rtl:flex-row-reverse" variant="outline">
                   <div className="bg-green-500/10 p-2 rounded-lg text-green-500">
                     <TrendingUp className="h-5 w-5" />
                   </div>
-                  <div className="text-left">
-                    <div className="font-semibold">View Earnings</div>
-                    <div className="text-xs text-muted-foreground">Track your commissions</div>
+                  <div className="text-left rtl:text-right">
+                    <div className="font-semibold">{t('store.dashboard.view_earnings')}</div>
+                    <div className="text-xs text-muted-foreground">{t('store.dashboard.track_note')}</div>
                   </div>
                 </Button>
               </Link>
             </CardContent>
           </Card>
 
-          <Card className="col-span-full lg:col-span-3">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="col-span-full lg:col-span-3 rtl:text-right">
+            <CardHeader className="rtl:text-right">
+              <CardTitle className="flex items-center gap-2 rtl:flex-row-reverse">
                 <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                Inventory Alerts
+                {t('store.dashboard.inventory_alerts')}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-4 rtl:text-right">
                 {outOfStockProducts.length === 0 && lowStockProducts.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-4 text-center border rounded-lg border-dashed">
-                    Your inventory is looking healthy!
+                    {t('store.dashboard.healthy_note')}
                   </p>
                 ) : (
                   <>
                     {outOfStockProducts.map(p => (
-                      <div key={p.id} className="flex items-center justify-between p-2 border rounded-lg bg-destructive/5 border-destructive/20">
+                      <div key={p.id} className="flex items-center justify-between p-2 border rounded-lg bg-destructive/5 border-destructive/20 rtl:flex-row-reverse">
                         <span className="text-sm font-medium">{p.name}</span>
-                        <Badge variant="destructive">Out of Stock</Badge>
+                        <Badge variant="destructive">{t('store.dashboard.out_of_stock')}</Badge>
                       </div>
                     ))}
                     {lowStockProducts.map(p => (
-                      <div key={p.id} className="flex items-center justify-between p-2 border rounded-lg bg-yellow-50 border-yellow-200">
+                      <div key={p.id} className="flex items-center justify-between p-2 border rounded-lg bg-yellow-50 border-yellow-200 rtl:flex-row-reverse">
                         <span className="text-sm font-medium">{p.name}</span>
-                        <Badge variant="outline" className="text-yellow-700 border-yellow-300">Only {p.stock} left</Badge>
+                        <Badge variant="outline" className="text-yellow-700 border-yellow-300">{t('store.dashboard.low_stock_left', { count: p.stock })}</Badge>
                       </div>
                     ))}
                   </>
@@ -180,6 +184,3 @@ export default function StoreDashboard() {
     </StoreLayout>
   );
 }
-
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";

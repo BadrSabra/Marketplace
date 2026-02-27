@@ -38,6 +38,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useTranslation } from "react-i18next";
 
 const productFormSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -53,6 +54,7 @@ const productFormSchema = z.object({
 type ProductFormValues = z.infer<typeof productFormSchema>;
 
 export default function StoreInventory() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -96,13 +98,13 @@ export default function StoreInventory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products", { storeId: myStore?.id }] });
-      toast({ title: "Product created successfully" });
+      toast({ title: t('store.inventory.toasts.create_success') });
       setIsDialogOpen(false);
       form.reset();
     },
     onError: (error: any) => {
       toast({ 
-        title: "Creation failed", 
+        title: t('store.inventory.toasts.create_error'), 
         description: error.message || "An error occurred",
         variant: "destructive"
       });
@@ -119,14 +121,14 @@ export default function StoreInventory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products", { storeId: myStore?.id }] });
-      toast({ title: "Product updated successfully" });
+      toast({ title: t('store.inventory.toasts.update_success') });
       setIsDialogOpen(false);
       setEditingProduct(null);
       form.reset();
     },
     onError: (error: any) => {
       toast({ 
-        title: "Update failed", 
+        title: t('store.inventory.toasts.update_error'), 
         description: error.message || "An error occurred",
         variant: "destructive"
       });
@@ -139,7 +141,7 @@ export default function StoreInventory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products", { storeId: myStore?.id }] });
-      toast({ title: "Product deleted successfully" });
+      toast({ title: t('store.inventory.toasts.delete_success') });
     },
   });
 
@@ -210,11 +212,11 @@ export default function StoreInventory() {
 
   return (
     <StoreLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="space-y-6 rtl:text-right" dir="auto">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 rtl:flex-row-reverse">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Product Management</h1>
-            <p className="text-muted-foreground">Manage your store's products, inventory, and pricing.</p>
+            <h1 className="text-3xl font-bold tracking-tight">{t('store.inventory.title')}</h1>
+            <p className="text-muted-foreground">{t('store.inventory.subtitle')}</p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
@@ -224,18 +226,18 @@ export default function StoreInventory() {
             }
           }}>
             <DialogTrigger asChild>
-              <Button className="h-11 px-6 shadow-md shadow-primary/20" data-testid="button-add-product">
-                <Plus className="h-5 w-5 mr-2" />
-                Add Product
+              <Button className="h-11 px-6 shadow-md shadow-primary/20 rtl:flex-row-reverse" data-testid="button-add-product">
+                <Plus className="h-5 w-5 mr-2 rtl:mr-0 rtl:ml-2" />
+                {t('store.inventory.add_product')}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
+              <DialogHeader className="rtl:text-right">
                 <DialogTitle className="text-2xl font-bold">
-                  {editingProduct ? "Edit Product" : "Add New Product"}
+                  {editingProduct ? t('store.inventory.edit_product') : t('store.inventory.add_product')}
                 </DialogTitle>
                 <DialogDescription>
-                  Enter the details for your product. All fields marked with * are required.
+                  {t('store.inventory.form.required_note')}
                 </DialogDescription>
               </DialogHeader>
               <Form {...form}>
@@ -244,10 +246,10 @@ export default function StoreInventory() {
                     control={form.control}
                     name="name"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold">Product Name *</FormLabel>
+                      <FormItem className="rtl:text-right">
+                        <FormLabel className="font-bold">{t('store.inventory.form.name')}</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="e.g. Fresh Milk" className="h-11" data-testid="input-name" />
+                          <Input {...field} placeholder={t('store.inventory.form.name_placeholder')} className="h-11" data-testid="input-name" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -257,22 +259,22 @@ export default function StoreInventory() {
                     control={form.control}
                     name="description"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold">Description</FormLabel>
+                      <FormItem className="rtl:text-right">
+                        <FormLabel className="font-bold">{t('store.inventory.form.description')}</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Brief product details..." className="h-11" data-testid="input-description" />
+                          <Input {...field} placeholder={t('store.inventory.form.description_placeholder')} className="h-11" data-testid="input-description" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 rtl:flex-row-reverse">
                     <FormField
                       control={form.control}
                       name="price"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="font-bold">Price ($) *</FormLabel>
+                        <FormItem className="rtl:text-right">
+                          <FormLabel className="font-bold">{t('store.inventory.form.price')}</FormLabel>
                           <FormControl>
                             <Input {...field} type="number" step="0.01" className="h-11" data-testid="input-price" />
                           </FormControl>
@@ -284,8 +286,8 @@ export default function StoreInventory() {
                       control={form.control}
                       name="stock"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="font-bold">Stock Quantity *</FormLabel>
+                        <FormItem className="rtl:text-right">
+                          <FormLabel className="font-bold">{t('store.inventory.form.stock')}</FormLabel>
                           <FormControl>
                             <Input 
                               {...field} 
@@ -304,24 +306,24 @@ export default function StoreInventory() {
                     control={form.control}
                     name="category"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold">Category *</FormLabel>
+                      <FormItem className="rtl:text-right">
+                        <FormLabel className="font-bold">{t('store.inventory.form.category')}</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="e.g. Dairy, Bakery" className="h-11" data-testid="input-category" />
+                          <Input {...field} placeholder={t('store.inventory.form.category_placeholder')} className="h-11" data-testid="input-category" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <DialogFooter className="pt-4">
+                  <DialogFooter className="pt-4 rtl:flex-row-reverse">
                     <Button 
                       type="submit" 
-                      className="w-full h-11 text-lg font-bold"
+                      className="w-full h-11 text-lg font-bold rtl:flex-row-reverse"
                       disabled={createMutation.isPending || updateMutation.isPending}
                       data-testid="button-submit-product"
                     >
-                      {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="h-5 w-5 mr-2 animate-spin" />}
-                      {editingProduct ? "Update Product" : "Add Product"}
+                      {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="h-5 w-5 mr-2 rtl:mr-0 rtl:ml-2 animate-spin" />}
+                      {editingProduct ? t('store.inventory.form.submit_update') : t('store.inventory.form.submit_add')}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -330,12 +332,12 @@ export default function StoreInventory() {
           </Dialog>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col md:flex-row gap-4 rtl:flex-row-reverse">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground rtl:left-auto rtl:right-3" />
             <Input 
-              placeholder="Search by name..." 
-              className="pl-10 h-11"
+              placeholder={t('store.inventory.search_placeholder')} 
+              className="pl-10 rtl:pl-3 rtl:pr-10 h-11"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               data-testid="input-search"
@@ -343,97 +345,97 @@ export default function StoreInventory() {
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[180px] h-11">
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder={t('store.inventory.status_filter')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All Status</SelectItem>
-              <SelectItem value="ACTIVE">Active</SelectItem>
-              <SelectItem value="INACTIVE">Inactive</SelectItem>
+              <SelectItem value="ALL">{t('store.inventory.statuses.ALL')}</SelectItem>
+              <SelectItem value="ACTIVE">{t('store.inventory.statuses.ACTIVE')}</SelectItem>
+              <SelectItem value="INACTIVE">{t('store.inventory.statuses.INACTIVE')}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={stockFilter} onValueChange={setStockFilter}>
             <SelectTrigger className="w-[180px] h-11">
-              <SelectValue placeholder="Stock Level" />
+              <SelectValue placeholder={t('store.inventory.stock_filter')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All Stock</SelectItem>
-              <SelectItem value="LOW">Low Stock</SelectItem>
-              <SelectItem value="OUT">Out of Stock</SelectItem>
+              <SelectItem value="ALL">{t('store.inventory.stock_levels.ALL')}</SelectItem>
+              <SelectItem value="LOW">{t('store.inventory.stock_levels.LOW')}</SelectItem>
+              <SelectItem value="OUT">{t('store.inventory.stock_levels.OUT')}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-[180px] h-11">
-              <SelectValue placeholder="Sort By" />
+              <SelectValue placeholder={t('store.inventory.sort_by')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="name-asc">Name (A-Z)</SelectItem>
-              <SelectItem value="price-asc">Price (Low-High)</SelectItem>
-              <SelectItem value="price-desc">Price (High-Low)</SelectItem>
-              <SelectItem value="stock-asc">Stock (Low-High)</SelectItem>
-              <SelectItem value="stock-desc">Stock (High-Low)</SelectItem>
+              <SelectItem value="name-asc">{t('store.inventory.sort_options.name_asc')}</SelectItem>
+              <SelectItem value="price-asc">{t('store.inventory.sort_options.price_asc')}</SelectItem>
+              <SelectItem value="price-desc">{t('store.inventory.sort_options.price_desc')}</SelectItem>
+              <SelectItem value="stock-asc">{t('store.inventory.sort_options.stock_asc')}</SelectItem>
+              <SelectItem value="stock-desc">{t('store.inventory.sort_options.stock_desc')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <CardHeader className="rtl:text-right">
+            <CardTitle className="flex items-center gap-2 rtl:flex-row-reverse">
               <Package className="h-5 w-5 text-primary" />
-              Products List
+              {t('store.inventory.list_title')}
             </CardTitle>
             <CardDescription>
-              Displaying {filteredProducts.length} products from your store.
+              {t('store.inventory.list_description', { count: filteredProducts.length })}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Product Name</TableHead>
-                    <TableHead>SKU / ID</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Stock</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                  <TableRow className="rtl:flex-row-reverse">
+                    <TableHead className="rtl:text-right">{t('store.inventory.table.name')}</TableHead>
+                    <TableHead className="rtl:text-right">{t('store.inventory.table.sku')}</TableHead>
+                    <TableHead className="rtl:text-right">{t('store.inventory.table.price')}</TableHead>
+                    <TableHead className="rtl:text-right">{t('store.inventory.table.stock')}</TableHead>
+                    <TableHead className="rtl:text-right">{t('store.inventory.table.status')}</TableHead>
+                    <TableHead className="text-right rtl:text-left">{t('store.inventory.table.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredProducts.length > 0 ? (
                     filteredProducts.map((product) => (
-                      <TableRow key={product.id} className="group" data-testid={`row-product-${product.id}`}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
+                      <TableRow key={product.id} className="group rtl:flex-row-reverse" data-testid={`row-product-${product.id}`}>
+                        <TableCell className="rtl:text-right">
+                          <div className="flex items-center gap-3 rtl:flex-row-reverse">
                             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
                               <Package className="h-5 w-5 text-primary" />
                             </div>
-                            <div className="flex flex-col">
+                            <div className="flex flex-col rtl:text-right">
                               <span className="font-bold text-sm" data-testid={`text-name-${product.id}`}>{product.name}</span>
                               <span className="text-xs text-muted-foreground line-clamp-1 max-w-[150px]">{product.description || "No description"}</span>
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="rtl:text-right">
                           <span className="font-mono text-[10px] text-muted-foreground">#{product.id.split("-")[0].toUpperCase()}</span>
                         </TableCell>
-                        <TableCell className="font-black text-primary text-sm">
+                        <TableCell className="font-black text-primary text-sm rtl:text-right">
                           ${parseFloat(product.price.toString()).toFixed(2)}
                         </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
+                        <TableCell className="rtl:text-right">
+                          <div className="flex items-center gap-2 rtl:flex-row-reverse">
                             <span className="font-mono font-bold">{product.stock}</span>
                             {product.stock < 5 && product.stock > 0 && (
                               <AlertTriangle className="h-3 w-3 text-yellow-500" />
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="rtl:text-right">
                           <Badge variant={product.stock > 0 ? "default" : "secondary"} className={product.stock > 0 ? "bg-green-500 hover:bg-green-600" : ""}>
-                            {product.stock > 0 ? "Active" : "Inactive"}
+                            {product.stock > 0 ? t('store.inventory.statuses.ACTIVE') : t('store.inventory.statuses.INACTIVE')}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
+                        <TableCell className="text-right rtl:text-left">
+                          <div className="flex justify-end gap-2 rtl:flex-row-reverse">
                             <Button 
                               variant="ghost" 
                               size="icon" 
@@ -448,7 +450,7 @@ export default function StoreInventory() {
                               size="icon" 
                               className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                               onClick={() => {
-                                if (confirm("Are you sure you want to delete this product? This action cannot be undone.")) {
+                                if (confirm(t('store.inventory.delete_confirm'))) {
                                   deleteMutation.mutate(product.id);
                                 }
                               }}
@@ -465,8 +467,7 @@ export default function StoreInventory() {
                       <TableCell colSpan={6} className="text-center py-16 text-muted-foreground">
                         <div className="flex flex-col items-center gap-2">
                           <Package className="h-12 w-12 opacity-20" />
-                          <p className="text-lg font-medium">No products found</p>
-                          <p className="text-sm">Start by adding your first product to the catalog.</p>
+                          <p className="text-lg font-medium">{t('store.inventory.no_history')}</p>
                         </div>
                       </TableCell>
                     </TableRow>

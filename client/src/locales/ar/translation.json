@@ -154,5 +154,182 @@
         "Car": "سيارة"
       }
     }
+  },
+  "store": {
+    "orders": {
+      "title": "إدارة الطلبات",
+      "subtitle": "مراقبة ومعالجة الطلبات الواردة لمتجرك.",
+      "search_label": "بحث في الطلبات",
+      "search_placeholder": "بحث بالعميل أو الرقم...",
+      "status_filter": "فلتر الحالة",
+      "sort_by": "ترتيب حسب",
+      "active_orders": "الطلبات النشطة",
+      "orders_description": "الطلبات التي تتطلب التنفيذ أو قيد التنفيذ حالياً.",
+      "table": {
+        "info": "معلومات الطلب",
+        "customer": "العميل",
+        "items": "الأصناف",
+        "total": "الإجمالي",
+        "status": "الحالة",
+        "actions": "إجراءات"
+      },
+      "no_orders": "لم يتم العثور على طلبات.",
+      "view_details": "عرض التفاصيل",
+      "no_items": "لا توجد أصناف",
+      "actions": {
+        "accept": "قبول",
+        "cancel": "إلغاء",
+        "mark_ready": "تحديد كجاهز"
+      },
+      "statuses": {
+        "ALL": "جميع الحالات",
+        "PENDING": "قيد الانتظار",
+        "ACCEPTED": "مقبول",
+        "READY": "جاهز",
+        "PICKED_UP": "تم الاستلام",
+        "DELIVERED": "تم التوصيل",
+        "CANCELLED": "ملغي"
+      },
+      "sort_options": {
+        "date_desc": "الأحدث أولاً",
+        "date_asc": "الأقدم أولاً",
+        "amount_desc": "الأعلى قيمة",
+        "amount_asc": "الأقل قيمة"
+      },
+      "toasts": {
+        "success_title": "تم تحديث الحالة",
+        "success_desc": "تم تحديث حالة الطلب بنجاح.",
+        "error_title": "فشل التحديث",
+        "error_desc": "فشل في تحديث حالة الطلب."
+      }
+    },
+    "order_details": {
+      "title": "تفاصيل الطلب",
+      "back_to_orders": "العودة للطلبات",
+      "order_number": "طلب رقم",
+      "items_title": "أصناف الطلب",
+      "items_subtitle": "تفاصيل المنتجات في هذا الطلب",
+      "sub_order_number": "طلب فرعي رقم",
+      "subtotal": "المجموع الفرعي",
+      "table": {
+        "product": "المنتج",
+        "qty": "الكمية",
+        "price": "السعر",
+        "total": "الإجمالي"
+      },
+      "customer_info": "معلومات العميل",
+      "name": "الاسم",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "address": "عنوان التوصيل",
+      "payment_summary": "ملخص الدفع",
+      "payment_status": "حالة الدفع",
+      "total_price": "السعر الإجمالي",
+      "your_balance": "رصيدك",
+      "funds_note": "يتم تحرير الأموال إلى محفظتك عند التوصيل الناجح.",
+      "not_found": "الطلب غير موجود",
+      "not_found_desc": "الطلب الذي تبحث عنه غير موجود أو ليس لديك صلاحية الوصول إليه."
+    },
+    "inventory": {
+      "title": "إدارة المنتجات",
+      "subtitle": "إدارة منتجات متجرك والمخزون والأسعار.",
+      "add_product": "إضافة منتج",
+      "edit_product": "تعديل منتج",
+      "search_placeholder": "بحث بالاسم...",
+      "status_filter": "الحالة",
+      "stock_filter": "مستوى المخزون",
+      "sort_by": "ترتيب حسب",
+      "list_title": "قائمة المنتجات",
+      "list_description": "عرض {{count}} منتج من متجرك.",
+      "table": {
+        "name": "اسم المنتج",
+        "sku": "الرمز / المعرف",
+        "price": "السعر",
+        "stock": "المخزون",
+        "status": "الحالة",
+        "actions": "إجراءات"
+      },
+      "form": {
+        "name": "اسم المنتج *",
+        "name_placeholder": "مثال: حليب طازج",
+        "description": "الوصف",
+        "description_placeholder": "تفاصيل موجزة عن المنتج...",
+        "price": "السعر ($) *",
+        "stock": "كمية المخزون *",
+        "category": "الفئة *",
+        "category_placeholder": "مثال: ألبان، مخبوزات",
+        "submit_add": "إضافة المنتج",
+        "submit_update": "تحديث المنتج",
+        "required_note": "أدخل تفاصيل منتجك. جميع الحقول التي تحمل علامة * مطلوبة."
+      },
+      "stock_levels": {
+        "ALL": "كل المخزون",
+        "LOW": "مخزون منخفض",
+        "OUT": "نفذ المخزون"
+      },
+      "statuses": {
+        "ALL": "كل الحالات",
+        "ACTIVE": "نشط",
+        "INACTIVE": "غير نشط"
+      },
+      "sort_options": {
+        "name_asc": "الاسم (أ-ي)",
+        "price_asc": "السعر (من الأقل)",
+        "price_desc": "السعر (من الأعلى)",
+        "stock_asc": "المخزون (من الأقل)",
+        "stock_desc": "المخزون (من الأعلى)"
+      },
+      "delete_confirm": "هل أنت متأكد أنك تريد حذف هذا المنتج؟ لا يمكن التراجع عن هذا الإجراء.",
+      "toasts": {
+        "create_success": "تم إنشاء المنتج بنجاح",
+        "create_error": "فشل الإنشاء",
+        "update_success": "تم تحديث المنتج بنجاح",
+        "update_error": "فشل التحديث",
+        "delete_success": "تم حذف المنتج بنجاح"
+      }
+    },
+    "earnings": {
+      "title": "المركز المالي",
+      "subtitle": "راقب إيراداتك ورصيد محفظتك وسجل معاملاتك.",
+      "available_balance": "الرصيد المتاح",
+      "balance_note": "متاح للاستخدام الفوري",
+      "total_commissions": "إجمالي العمولات",
+      "commissions_note": "إجمالي الأرباح المتراكمة",
+      "held_funds": "أموال محتجزة",
+      "held_note": "في انتظار الموافقة أو المعالجة",
+      "recent_transactions": "المعاملات الأخيرة",
+      "transactions_subtitle": "سجل مفصل للنشاط المالي لمتجرك.",
+      "table": {
+        "date": "التاريخ والوقت",
+        "type": "نوع المعاملة",
+        "reference": "مرجع الطلب",
+        "amount": "المبلغ",
+        "status": "الحالة"
+      },
+      "no_history": "لم يتم العثور على سجل أرباح."
+    },
+    "dashboard": {
+      "overview": "نظرة عامة على المتجر",
+      "welcome": "مرحباً بك مجدداً، {{name}}. إليك ما يحدث في {{store}}.",
+      "wallet_balance": "رصيد المحفظة",
+      "pending_orders": "طلبات معلقة",
+      "attention_note": "تتطلب اهتمامك",
+      "active_products": "المنتجات النشطة",
+      "catalog_note": "إجمالي الأصناف في الكتالوج",
+      "inventory_health": "صحة المخزون",
+      "out_of_stock_note": "أصناف نفذت من المخزون",
+      "quick_actions": "إجراءات سريعة",
+      "actions_subtitle": "أدوات الإدارة الأكثر استخداماً",
+      "manage_orders": "إدارة الطلبات",
+      "process_note": "معالجة الطلبات الواردة",
+      "product_catalog": "كتالوج المنتجات",
+      "edit_note": "إضافة وتعديل المنتجات",
+      "view_earnings": "عرض الأرباح",
+      "track_note": "تتبع عمولاتك",
+      "inventory_alerts": "تنبيهات المخزون",
+      "healthy_note": "مخزونك يبدو جيداً!",
+      "out_of_stock": "نفذ المخزون",
+      "low_stock_left": "بقي {{count}} فقط"
+    }
   }
 }
