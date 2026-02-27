@@ -1,0 +1,139 @@
+You are now entering SYSTEM INTELLIGENCE MODE.
+
+Your task is NOT to build anything.
+Your task is NOT to modify anything.
+
+Your task is to perform a FULL STRUCTURAL, FUNCTIONAL, SECURITY, AND ARCHITECTURAL AUDIT of the entire project and extract every piece of information required before any further development.
+
+You must produce a comprehensive structured report.
+
+-----------------------------------------
+PHASE 1 — PROJECT STRUCTURE ANALYSIS
+-----------------------------------------
+
+1. Provide the complete folder and file structure (frontend + backend).
+2. Identify:
+   - Framework (Next.js? React? Express? etc.)
+   - Routing system type
+   - State management system
+   - Styling system (Tailwind? CSS modules?)
+   - Build system
+3. Identify environment configuration files.
+4. Identify deployment configuration.
+
+-----------------------------------------
+PHASE 2 — DATABASE INTELLIGENCE
+-----------------------------------------
+
+1. List all database tables.
+2. For each table:
+   - Columns
+   - Data types
+   - Relations
+   - Indexes
+3. Identify:
+   - User roles system
+   - Order lifecycle model
+   - Store-driver relationship model
+4. Check for:
+   - Missing constraints
+   - Missing indexes
+   - Security risks
+
+-----------------------------------------
+PHASE 3 — AUTHENTICATION & AUTHORIZATION
+-----------------------------------------
+
+1. Authentication method:
+   - JWT? Session? Hybrid?
+2. Password hashing algorithm.
+3. Token storage method.
+4. Cookie configuration (secure, httpOnly, sameSite).
+5. Middleware structure.
+6. Role-based access implementation.
+7. Identify ALL protected routes.
+8. Identify ANY route that should be protected but is not.
+
+-----------------------------------------
+PHASE 4 — FRONTEND COMPLETENESS AUDIT
+-----------------------------------------
+
+For each role (ADMIN, STORE_OWNER, DRIVER, CUSTOMER):
+
+1. List all pages implemented.
+2. Identify incomplete pages.
+3. Identify placeholder UI.
+4. Identify pages without backend connection.
+5. Identify missing error handling.
+6. Identify missing loading states.
+7. Check RTL consistency.
+8. Check Arabic localization completeness.
+9. Check navigation consistency.
+10. Check broken routes.
+
+-----------------------------------------
+PHASE 5 — ORDER FLOW VALIDATION
+-----------------------------------------
+
+Trace a FULL order lifecycle:
+
+Customer → Store → Driver → Completion
+
+For each transition:
+1. Identify API endpoint used.
+2. Identify status updates.
+3. Identify DB write operations.
+4. Identify race condition risks.
+5. Identify failure points.
+
+-----------------------------------------
+PHASE 6 — ADMIN CAPABILITY ANALYSIS
+-----------------------------------------
+
+1. Is there an Admin dashboard?
+2. What can Admin currently control?
+3. What cannot Admin control but should?
+4. Are there emergency override capabilities?
+5. Are there system logs?
+
+-----------------------------------------
+PHASE 7 — SECURITY RISK MAP
+-----------------------------------------
+
+1. Identify:
+   - Hardcoded secrets
+   - Weak validation
+   - Missing rate limiting
+   - Missing input sanitization
+   - Privilege escalation risks
+2. Check for:
+   - Open API endpoints
+   - Mass assignment risks
+   - Direct DB exposure
+   - Debug mode enabled in production
+
+-----------------------------------------
+PHASE 8 — MVP READINESS SCORE
+-----------------------------------------
+
+Based on the entire analysis:
+
+1. Give a % completion estimate.
+2. List:
+   - Critical blockers for launch
+   - High priority improvements
+   - Medium priority improvements
+3. Identify what is REQUIRED for MVP launch inside one city.
+4. Identify what is NOT required yet.
+
+-----------------------------------------
+RULES
+-----------------------------------------
+
+- Do NOT change any code.
+- Do NOT implement features.
+- Do NOT optimize anything.
+- Only analyze and report.
+- Be extremely detailed.
+- No assumptions.
+- If something is unclear, explicitly state it.
