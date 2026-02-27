@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Spinner } from "@/components/ui/spinner";
 import { Plus, Trash2, Save, User } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const profileSchema = z.object({
   name: z.string().min(1, "Name is required").max(50, "Max 50 characters").regex(/^[a-zA-Z\s]*$/, "Letters only"),
@@ -37,6 +38,7 @@ const profileSchema = z.object({
 type ProfileForm = z.infer<typeof profileSchema>;
 
 export default function CustomerProfile() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   
   const { data: user, isLoading } = useQuery({
@@ -73,12 +75,15 @@ export default function CustomerProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/customer/profile"] });
-      toast({ title: "Success", description: "Profile updated successfully" });
+      toast({ 
+        title: t('customer.profile.success_update_title'), 
+        description: t('customer.profile.success_update_desc') 
+      });
     },
     onError: (error: Error) => {
       toast({ 
-        title: "Error", 
-        description: error.message || "Failed to update profile",
+        title: t('customer.profile.error_update_title'), 
+        description: error.message || t('customer.profile.error_update_desc'),
         variant: "destructive" 
       });
     },
@@ -96,10 +101,10 @@ export default function CustomerProfile() {
   const isDirty = form.formState.isDirty;
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-2xl">
+    <div className="container mx-auto py-8 px-4 max-w-2xl rtl:text-right" dir="auto">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Profile Management</CardTitle>
+          <CardTitle className="text-2xl font-bold">{t('customer.profile.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -113,8 +118,8 @@ export default function CustomerProfile() {
                   control={form.control}
                   name="avatarUrl"
                   render={({ field }) => (
-                    <FormItem className="w-full">
-                      <FormLabel>Avatar URL</FormLabel>
+                    <FormItem className="w-full rtl:text-right">
+                      <FormLabel>{t('customer.profile.avatar_url')}</FormLabel>
                       <FormControl>
                         <Input placeholder="https://..." {...field} data-testid="input-avatar-url" />
                       </FormControl>
@@ -124,13 +129,13 @@ export default function CustomerProfile() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rtl:flex-row-reverse">
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Full Name</FormLabel>
+                    <FormItem className="rtl:text-right">
+                      <FormLabel>{t('customer.profile.full_name')}</FormLabel>
                       <FormControl>
                         <Input {...field} data-testid="input-name" />
                       </FormControl>
@@ -138,19 +143,19 @@ export default function CustomerProfile() {
                     </FormItem>
                   )}
                 />
-                <FormItem>
-                  <FormLabel>Email (Read-only)</FormLabel>
+                <FormItem className="rtl:text-right">
+                  <FormLabel>{t('customer.profile.email_readonly')}</FormLabel>
                   <Input value={user?.email} disabled className="bg-muted" />
                 </FormItem>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rtl:flex-row-reverse">
                 <FormField
                   control={form.control}
                   name="phone"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
+                    <FormItem className="rtl:text-right">
+                      <FormLabel>{t('customer.profile.phone_number')}</FormLabel>
                       <FormControl>
                         <Input {...field} data-testid="input-phone" />
                       </FormControl>
@@ -162,18 +167,18 @@ export default function CustomerProfile() {
                   control={form.control}
                   name="transportType"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Preferred Transport</FormLabel>
+                    <FormItem className="rtl:text-right">
+                      <FormLabel>{t('customer.profile.transport_type')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-transport">
-                            <SelectValue placeholder="Select transport" />
+                            <SelectValue placeholder={t('customer.profile.select_transport')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Walk">Walk</SelectItem>
-                          <SelectItem value="Bike">Bike</SelectItem>
-                          <SelectItem value="Car">Car</SelectItem>
+                          <SelectItem value="Walk">{t('customer.profile.transport.Walk')}</SelectItem>
+                          <SelectItem value="Bike">{t('customer.profile.transport.Bike')}</SelectItem>
+                          <SelectItem value="Car">{t('customer.profile.transport.Car')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -183,17 +188,17 @@ export default function CustomerProfile() {
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <FormLabel>Delivery Addresses</FormLabel>
+                <div className="flex items-center justify-between rtl:flex-row-reverse">
+                  <FormLabel className="rtl:text-right">{t('customer.profile.delivery_addresses')}</FormLabel>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => append("")}
-                    className="gap-2"
+                    className="gap-2 rtl:flex-row-reverse"
                     data-testid="button-add-address"
                   >
-                    <Plus className="h-4 w-4" /> Add Address
+                    <Plus className="h-4 w-4" /> {t('customer.profile.add_address')}
                   </Button>
                 </div>
                 {fields.map((field, index) => (
@@ -202,8 +207,8 @@ export default function CustomerProfile() {
                     control={form.control}
                     name={`addresses.${index}`}
                     render={({ field }) => (
-                      <FormItem>
-                        <div className="flex gap-2">
+                      <FormItem className="rtl:text-right">
+                        <div className="flex gap-2 rtl:flex-row-reverse">
                           <FormControl>
                             <Input {...field} data-testid={`input-address-${index}`} />
                           </FormControl>
@@ -229,12 +234,12 @@ export default function CustomerProfile() {
 
               <Button
                 type="submit"
-                className="w-full gap-2"
+                className="w-full gap-2 rtl:flex-row-reverse"
                 disabled={!isDirty || mutation.isPending}
                 data-testid="button-save-profile"
               >
                 {mutation.isPending ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
-                Save Changes
+                {t('customer.profile.save_changes')}
               </Button>
             </form>
           </Form>

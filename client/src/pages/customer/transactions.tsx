@@ -23,6 +23,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { format } from "date-fns";
 import { Search, Filter, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 type Transaction = {
   id: string;
@@ -35,6 +36,7 @@ type Transaction = {
 };
 
 export default function CustomerTransactions() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [type, setType] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
@@ -99,61 +101,61 @@ export default function CustomerTransactions() {
 
   if (isError) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-        <p className="text-destructive">Failed to load transactions</p>
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4 rtl:text-right" dir="auto">
+        <p className="text-destructive">{t('customer.transactions.failed_load')}</p>
         <Button onClick={() => refetch()} data-testid="button-retry">
-          Retry
+          {t('customer.transactions.retry')}
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 space-y-6">
+    <div className="container mx-auto py-8 px-4 space-y-6 rtl:text-right" dir="auto">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Transaction History</CardTitle>
+          <CardTitle className="text-2xl font-bold">{t('customer.transactions.title')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Search Order ID</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6 rtl:flex-row-reverse">
+            <div className="space-y-2 rtl:text-right">
+              <label className="text-sm font-medium">{t('customer.transactions.search_order')}</label>
               <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground rtl:left-auto rtl:right-2" />
                 <Input
-                  placeholder="Order ID..."
+                  placeholder={t('customer.transactions.order_placeholder')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-8"
+                  className="pl-8 rtl:pl-3 rtl:pr-8"
                   data-testid="input-search-order"
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Type</label>
+            <div className="space-y-2 rtl:text-right">
+              <label className="text-sm font-medium">{t('customer.wallet.type')}</label>
               <Select value={type} onValueChange={setType}>
                 <SelectTrigger data-testid="select-type">
-                  <SelectValue placeholder="All Types" />
+                  <SelectValue placeholder={t('customer.wallet.all_types')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="DEPOSIT">Deposit</SelectItem>
-                  <SelectItem value="PAYMENT">Payment</SelectItem>
-                  <SelectItem value="COMMISSION">Commission</SelectItem>
-                  <SelectItem value="REFUND">Refund</SelectItem>
+                  <SelectItem value="all">{t('customer.wallet.all_types')}</SelectItem>
+                  <SelectItem value="DEPOSIT">{t('customer.wallet.types.DEPOSIT')}</SelectItem>
+                  <SelectItem value="PAYMENT">{t('customer.wallet.types.PAYMENT')}</SelectItem>
+                  <SelectItem value="COMMISSION">{t('customer.wallet.types.COMMISSION')}</SelectItem>
+                  <SelectItem value="REFUND">{t('customer.wallet.types.REFUND')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
+            <div className="space-y-2 rtl:text-right">
+              <label className="text-sm font-medium">{t('customer.wallet.status')}</label>
               <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger data-testid="select-status">
-                  <SelectValue placeholder="All Status" />
+                  <SelectValue placeholder={t('customer.transactions.all_status')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="all">{t('customer.transactions.all_status')}</SelectItem>
                   <SelectItem value="PENDING">Pending</SelectItem>
                   <SelectItem value="COMPLETED">Completed</SelectItem>
                   <SelectItem value="FAILED">Failed</SelectItem>
@@ -161,8 +163,8 @@ export default function CustomerTransactions() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">From Date</label>
+            <div className="space-y-2 rtl:text-right">
+              <label className="text-sm font-medium">{t('customer.transactions.from_date')}</label>
               <Input
                 type="date"
                 value={dateFrom}
@@ -171,8 +173,8 @@ export default function CustomerTransactions() {
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">To Date</label>
+            <div className="space-y-2 rtl:text-right">
+              <label className="text-sm font-medium">{t('customer.transactions.to_date')}</label>
               <Input
                 type="date"
                 value={dateTo}
@@ -182,30 +184,30 @@ export default function CustomerTransactions() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 mb-6">
+          <div className="flex justify-end gap-2 mb-6 rtl:flex-row-reverse">
             <Button
               variant="outline"
               onClick={resetFilters}
-              className="gap-2"
+              className="gap-2 rtl:flex-row-reverse"
               data-testid="button-reset"
             >
-              <RotateCcw className="h-4 w-4" /> Reset
+              <RotateCcw className="h-4 w-4" /> {t('customer.transactions.reset')}
             </Button>
-            <Button onClick={() => refetch()} className="gap-2" data-testid="button-apply">
-              <Filter className="h-4 w-4" /> Apply Filters
+            <Button onClick={() => refetch()} className="gap-2 rtl:flex-row-reverse" data-testid="button-apply">
+              <Filter className="h-4 w-4" /> {t('customer.transactions.apply_filters')}
             </Button>
           </div>
 
           <div className="rounded-md border">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Date & Time</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Order ID</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Notes</TableHead>
+                <TableRow className="rtl:flex-row-reverse">
+                  <TableHead className="rtl:text-right">{t('customer.transactions.date_time')}</TableHead>
+                  <TableHead className="rtl:text-right">{t('customer.wallet.type')}</TableHead>
+                  <TableHead className="rtl:text-right">{t('customer.wallet.order_id')}</TableHead>
+                  <TableHead className="rtl:text-right">{t('customer.wallet.amount')}</TableHead>
+                  <TableHead className="rtl:text-right">{t('customer.wallet.status')}</TableHead>
+                  <TableHead className="rtl:text-right">{t('customer.transactions.notes')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -220,30 +222,30 @@ export default function CustomerTransactions() {
                 ) : data?.transactions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                      No transactions found
+                      {t('customer.wallet.no_transactions')}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  data?.transactions.map((t) => (
-                    <TableRow key={t.id} className="hover:bg-muted/50 transition-colors" data-testid={`row-transaction-${t.id}`}>
-                      <TableCell className="whitespace-nowrap">
-                        {format(new Date(t.createdAt), "MMM dd, yyyy HH:mm")}
+                  data?.transactions.map((t_row) => (
+                    <TableRow key={t_row.id} className="hover:bg-muted/50 transition-colors rtl:flex-row-reverse" data-testid={`row-transaction-${t_row.id}`}>
+                      <TableCell className="whitespace-nowrap rtl:text-right">
+                        {format(new Date(t_row.createdAt), "MMM dd, yyyy HH:mm")}
                       </TableCell>
-                      <TableCell className="font-medium">{t.type}</TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {t.referenceId || "-"}
+                      <TableCell className="font-medium rtl:text-right">{t(`customer.wallet.types.${t_row.type}`)}</TableCell>
+                      <TableCell className="font-mono text-sm rtl:text-right">
+                        {t_row.referenceId || "-"}
                       </TableCell>
-                      <TableCell className={`font-bold ${getAmountColor(t.type)}`}>
-                        {["DEPOSIT", "COMMISSION", "REFUND"].includes(t.type) ? "+" : "-"}
-                        EGP {Math.abs(parseFloat(t.amount)).toFixed(2)}
+                      <TableCell className={`font-bold rtl:text-right ${getAmountColor(t_row.type)}`}>
+                        {["DEPOSIT", "COMMISSION", "REFUND"].includes(t_row.type) ? "+" : "-"}
+                        EGP {Math.abs(parseFloat(t_row.amount)).toFixed(2)}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className={getStatusColor(t.status)}>
-                          {t.status}
+                      <TableCell className="rtl:text-right">
+                        <Badge variant="secondary" className={getStatusColor(t_row.status)}>
+                          {t_row.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="max-w-[200px] truncate">
-                        {t.notes || "-"}
+                      <TableCell className="max-w-[200px] truncate rtl:text-right">
+                        {t_row.notes || "-"}
                       </TableCell>
                     </TableRow>
                   ))
@@ -253,19 +255,24 @@ export default function CustomerTransactions() {
           </div>
 
           {data && data.total > limit && (
-            <div className="flex items-center justify-between space-x-2 py-4">
+            <div className="flex items-center justify-between space-x-2 py-4 rtl:flex-row-reverse rtl:space-x-reverse">
               <div className="text-sm text-muted-foreground">
-                Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, data.total)} of {data.total} results
+                {t('customer.transactions.showing_results', { 
+                  start: ((page - 1) * limit) + 1, 
+                  end: Math.min(page * limit, data.total), 
+                  total: data.total 
+                })}
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 rtl:flex-row-reverse">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                   data-testid="button-prev-page"
+                  className="rtl:flex-row-reverse"
                 >
-                  Previous
+                  {t('customer.wallet.previous')}
                 </Button>
                 <Button
                   variant="outline"
@@ -273,8 +280,9 @@ export default function CustomerTransactions() {
                   onClick={() => setPage((p) => p + 1)}
                   disabled={page * limit >= data.total}
                   data-testid="button-next-page"
+                  className="rtl:flex-row-reverse"
                 >
-                  Next
+                  {t('customer.wallet.next')}
                 </Button>
               </div>
             </div>

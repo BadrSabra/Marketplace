@@ -63,5 +63,96 @@
     "select": {
       "placeholder": "اختر خياراً..."
     }
+  },
+  "customer": {
+    "dashboard": {
+      "title": "لوحة تحكم العميل",
+      "subtitle": "إدارة طلباتك والتحقق من عمليات التسليم.",
+      "my_wallet": "محفظتي",
+      "active_deliveries": "عمليات التسليم النشطة",
+      "no_orders": "لم يتم العثور على طلبات نشطة.",
+      "store": "المتجر",
+      "order_id": "رقم الطلب",
+      "verify_delivery": "التحقق من التسليم",
+      "otp_placeholder": "أدخل رمز التحقق المكون من 6 أرقام",
+      "confirm_receipt": "تأكيد الاستلام",
+      "driver_code_help": "اطلب من السائق رمز التسليم لتأكيد استلامك للأصناف.",
+      "delivery_confirmed": "تم تأكيد التسليم",
+      "invalid_otp_title": "رمز غير صالح",
+      "invalid_otp_desc": "يرجى إدخال رمز رقمي صالح مكون من 6 أرقام.",
+      "success_verify_title": "تم التحقق من التسليم",
+      "success_verify_desc": "شكراً لك! تم تأكيد التسليم الخاص بك.",
+      "failed_verify_title": "فشل التحقق",
+      "failed_verify_desc": "رمز التحقق غير صالح. يرجى المحاولة مرة أخرى."
+    },
+    "wallet": {
+      "title": "محفظتي",
+      "available_balance": "الرصيد المتاح",
+      "pending_holds": "المبالغ المعلقة",
+      "deposit_funds": "إيداع الأموال",
+      "amount_label": "المبلغ ($)",
+      "amount_placeholder": "10.00",
+      "receipt_url_label": "رابط الإيصال",
+      "receipt_url_placeholder": "https://...",
+      "submit_deposit": "إرسال الإيداع",
+      "pending_deposits": "الإيداعات المعلقة",
+      "date": "التاريخ",
+      "amount": "المبلغ",
+      "status": "الحالة",
+      "no_pending": "لا توجد إيداعات معلقة",
+      "transaction_history": "سجل المعاملات",
+      "all_types": "جميع الأنواع",
+      "type": "النوع",
+      "order_id": "رقم الطلب",
+      "no_transactions": "لم يتم العثور على معاملات",
+      "previous": "السابق",
+      "next": "التالي",
+      "page_info": "صفحة {{page}} من {{total}}",
+      "success_deposit_title": "تم إرسال الإيداع",
+      "success_deposit_desc": "إيداعك قيد انتظار موافقة المسؤول.",
+      "failed_deposit_title": "فشل الإيداع",
+      "types": {
+        "DEPOSIT": "إيداع",
+        "PAYMENT": "دفع",
+        "REFUND": "استرداد",
+        "COMMISSION": "عمولة"
+      }
+    },
+    "transactions": {
+      "title": "سجل المعاملات",
+      "search_order": "البحث برقم الطلب",
+      "order_placeholder": "رقم الطلب...",
+      "all_status": "جميع الحالات",
+      "from_date": "من تاريخ",
+      "to_date": "إلى تاريخ",
+      "reset": "إعادة ضبط",
+      "apply_filters": "تطبيق الفلاتر",
+      "date_time": "التاريخ والوقت",
+      "notes": "ملاحظات",
+      "showing_results": "عرض {{start}} إلى {{end}} من {{total}} نتائج",
+      "failed_load": "فشل تحميل المعاملات",
+      "retry": "إعادة المحاولة"
+    },
+    "profile": {
+      "title": "إدارة الملف الشخصي",
+      "avatar_url": "رابط الصورة الشخصية",
+      "full_name": "الاسم الكامل",
+      "email_readonly": "البريد الإلكتروني (للقراءة فقط)",
+      "phone_number": "رقم الهاتف",
+      "transport_type": "وسيلة النقل المفضلة",
+      "select_transport": "اختر وسيلة النقل",
+      "delivery_addresses": "عناوين التسليم",
+      "add_address": "إضافة عنوان",
+      "save_changes": "حفظ التغييرات",
+      "success_update_title": "نجاح",
+      "success_update_desc": "تم تحديث الملف الشخصي بنجاح",
+      "error_update_title": "خطأ",
+      "error_update_desc": "فشل في تحديث الملف الشخصي",
+      "transport": {
+        "Walk": "مشياً",
+        "Bike": "دراجة",
+        "Car": "سيارة"
+      }
+    }
   }
 }
