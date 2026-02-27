@@ -1,0 +1,66 @@
+
+
+Prompt 28 – Phase 3: Customer Dashboard (Fast Mode, Safe Rollout)
+
+# PHASE 3 – Customer Dashboard Localization & RTL Support
+
+OBJECTIVE:
+Continue Arabic localization and RTL support for all Customer-facing pages and components, using the common UI components updated in Phase 2.
+
+STRICT RULES:
+- Fast Mode compatible (no heavy computation or deep recursion).
+- Safe rollout: modify only Customer Dashboard pages and their directly imported components.
+- Do NOT modify backend code, shared components from Phase 2, or unrelated pages.
+- Only work on read/write files under client/src/pages/customer and their direct UI imports.
+- Console output only; no file creation outside existing structure.
+
+TASKS:
+
+1. Extract all hardcoded strings in Customer pages:
+   - pages: dashboard.tsx, wallet.tsx, transactions.tsx, profile.tsx, store/orders.tsx, store/order/[id].tsx, store/inventory.tsx
+   - Include: headings, button labels, table headers, form labels, alerts, tooltips, placeholder text.
+
+2. Replace strings with i18n keys in the pattern:
+   - `t('customer.page_key.string_key')`
+   - Add new keys to `client/src/locales/ar/translation.json` under a `customer` section.
+
+3. RTL adjustments for layout:
+   - Swap padding, margin, text alignment, icon placement:
+     - `pl-*` ↔ `pr-*`
+     - `ml-*` ↔ `mr-*`
+     - `text-left` ↔ `text-right`
+     - `left-*` ↔ `right-*`
+   - Ensure forms, tables, and lists follow RTL alignment.
+   - Update directional icons where used (ArrowRight ↔ ArrowLeft, ChevronRight ↔ ChevronLeft).
+
+4. Toast messages:
+   - Map all Customer-related toast messages to Arabic equivalents (use Phase 1 toast extraction as reference).
+
+5. Verify usage of Phase 2 components:
+   - Alert, Table, Toast, Select.
+   - Ensure RTL and i18n updates propagate correctly when imported.
+
+6. Create a JSON report after completing all updates:
+
+{ "pages_localized": [ { "page_path": "", "total_strings_localized": 0, "rtl_classes_fixed": 0, "toast_messages_mapped": 0 } ], "summary": { "total_pages": 0, "total_strings_localized": 0, "total_rtl_classes_fixed": 0, "total_toast_messages_mapped": 0, "next_step_suggestion": "Phase 4: Store & Driver Dashboards" } }
+
+7. Restart application workflow and verify:
+   - Customer Dashboard pages load correctly.
+   - RTL alignment visually correct.
+   - Toasts appear in Arabic.
+   - No console errors.
+
+OUTPUT:
+- JSON report only (as above) to track progress.
+- Do NOT output code changes directly; only confirm localization and RTL adjustments in report.
+
+---
+
+⚡ **Important Notes for Agent:**
+- Work incrementally per page (dashboard → wallet → transactions → profile → store orders → store order details → store inventory).
+- Ensure each page is stable before moving to the next.
+- Use Phase 2 localized UI components wherever possible to reduce duplicate work.
+- Maintain a checkpoint after each page for safe rollback.
+
+
+---
