@@ -23,7 +23,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { format } from "date-fns";
 import { Search, Filter, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useTranslation } from "react-i18next";
+import { t } from "@/i18n";
 
 type Transaction = {
   id: string;
@@ -36,7 +36,6 @@ type Transaction = {
 };
 
 export default function CustomerTransactions() {
-  const { t } = useTranslation();
   const { toast } = useToast();
   const [type, setType] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");

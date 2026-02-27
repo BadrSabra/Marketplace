@@ -25,7 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Spinner } from "@/components/ui/spinner";
 import { Plus, Trash2, Save, User } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { t } from "@/i18n";
 
 const profileSchema = z.object({
   name: z.string().min(1, "Name is required").max(50, "Max 50 characters").regex(/^[a-zA-Z\s]*$/, "Letters only"),
@@ -38,7 +38,6 @@ const profileSchema = z.object({
 type ProfileForm = z.infer<typeof profileSchema>;
 
 export default function CustomerProfile() {
-  const { t } = useTranslation();
   const { toast } = useToast();
   
   const { data: user, isLoading } = useQuery({

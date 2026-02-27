@@ -15,7 +15,7 @@ import { format } from "date-fns";
 import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { useTranslation } from "react-i18next";
+import { t } from "@/i18n";
 
 const depositSchema = z.object({
   amount: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
@@ -27,7 +27,6 @@ const depositSchema = z.object({
 type DepositForm = z.infer<typeof depositSchema>;
 
 export default function CustomerWallet() {
-  const { t } = useTranslation();
   const { toast } = useToast();
   const [page, setPage] = useState(0);
   const [type, setType] = useState<string>("ALL");

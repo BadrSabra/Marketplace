@@ -8,10 +8,9 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, CheckCircle2, Package, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
-import { useTranslation } from "react-i18next";
+import { t } from "@/i18n";
 
 export default function CustomerDashboard() {
-  const { t } = useTranslation();
   const { useMyOrders } = useOrders();
   const { data: orders, isLoading } = useMyOrders();
   const { toast } = useToast();
