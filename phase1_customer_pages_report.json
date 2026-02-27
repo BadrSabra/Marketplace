@@ -1,0 +1,9 @@
+{
+  "page_or_component": "Customer Pages (Dashboard, Wallet, Transactions, Profile, Order Details)",
+  "total_strings_localized": 10,
+  "rtl_classes_fixed": 50,
+  "backend_keys_mapped": 0,
+  "toast_messages_mapped": 0,
+  "completion_status": "complete",
+  "next_step_suggestion": "Admin Pages"
+}

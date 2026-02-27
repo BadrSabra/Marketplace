@@ -110,12 +110,12 @@ export default function CustomerWallet() {
   const pendingTotal = pendingDeposits?.reduce((sum: number, d: any) => sum + parseFloat(d.transaction.amount), 0) || 0;
 
   return (
-    <div className="container mx-auto p-6 space-y-6 rtl:text-right" dir="auto">
+    <div className="container mx-auto p-6 space-y-6 text-right" dir="rtl">
       <h1 className="text-3xl font-bold">{t('customer.wallet.title')}</h1>
       
       <div className="grid md:grid-cols-3 gap-6">
         <Card data-testid="card-available-balance">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 rtl:flex-row-reverse">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 flex-row-reverse">
             <CardTitle className="text-sm font-medium">{t('customer.wallet.available_balance')}</CardTitle>
             <WalletIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -125,7 +125,7 @@ export default function CustomerWallet() {
         </Card>
 
         <Card data-testid="card-pending-holds">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 rtl:flex-row-reverse">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 flex-row-reverse">
             <CardTitle className="text-sm font-medium">{t('customer.wallet.pending_holds')}</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -136,7 +136,7 @@ export default function CustomerWallet() {
 
         <Card className="md:row-span-2">
           <CardHeader>
-            <CardTitle className="text-lg rtl:text-right">{t('customer.wallet.deposit_funds')}</CardTitle>
+            <CardTitle className="text-lg text-right">{t('customer.wallet.deposit_funds')}</CardTitle>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -145,10 +145,10 @@ export default function CustomerWallet() {
                   control={form.control}
                   name="amount"
                   render={({ field }) => (
-                    <FormItem className="rtl:text-right">
+                    <FormItem className="text-right">
                       <FormLabel>{t('customer.wallet.amount_label')}</FormLabel>
                       <FormControl>
-                        <Input placeholder={t('customer.wallet.amount_placeholder')} {...field} data-testid="input-deposit-amount" />
+                        <Input placeholder={t('customer.wallet.amount_placeholder')} {...field} data-testid="input-deposit-amount" className="text-right" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -158,10 +158,10 @@ export default function CustomerWallet() {
                   control={form.control}
                   name="receiptUrl"
                   render={({ field }) => (
-                    <FormItem className="rtl:text-right">
+                    <FormItem className="text-right">
                       <FormLabel>{t('customer.wallet.receipt_url_label')}</FormLabel>
                       <FormControl>
-                        <Input placeholder={t('customer.wallet.receipt_url_placeholder')} {...field} data-testid="input-receipt-url" />
+                        <Input placeholder={t('customer.wallet.receipt_url_placeholder')} {...field} data-testid="input-receipt-url" className="text-right" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -169,11 +169,11 @@ export default function CustomerWallet() {
                 />
                 <Button 
                   type="submit" 
-                  className="w-full gap-2 rtl:flex-row-reverse" 
+                  className="w-full gap-2 flex-row-reverse" 
                   disabled={depositMutation.isPending}
                   data-testid="button-submit-deposit"
                 >
-                  {depositMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {depositMutation.isPending && <Loader2 className="h-4 w-4 animate-spin ml-2 mr-0" />}
                   <Plus className="h-4 w-4" /> {t('customer.wallet.submit_deposit')}
                 </Button>
               </form>
@@ -183,17 +183,17 @@ export default function CustomerWallet() {
 
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2 rtl:flex-row-reverse rtl:text-right">
+            <CardTitle className="text-lg flex items-center gap-2 flex-row-reverse text-right">
               <Clock className="h-5 w-5" /> {t('customer.wallet.pending_deposits')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
-                <TableRow className="rtl:flex-row-reverse">
-                  <TableHead className="rtl:text-right">{t('customer.wallet.date')}</TableHead>
-                  <TableHead className="rtl:text-right">{t('customer.wallet.amount')}</TableHead>
-                  <TableHead className="rtl:text-right">{t('customer.wallet.status')}</TableHead>
+                <TableRow className="flex-row-reverse">
+                  <TableHead className="text-right">{t('customer.wallet.date')}</TableHead>
+                  <TableHead className="text-right">{t('customer.wallet.amount')}</TableHead>
+                  <TableHead className="text-right">{t('customer.wallet.status')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -205,10 +205,10 @@ export default function CustomerWallet() {
                   </TableRow>
                 ) : (
                   pendingDeposits?.map((d: any) => (
-                    <TableRow key={d.transaction.id} className="rtl:flex-row-reverse">
-                      <TableCell className="rtl:text-right">{format(new Date(d.transaction.createdAt), "MMM d, yyyy HH:mm")}</TableCell>
-                      <TableCell className="font-medium rtl:text-right">${parseFloat(d.transaction.amount).toFixed(2)}</TableCell>
-                      <TableCell className="rtl:text-right">
+                    <TableRow key={d.transaction.id} className="flex-row-reverse">
+                      <TableCell className="text-right">{format(new Date(d.transaction.createdAt), "MMM d, yyyy HH:mm")}</TableCell>
+                      <TableCell className="font-medium text-right">${parseFloat(d.transaction.amount).toFixed(2)}</TableCell>
+                      <TableCell className="text-right">
                         <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-200">
                           {d.transaction.status}
                         </Badge>
@@ -223,11 +223,11 @@ export default function CustomerWallet() {
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between rtl:flex-row-reverse">
-          <CardTitle className="flex items-center rtl:flex-row-reverse rtl:text-right">
-            <History className="ml-2 h-5 w-5 rtl:ml-0 rtl:mr-2" /> {t('customer.wallet.transaction_history')}
+        <CardHeader className="flex flex-row items-center justify-between flex-row-reverse">
+          <CardTitle className="flex items-center flex-row-reverse text-right">
+            <History className="ml-2 h-5 w-5 ml-0 mr-2" /> {t('customer.wallet.transaction_history')}
           </CardTitle>
-          <div className="flex items-center gap-2 rtl:flex-row-reverse">
+          <div className="flex items-center gap-2 flex-row-reverse">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <Select value={type} onValueChange={(val) => { setType(val); setPage(0); }}>
               <SelectTrigger className="w-[180px]" data-testid="select-transaction-type">
@@ -246,12 +246,12 @@ export default function CustomerWallet() {
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow className="rtl:flex-row-reverse">
-                <TableHead className="rtl:text-right">{t('customer.wallet.date')}</TableHead>
-                <TableHead className="rtl:text-right">{t('customer.wallet.type')}</TableHead>
-                <TableHead className="rtl:text-right">{t('customer.wallet.amount')}</TableHead>
-                <TableHead className="rtl:text-right">{t('customer.wallet.status')}</TableHead>
-                <TableHead className="rtl:text-right">{t('customer.wallet.order_id')}</TableHead>
+              <TableRow className="flex-row-reverse">
+                <TableHead className="text-right">{t('customer.wallet.date')}</TableHead>
+                <TableHead className="text-right">{t('customer.wallet.type')}</TableHead>
+                <TableHead className="text-right">{t('customer.wallet.amount')}</TableHead>
+                <TableHead className="text-right">{t('customer.wallet.status')}</TableHead>
+                <TableHead className="text-right">{t('customer.wallet.order_id')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -263,19 +263,19 @@ export default function CustomerWallet() {
                 </TableRow>
               ) : (
                 transactions.map((tx: any) => (
-                  <TableRow key={tx.id} data-testid={`row-transaction-${tx.id}`} className="rtl:flex-row-reverse">
-                    <TableCell className="rtl:text-right">{format(new Date(tx.createdAt), "MMM d, yyyy HH:mm")}</TableCell>
-                    <TableCell className="font-medium rtl:text-right">
+                  <TableRow key={tx.id} data-testid={`row-transaction-${tx.id}`} className="flex-row-reverse">
+                    <TableCell className="text-right">{format(new Date(tx.createdAt), "MMM d, yyyy HH:mm")}</TableCell>
+                    <TableCell className="font-medium text-right">
                       {t(`customer.wallet.types.${tx.type}`)}
                     </TableCell>
-                    <TableCell className={`rtl:text-right ${
+                    <TableCell className={`text-right ${
                       tx.type === 'DEPOSIT' || tx.type === 'COMMISSION' 
                         ? 'text-green-600 font-medium' 
                         : 'text-red-600 font-medium'
                     }`}>
                       {tx.type === 'DEPOSIT' || tx.type === 'COMMISSION' ? '+' : '-'}${parseFloat(tx.amount).toFixed(2)}
                     </TableCell>
-                    <TableCell className="rtl:text-right">
+                    <TableCell className="text-right">
                       <Badge variant={
                         tx.status === 'COMPLETED' ? 'outline' : 
                         tx.status === 'PENDING' ? 'secondary' : 'destructive'
@@ -286,7 +286,7 @@ export default function CustomerWallet() {
                         {tx.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs font-mono rtl:text-right">{tx.referenceId || "-"}</TableCell>
+                    <TableCell className="text-xs font-mono text-right">{tx.referenceId || "-"}</TableCell>
                   </TableRow>
                 ))
               )}
@@ -294,16 +294,16 @@ export default function CustomerWallet() {
           </Table>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-end space-x-2 py-4 rtl:flex-row-reverse rtl:space-x-reverse">
+            <div className="flex items-center justify-end space-x-2 py-4 flex-row-reverse space-x-reverse">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setPage(prev => Math.max(0, prev - 1))}
                 disabled={page === 0}
                 data-testid="button-prev-page"
-                className="gap-2 rtl:flex-row-reverse"
+                className="gap-2 flex-row-reverse"
               >
-                <ChevronLeft className="h-4 w-4" /> {t('customer.wallet.previous')}
+                <ChevronLeft className="h-4 w-4 rotate-180" /> {t('customer.wallet.previous')}
               </Button>
               <div className="text-sm font-medium">
                 {t('customer.wallet.page_info', { page: page + 1, total: totalPages })}
@@ -314,9 +314,9 @@ export default function CustomerWallet() {
                 onClick={() => setPage(prev => Math.min(totalPages - 1, prev + 1))}
                 disabled={page >= totalPages - 1}
                 data-testid="button-next-page"
-                className="gap-2 rtl:flex-row-reverse"
+                className="gap-2 flex-row-reverse"
               >
-                {t('customer.wallet.next')} <ChevronRight className="h-4 w-4" />
+                {t('customer.wallet.next')} <ChevronRight className="h-4 w-4 rotate-180" />
               </Button>
             </div>
           )}

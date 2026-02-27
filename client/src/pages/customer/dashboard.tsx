@@ -56,9 +56,9 @@ export default function CustomerDashboard() {
   };
 
   return (
-    <div className="p-8 max-w-5xl mx-auto rtl:text-right" dir="auto">
-      <header className="mb-8 flex justify-between items-center rtl:flex-row-reverse">
-        <div className="rtl:text-right">
+    <div className="p-8 max-w-5xl mx-auto text-right" dir="rtl">
+      <header className="mb-8 flex justify-between items-center flex-row-reverse">
+        <div className="text-right">
           <h1 className="text-3xl font-bold tracking-tight">{t('customer.dashboard.title')}</h1>
           <p className="text-muted-foreground mt-1">{t('customer.dashboard.subtitle')}</p>
         </div>
@@ -76,7 +76,7 @@ export default function CustomerDashboard() {
         </div>
       ) : (
         <div className="grid gap-6">
-          <h2 className="text-xl font-semibold flex items-center gap-2 rtl:flex-row-reverse">
+          <h2 className="text-xl font-semibold flex items-center gap-2 flex-row-reverse">
             <Package className="h-5 w-5" />
             {t('customer.dashboard.active_deliveries')}
           </h2>
@@ -92,8 +92,8 @@ export default function CustomerDashboard() {
               <div key={order.id} className="space-y-4">
                 {order.subOrders?.map((subOrder: any) => (
                   <Card key={subOrder.id} data-testid={`card-suborder-${subOrder.id}`}>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 rtl:flex-row-reverse">
-                      <div className="space-y-1 rtl:text-right">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 flex-row-reverse">
+                      <div className="space-y-1 text-right">
                         <CardTitle className="text-base font-medium">
                           {t('customer.dashboard.store')}: {subOrder.store?.name || "Local Store"}
                         </CardTitle>
@@ -105,11 +105,11 @@ export default function CustomerDashboard() {
                         {subOrder.status}
                       </Badge>
                     </CardHeader>
-                    <CardContent className="rtl:text-right">
+                    <CardContent className="text-right">
                       {subOrder.status === "IN_TRANSIT" && (
                         <div className="mt-4 p-4 bg-primary/5 rounded-lg border border-primary/10">
                           <p className="text-sm font-medium mb-3">{t('customer.dashboard.verify_delivery')}</p>
-                          <div className="flex gap-3 rtl:flex-row-reverse">
+                          <div className="flex gap-3 flex-row-reverse">
                             <Input
                               placeholder={t('customer.dashboard.otp_placeholder')}
                               value={verifyingId === subOrder.id ? otpValue : ""}
@@ -118,7 +118,7 @@ export default function CustomerDashboard() {
                                 setOtpValue(e.target.value);
                               }}
                               maxLength={6}
-                              className="max-w-[180px]"
+                              className="max-w-[180px] text-right"
                               data-testid={`input-otp-${subOrder.id}`}
                             />
                             <Button 
@@ -126,7 +126,7 @@ export default function CustomerDashboard() {
                               disabled={verifyingId === subOrder.id && (verifyingId !== subOrder.id || otpValue.length !== 6)}
                               data-testid={`button-verify-${subOrder.id}`}
                             >
-                              {verifyingId === subOrder.id && <Loader2 className="mr-2 h-4 w-4 animate-spin rtl:ml-2 rtl:mr-0" />}
+                              {verifyingId === subOrder.id && <Loader2 className="mr-2 h-4 w-4 animate-spin ml-2 mr-0" />}
                               {t('customer.dashboard.confirm_receipt')}
                             </Button>
                           </div>
@@ -136,7 +136,7 @@ export default function CustomerDashboard() {
                         </div>
                       )}
                       {subOrder.status === "DELIVERED" && (
-                        <div className="mt-4 flex items-center gap-2 text-green-600 text-sm font-medium rtl:flex-row-reverse">
+                        <div className="mt-4 flex items-center gap-2 text-green-600 text-sm font-medium flex-row-reverse">
                           <CheckCircle2 className="h-4 w-4" />
                           {t('customer.dashboard.delivery_confirmed')}
                         </div>

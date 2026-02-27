@@ -110,31 +110,31 @@ export default function CustomerTransactions() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 space-y-6 rtl:text-right" dir="auto">
+    <div className="container mx-auto py-8 px-4 space-y-6 text-right" dir="rtl">
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl font-bold">{t('customer.transactions.title')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6 rtl:flex-row-reverse">
-            <div className="space-y-2 rtl:text-right">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6 flex-row-reverse">
+            <div className="space-y-2 text-right">
               <label className="text-sm font-medium">{t('customer.transactions.search_order')}</label>
               <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground rtl:left-auto rtl:right-2" />
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground left-auto right-2" />
                 <Input
                   placeholder={t('customer.transactions.order_placeholder')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-8 rtl:pl-3 rtl:pr-8"
+                  className="pl-8 pl-3 pr-8 text-right"
                   data-testid="input-search-order"
                 />
               </div>
             </div>
 
-            <div className="space-y-2 rtl:text-right">
+            <div className="space-y-2 text-right">
               <label className="text-sm font-medium">{t('customer.wallet.type')}</label>
               <Select value={type} onValueChange={setType}>
-                <SelectTrigger data-testid="select-type">
+                <SelectTrigger data-testid="select-type" className="text-right">
                   <SelectValue placeholder={t('customer.wallet.all_types')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -147,10 +147,10 @@ export default function CustomerTransactions() {
               </Select>
             </div>
 
-            <div className="space-y-2 rtl:text-right">
+            <div className="space-y-2 text-right">
               <label className="text-sm font-medium">{t('customer.wallet.status')}</label>
               <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger data-testid="select-status">
+                <SelectTrigger data-testid="select-status" className="text-right">
                   <SelectValue placeholder={t('customer.transactions.all_status')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -162,51 +162,53 @@ export default function CustomerTransactions() {
               </Select>
             </div>
 
-            <div className="space-y-2 rtl:text-right">
+            <div className="space-y-2 text-right">
               <label className="text-sm font-medium">{t('customer.transactions.from_date')}</label>
               <Input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
                 data-testid="input-date-from"
+                className="text-right"
               />
             </div>
 
-            <div className="space-y-2 rtl:text-right">
+            <div className="space-y-2 text-right">
               <label className="text-sm font-medium">{t('customer.transactions.to_date')}</label>
               <Input
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
                 data-testid="input-date-to"
+                className="text-right"
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 mb-6 rtl:flex-row-reverse">
+          <div className="flex justify-end gap-2 mb-6 flex-row-reverse">
             <Button
               variant="outline"
               onClick={resetFilters}
-              className="gap-2 rtl:flex-row-reverse"
+              className="gap-2 flex-row-reverse"
               data-testid="button-reset"
             >
               <RotateCcw className="h-4 w-4" /> {t('customer.transactions.reset')}
             </Button>
-            <Button onClick={() => refetch()} className="gap-2 rtl:flex-row-reverse" data-testid="button-apply">
+            <Button onClick={() => refetch()} className="gap-2 flex-row-reverse" data-testid="button-apply">
               <Filter className="h-4 w-4" /> {t('customer.transactions.apply_filters')}
             </Button>
           </div>
 
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="rtl:flex-row-reverse">
-                  <TableHead className="rtl:text-right">{t('customer.transactions.date_time')}</TableHead>
-                  <TableHead className="rtl:text-right">{t('customer.wallet.type')}</TableHead>
-                  <TableHead className="rtl:text-right">{t('customer.wallet.order_id')}</TableHead>
-                  <TableHead className="rtl:text-right">{t('customer.wallet.amount')}</TableHead>
-                  <TableHead className="rtl:text-right">{t('customer.wallet.status')}</TableHead>
-                  <TableHead className="rtl:text-right">{t('customer.transactions.notes')}</TableHead>
+                <TableRow className="flex-row-reverse">
+                  <TableHead className="text-right">{t('customer.transactions.date_time')}</TableHead>
+                  <TableHead className="text-right">{t('customer.wallet.type')}</TableHead>
+                  <TableHead className="text-right">{t('customer.wallet.order_id')}</TableHead>
+                  <TableHead className="text-right">{t('customer.wallet.amount')}</TableHead>
+                  <TableHead className="text-right">{t('customer.wallet.status')}</TableHead>
+                  <TableHead className="text-right">{t('customer.transactions.notes')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -226,24 +228,24 @@ export default function CustomerTransactions() {
                   </TableRow>
                 ) : (
                   data?.transactions.map((t_row) => (
-                    <TableRow key={t_row.id} className="hover:bg-muted/50 transition-colors rtl:flex-row-reverse" data-testid={`row-transaction-${t_row.id}`}>
-                      <TableCell className="whitespace-nowrap rtl:text-right">
+                    <TableRow key={t_row.id} className="hover:bg-muted/50 transition-colors flex-row-reverse" data-testid={`row-transaction-${t_row.id}`}>
+                      <TableCell className="whitespace-nowrap text-right">
                         {format(new Date(t_row.createdAt), "MMM dd, yyyy HH:mm")}
                       </TableCell>
-                      <TableCell className="font-medium rtl:text-right">{t(`customer.wallet.types.${t_row.type}`)}</TableCell>
-                      <TableCell className="font-mono text-sm rtl:text-right">
+                      <TableCell className="font-medium text-right">{t(`customer.wallet.types.${t_row.type}`)}</TableCell>
+                      <TableCell className="font-mono text-sm text-right">
                         {t_row.referenceId || "-"}
                       </TableCell>
-                      <TableCell className={`font-bold rtl:text-right ${getAmountColor(t_row.type)}`}>
+                      <TableCell className={`font-bold text-right ${getAmountColor(t_row.type)}`}>
                         {["DEPOSIT", "COMMISSION", "REFUND"].includes(t_row.type) ? "+" : "-"}
                         EGP {Math.abs(parseFloat(t_row.amount)).toFixed(2)}
                       </TableCell>
-                      <TableCell className="rtl:text-right">
+                      <TableCell className="text-right">
                         <Badge variant="secondary" className={getStatusColor(t_row.status)}>
                           {t_row.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="max-w-[200px] truncate rtl:text-right">
+                      <TableCell className="max-w-[200px] truncate text-right">
                         {t_row.notes || "-"}
                       </TableCell>
                     </TableRow>
@@ -254,7 +256,7 @@ export default function CustomerTransactions() {
           </div>
 
           {data && data.total > limit && (
-            <div className="flex items-center justify-between space-x-2 py-4 rtl:flex-row-reverse rtl:space-x-reverse">
+            <div className="flex items-center justify-between space-x-2 py-4 flex-row-reverse space-x-reverse">
               <div className="text-sm text-muted-foreground">
                 {t('customer.transactions.showing_results', { 
                   start: ((page - 1) * limit) + 1, 
@@ -262,16 +264,16 @@ export default function CustomerTransactions() {
                   total: data.total 
                 })}
               </div>
-              <div className="flex gap-2 rtl:flex-row-reverse">
+              <div className="flex gap-2 flex-row-reverse">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                   data-testid="button-prev-page"
-                  className="rtl:flex-row-reverse"
+                  className="flex-row-reverse"
                 >
-                  {t('customer.wallet.previous')}
+                  <ChevronLeft className="h-4 w-4 rotate-180" /> {t('customer.wallet.previous')}
                 </Button>
                 <Button
                   variant="outline"
@@ -279,9 +281,9 @@ export default function CustomerTransactions() {
                   onClick={() => setPage((p) => p + 1)}
                   disabled={page * limit >= data.total}
                   data-testid="button-next-page"
-                  className="rtl:flex-row-reverse"
+                  className="flex-row-reverse"
                 >
-                  {t('customer.wallet.next')}
+                  {t('customer.wallet.next')} <ChevronRight className="h-4 w-4 rotate-180" />
                 </Button>
               </div>
             </div>

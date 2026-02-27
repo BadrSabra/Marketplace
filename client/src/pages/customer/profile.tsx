@@ -100,7 +100,7 @@ export default function CustomerProfile() {
   const isDirty = form.formState.isDirty;
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-2xl rtl:text-right" dir="auto">
+    <div className="container mx-auto py-8 px-4 max-w-2xl text-right" dir="rtl">
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl font-bold">{t('customer.profile.title')}</CardTitle>
@@ -117,10 +117,10 @@ export default function CustomerProfile() {
                   control={form.control}
                   name="avatarUrl"
                   render={({ field }) => (
-                    <FormItem className="w-full rtl:text-right">
+                    <FormItem className="w-full text-right">
                       <FormLabel>{t('customer.profile.avatar_url')}</FormLabel>
                       <FormControl>
-                        <Input placeholder="https://..." {...field} data-testid="input-avatar-url" />
+                        <Input placeholder="https://..." {...field} data-testid="input-avatar-url" className="text-right" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -128,35 +128,35 @@ export default function CustomerProfile() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rtl:flex-row-reverse">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-row-reverse">
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
-                    <FormItem className="rtl:text-right">
+                    <FormItem className="text-right">
                       <FormLabel>{t('customer.profile.full_name')}</FormLabel>
                       <FormControl>
-                        <Input {...field} data-testid="input-name" />
+                        <Input {...field} data-testid="input-name" className="text-right" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <FormItem className="rtl:text-right">
+                <FormItem className="text-right">
                   <FormLabel>{t('customer.profile.email_readonly')}</FormLabel>
-                  <Input value={user?.email} disabled className="bg-muted" />
+                  <Input value={user?.email} disabled className="bg-muted text-right" />
                 </FormItem>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rtl:flex-row-reverse">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-row-reverse">
                 <FormField
                   control={form.control}
                   name="phone"
                   render={({ field }) => (
-                    <FormItem className="rtl:text-right">
+                    <FormItem className="text-right">
                       <FormLabel>{t('customer.profile.phone_number')}</FormLabel>
                       <FormControl>
-                        <Input {...field} data-testid="input-phone" />
+                        <Input {...field} data-testid="input-phone" className="text-right" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -166,11 +166,11 @@ export default function CustomerProfile() {
                   control={form.control}
                   name="transportType"
                   render={({ field }) => (
-                    <FormItem className="rtl:text-right">
+                    <FormItem className="text-right">
                       <FormLabel>{t('customer.profile.transport_type')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger data-testid="select-transport">
+                          <SelectTrigger data-testid="select-transport" className="text-right">
                             <SelectValue placeholder={t('customer.profile.select_transport')} />
                           </SelectTrigger>
                         </FormControl>
@@ -187,14 +187,14 @@ export default function CustomerProfile() {
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between rtl:flex-row-reverse">
-                  <FormLabel className="rtl:text-right">{t('customer.profile.delivery_addresses')}</FormLabel>
+                <div className="flex items-center justify-between flex-row-reverse">
+                  <FormLabel className="text-right">{t('customer.profile.delivery_addresses')}</FormLabel>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => append("")}
-                    className="gap-2 rtl:flex-row-reverse"
+                    className="gap-2 flex-row-reverse"
                     data-testid="button-add-address"
                   >
                     <Plus className="h-4 w-4" /> {t('customer.profile.add_address')}
@@ -206,10 +206,10 @@ export default function CustomerProfile() {
                     control={form.control}
                     name={`addresses.${index}`}
                     render={({ field }) => (
-                      <FormItem className="rtl:text-right">
-                        <div className="flex gap-2 rtl:flex-row-reverse">
+                      <FormItem className="text-right">
+                        <div className="flex gap-2 flex-row-reverse">
                           <FormControl>
-                            <Input {...field} data-testid={`input-address-${index}`} />
+                            <Input {...field} data-testid={`input-address-${index}`} className="text-right" />
                           </FormControl>
                           {fields.length > 1 && (
                             <Button
@@ -233,7 +233,7 @@ export default function CustomerProfile() {
 
               <Button
                 type="submit"
-                className="w-full gap-2 rtl:flex-row-reverse"
+                className="w-full gap-2 flex-row-reverse"
                 disabled={!isDirty || mutation.isPending}
                 data-testid="button-save-profile"
               >
