@@ -1,0 +1,193 @@
+Task: Build a Production-Ready Public Landing Page for the Hyperlocal Marketplace.
+
+Context:
+The platform is a hyperlocal marketplace serving:
+- قرية ميت جابر
+- القرى المجاورة فقط
+
+This page will replace the current Customer Dashboard and become the real public homepage of the platform.
+
+The homepage must be accessible without authentication.
+
+====================================================
+GLOBAL ARCHITECTURE RULES
+====================================================
+
+- Route: "/"
+- Public page (NO authentication required)
+- Do NOT modify existing auth system
+- Do NOT modify database schema
+- Do NOT break admin/store dashboards
+
+====================================================
+1) NAVIGATION BAR (Top Header)
+====================================================
+
+Create a clean responsive Navbar:
+
+Left:
+- Platform Logo (clickable → "/")
+
+Center:
+- Navigation links:
+  - السوق
+  - كيف يعمل
+  - تسجيل متجر
+
+Right:
+- If NOT logged in:
+  - زر "تسجيل الدخول"
+  - زر "إنشاء حساب"
+
+- If logged in:
+  - Avatar dropdown
+  - رابط "حسابي"
+
+Make Navbar sticky and mobile responsive.
+
+====================================================
+2) HERO SECTION
+====================================================
+
+Title:
+"سوق ميت جابر"
+
+Subtitle:
+"اطلب من متاجر قريتك والقرى المجاورة بسهولة وأمان"
+
+Optional:
+- Search input (search by store name)
+- Service badge:
+  "خدمة محلية داخل ميت جابر فقط"
+
+====================================================
+3) HYPERLOCAL NOTICE SECTION
+====================================================
+
+Small highlighted banner:
+"نخدم حالياً قرية ميت جابر والمناطق المجاورة فقط"
+
+This clarifies service scope.
+
+====================================================
+4) STORES GRID SECTION
+====================================================
+
+Create API:
+
+GET /api/public/stores?page=1&limit=12
+
+Backend rules:
+- Return only approved stores
+- Return only active stores
+- Sort by newest
+- Implement pagination
+
+Response fields:
+{
+  id,
+  name,
+  description,
+  logoUrl,
+  isOpen,
+  createdAt
+}
+
+====================================================
+5) StoreCard Component
+====================================================
+
+Each card must contain:
+
+- Logo (fallback image if null)
+- Store name
+- Short description (truncate 100 chars)
+- Badge:
+    - مفتوح
+    - مغلق
+- Button:
+    "عرض المتجر"
+
+On click:
+Navigate to:
+"/store/:id"
+
+====================================================
+6) STORE PAGE (Public)
+====================================================
+
+The store page must:
+
+- Be publicly accessible
+- Fetch store details dynamically
+- Fetch products dynamically
+
+If user clicks:
+"إضافة للسلة"
+
+AND not logged in:
+→ Redirect to /login
+
+====================================================
+7) UX STATES
+====================================================
+
+Implement:
+
+- Loading Skeleton (cards)
+- Empty State:
+   "لا توجد متاجر متاحة حالياً"
+- Error State:
+   Message + Retry button
+
+====================================================
+8) FOOTER
+====================================================
+
+Simple Footer:
+
+Sections:
+
+- عن المنصة
+- تسجيل متجر
+- تواصل معنا
+- جميع الحقوق محفوظة © Mit Gaber Market
+
+Keep minimal and clean.
+
+====================================================
+9) SEO OPTIMIZATION
+====================================================
+
+Set page title:
+
+"سوق ميت جابر | اطلب من متاجر قريتك أونلاين"
+
+Meta description:
+
+"منصة محلية لطلب المنتجات من متاجر قرية ميت جابر والقرى المجاورة مع توصيل سريع وآمن."
+
+Ensure:
+- Proper <title>
+- Proper <meta description>
+- Clean semantic HTML
+
+====================================================
+10) CLEAN ARCHITECTURE
+====================================================
+
+- Do NOT hardcode stores
+- Do NOT mock data
+- Keep components modular:
+    - Navbar
+    - HeroSection
+    - StoreGrid
+    - StoreCard
+    - Footer
+
+- Maintain responsive design
+
+====================================================
+
+Deliverable:
+A production-ready hyperlocal landing page that serves as the public homepage of the platform.
