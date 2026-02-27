@@ -1,0 +1,329 @@
+
+🎯 OBJECTIVE
+
+Perform a full deep-structure system intelligence extraction of the entire project (frontend + backend + database + wallet + monitoring) to prepare for safe Arabic localization and UI refactoring.
+
+This is READ-ONLY analysis.
+
+STRICTLY NO:
+
+File edits
+
+Refactors
+
+Dependency installs
+
+Config changes
+
+Format changes
+
+
+Analysis only.
+
+
+---
+
+🧠 PART 1 – System Overview
+
+Detect:
+
+Monorepo or single app?
+
+Folder structure tree (depth 3)
+
+Backend framework
+
+Frontend framework
+
+Build tool
+
+Runtime environment
+
+Database type
+
+ORM (Drizzle confirmed?)
+
+Auth system (custom JWT?)
+
+
+Output:
+
+{
+  "project_type": "",
+  "frontend_framework": "",
+  "backend_framework": "",
+  "database": "",
+  "orm": "",
+  "auth_system": "",
+  "folder_tree": {}
+}
+
+
+---
+
+🧠 PART 2 – API Surface Mapping (CRITICAL)
+
+Extract ALL:
+
+API routes
+
+HTTP methods
+
+Request schemas
+
+Response schemas
+
+Protected routes
+
+Role-based middleware
+
+
+Output:
+
+{
+  "endpoints": [
+    {
+      "method": "",
+      "path": "",
+      "requires_auth": true/false,
+      "role_required": "",
+      "request_shape": {},
+      "response_shape": {}
+    }
+  ]
+}
+
+
+---
+
+🧠 PART 3 – Database & Status Lifecycle Mapping
+
+Extract:
+
+All tables
+
+All enums
+
+Order lifecycle transitions
+
+Wallet ledger rules
+
+Foreign key relations
+
+
+Output:
+
+{
+  "tables": {},
+  "order_status_flow": [],
+  "wallet_rules": [],
+  "relations": []
+}
+
+
+---
+
+🧠 PART 4 – Frontend Route & Page Map
+
+Extract:
+
+All pages
+
+Route paths
+
+Role-restricted views
+
+Layout wrappers
+
+Global providers
+
+
+Output:
+
+{
+  "routes": [],
+  "layouts": [],
+  "providers": []
+}
+
+
+---
+
+🧠 PART 5 – Hardcoded Text Extraction (Full Sweep)
+
+Scan ALL frontend files and extract:
+
+Headings
+
+Buttons
+
+Labels
+
+Toast messages
+
+Status display strings
+
+Table headers
+
+Empty states
+
+Error messages
+
+Modal titles
+
+Confirmation dialogs
+
+
+Exclude:
+
+variable names
+
+console logs
+
+comments
+
+
+Output grouped by file.
+
+Also count total unique strings.
+
+
+---
+
+🧠 PART 6 – RTL Risk Scan
+
+Analyze:
+
+Flex direction usage
+
+text-left / text-right classes
+
+absolute positioning
+
+margin-left / margin-right usage
+
+hardcoded alignment styles
+
+
+Output:
+
+{
+  "high_risk_components": [],
+  "alignment_conflicts": [],
+  "estimated_rtl_breakage": "LOW/MEDIUM/HIGH"
+}
+
+
+---
+
+🧠 PART 7 – Wallet Safety & Order Integrity Check
+
+Detect:
+
+Where wallet balance updates
+
+Where ledger writes occur
+
+Where order status changes
+
+Where admin overrides happen
+
+
+Map dependency chain.
+
+Output:
+
+{
+  "wallet_update_points": [],
+  "order_status_update_points": [],
+  "admin_override_points": []
+}
+
+
+---
+
+🧠 PART 8 – Environment Separation
+
+Detect:
+
+dev vs production configs
+
+feature flags
+
+seed scripts
+
+monitoring endpoints
+
+health checks
+
+
+Output:
+
+{
+  "environments": [],
+  "feature_flags": [],
+  "monitoring_endpoints": []
+}
+
+
+---
+
+🧠 PART 9 – Complexity & Risk Scoring
+
+Provide:
+
+Localization complexity score (1–10)
+
+RTL complexity score (1–10)
+
+Estimated safe starting page
+
+Suggested phased rollout order
+
+
+
+---
+
+🧠 PART 10 – Generate Master Report
+
+Create:
+
+logs/master-system-intelligence.json
+
+Include ALL data.
+
+Print executive summary in console:
+
+Total API routes
+
+Total pages
+
+Total hardcoded strings
+
+Total DB tables
+
+Risk level
+
+Recommended next action
+
+
+
+---
+
+🚨 CRITICAL RULES
+
+Read-only.
+
+No formatting changes.
+
+No imports added.
+
+No test files.
+
+No dependency installs.
+
+No file creation except final report.
+
+
+
+--
