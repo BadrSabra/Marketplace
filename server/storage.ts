@@ -11,6 +11,7 @@ export interface IStorage {
   createWallet(wallet: InsertWallet): Promise<Wallet>;
   getWalletByUserId(userId: string): Promise<Wallet | undefined>;
   createStore(store: any): Promise<any>;
+  getStores(): Promise<any[]>;
   getProducts(): Promise<any[]>;
   getProductsByStoreId(storeId: string): Promise<any[]>;
   getProduct(id: string): Promise<any | undefined>;
@@ -53,6 +54,10 @@ export class DatabaseStorage implements IStorage {
   async createStore(insertStore: any): Promise<any> {
     const [store] = await db.insert(stores).values(insertStore).returning();
     return store;
+  }
+
+  async getStores(): Promise<any[]> {
+    return await db.select().from(stores);
   }
 
   async getProducts(): Promise<any[]> {

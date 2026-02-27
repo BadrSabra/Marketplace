@@ -1,0 +1,58 @@
+TASK: Diagnose and fix the MarketAdmin → Stores page issue.
+
+CONTEXT:
+- Frontend page shows "No stores registered yet" even when database contains store data.
+- Backend has a "stores" table and API endpoints under /api/stores.
+- Database uses PostgreSQL and Drizzle ORM.
+- Frontend fetches stores via API to display in a table with store names and locations.
+
+OBJECTIVE:
+1. Automatically identify why the Stores page shows "No stores registered yet".
+2. Verify connection between frontend, backend API, and database.
+3. Provide a fix so that the Stores page correctly displays all stores.
+
+STEPS:
+
+1️⃣ **Verify Database**
+- Connect to PostgreSQL.
+- Check table `stores` for existing records.
+- Check required columns: `id`, `name`, `location`, and any foreign keys.
+- Output sample rows for verification.
+
+2️⃣ **Verify Backend API**
+- Test GET request to `/api/stores`.
+- Confirm response status is 200 and JSON contains the actual store data.
+- If empty or error, check `store.service.ts` and controller code.
+- Verify Drizzle queries are correct and not filtered incorrectly.
+
+3️⃣ **Verify Frontend**
+- Check that the fetch to `/api/stores` is called on page load.
+- Inspect the response handling logic: does it correctly map the data into the UI table?
+- Ensure there is no filtering or conditional logic preventing display.
+
+4️⃣ **Diagnosis Report**
+- Summarize:
+  - Database status (rows present or not)
+  - Backend API status (returns stores or empty)
+  - Frontend status (receives data or fails to render)
+- Highlight the root cause: Backend, Frontend, or DB misalignment.
+
+5️⃣ **Fix Implementation**
+- If backend query is wrong:
+  - Correct Drizzle query to fetch all stores.
+- If frontend mapping is wrong:
+  - Adjust data binding to the table.
+- Ensure proper error handling for empty or missing data.
+- After fix, retest the full flow:
+  - DB → API → Frontend.
+
+6️⃣ **Validation**
+- Provide console output or screenshots showing:
+  - DB query returns stores.
+  - API response returns stores.
+  - Frontend table correctly displays store names and locations.
+
+OUTPUT:
+- Detailed step-by-step verification report.
+- Corrected backend/frontend code snippets if required.
+- Final confirmation that the Stores page is fully functional.
