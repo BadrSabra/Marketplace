@@ -20,11 +20,13 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+import { t } from "@/i18n";
+
 const NAV_ITEMS = [
-  { href: "/store/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/store/dashboard/orders", label: "Orders", icon: ShoppingCart },
-  { href: "/store/inventory", label: "Inventory", icon: Package },
-  { href: "/store/earnings", label: "Earnings", icon: Wallet },
+  { href: "/store/dashboard", label: "store.dashboard.title", icon: LayoutDashboard },
+  { href: "/store/dashboard/orders", label: "store.orders.title", icon: ShoppingCart },
+  { href: "/store/inventory", label: "store.inventory.title", icon: Package },
+  { href: "/store/earnings", label: "store.earnings.title", icon: Wallet },
 ];
 
 export function StoreLayout({ children }: { children: ReactNode }) {
@@ -57,12 +59,12 @@ export function StoreLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-background flex text-foreground">
+    <div className="min-h-screen bg-background flex text-foreground" dir="rtl">
       {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex flex-col w-64 bg-card border-r border-border/50 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10">
-        <div className="p-6">
+      <aside className="hidden md:flex flex-col w-64 bg-card border-l border-border/50 shadow-[-4px_0_24px_rgba(0,0,0,0.02)] z-10">
+        <div className="p-6 text-right">
           <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">
-            StoreCentral
+            {t('store.dashboard.your_store')}
           </h1>
           {myStore && (
             <p className="text-xs text-muted-foreground mt-1 font-medium truncate">
@@ -86,36 +88,36 @@ export function StoreLayout({ children }: { children: ReactNode }) {
                 )}
               >
                 <item.icon className={cn("w-5 h-5", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-primary")} />
-                <span className="flex-1">{item.label}</span>
-                {isActive && <ChevronRight className="w-4 h-4 opacity-50" />}
+                <span className="flex-1 text-right">{t(item.label)}</span>
+                {isActive && <ChevronRight className="w-4 h-4 opacity-50 rotate-180" />}
               </Link>
             );
           })}
         </nav>
 
         <div className="p-4 mt-auto border-t border-border/50 bg-secondary/20">
-          <div className="px-4 py-3 mb-4 rounded-xl bg-card border border-border/50 shadow-sm">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Wallet Balance</p>
+          <div className="px-4 py-3 mb-4 rounded-xl bg-card border border-border/50 shadow-sm text-right">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">{t('store.dashboard.wallet_balance')}</p>
             <p className="text-lg font-bold text-primary">
               {isWalletLoading ? <Spinner size="sm" /> : `$${parseFloat(wallet?.balance || "0").toFixed(2)}`}
             </p>
           </div>
 
-          <div className="flex items-center gap-3 px-2 py-3 mb-2">
+          <div className="flex items-center gap-3 px-2 py-3 mb-2 flex-row-reverse">
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold border border-primary/20">
               {user.name.charAt(0).toUpperCase()}
             </div>
-            <div className="overflow-hidden">
+            <div className="overflow-hidden text-right">
               <p className="text-sm font-semibold truncate">{user.name}</p>
               <p className="text-xs text-muted-foreground truncate capitalize">{user.role.toLowerCase().replace('_', ' ')}</p>
             </div>
           </div>
           <button 
             onClick={() => logout()}
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-xl transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-xl transition-colors flex-row-reverse"
           >
             <LogOut className="w-4 h-4" />
-            Sign Out
+            <span className="flex-1 text-right">{t('auth.login.logout') || 'تسجيل الخروج'}</span>
           </button>
         </div>
       </aside>
@@ -123,14 +125,14 @@ export function StoreLayout({ children }: { children: ReactNode }) {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile Header */}
-        <header className="md:hidden flex items-center justify-between p-4 bg-card border-b border-border z-20">
-          <div className="flex flex-col">
-            <h1 className="text-xl font-bold">StoreCentral</h1>
+        <header className="md:hidden flex items-center justify-between p-4 bg-card border-b border-border z-20 flex-row-reverse">
+          <div className="flex flex-col text-right">
+            <h1 className="text-xl font-bold">{t('store.dashboard.your_store')}</h1>
             {myStore && <p className="text-[10px] text-muted-foreground truncate">{myStore.name}</p>}
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-row-reverse">
             <div className="text-right hidden sm:block">
-              <p className="text-[10px] uppercase text-muted-foreground font-bold">Balance</p>
+              <p className="text-[10px] uppercase text-muted-foreground font-bold">{t('store.dashboard.wallet_balance')}</p>
               <p className="text-sm font-bold text-primary">${parseFloat(wallet?.balance || "0").toFixed(2)}</p>
             </div>
             <button 
@@ -157,27 +159,27 @@ export function StoreLayout({ children }: { children: ReactNode }) {
                   href={item.href}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all",
+                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all flex-row-reverse",
                     location === item.href 
                       ? "bg-primary text-primary-foreground" 
                       : "text-muted-foreground hover:bg-secondary"
                   )}
                 >
                   <item.icon className="w-5 h-5" />
-                  {item.label}
+                  <span className="flex-1 text-right">{t(item.label)}</span>
                 </Link>
               ))}
               <div className="pt-4 mt-2 border-t border-border">
-                <div className="flex justify-between items-center px-4 py-3 bg-secondary/30 rounded-xl mb-2">
-                  <span className="text-sm font-medium">Wallet Balance</span>
+                <div className="flex justify-between items-center px-4 py-3 bg-secondary/30 rounded-xl mb-2 flex-row-reverse">
+                  <span className="text-sm font-medium">{t('store.dashboard.wallet_balance')}</span>
                   <span className="font-bold text-primary">${parseFloat(wallet?.balance || "0").toFixed(2)}</span>
                 </div>
                 <button 
                   onClick={() => { logout(); setIsMobileMenuOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-destructive hover:bg-destructive/10 rounded-xl"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-destructive hover:bg-destructive/10 rounded-xl flex-row-reverse"
                 >
                   <LogOut className="w-5 h-5" />
-                  Sign Out
+                  <span className="flex-1 text-right">{t('auth.login.logout') || 'تسجيل الخروج'}</span>
                 </button>
               </div>
             </motion.div>
@@ -185,7 +187,7 @@ export function StoreLayout({ children }: { children: ReactNode }) {
         </AnimatePresence>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto p-4 md:p-8 lg:p-10">
+        <main className="flex-1 overflow-auto p-4 md:p-8 lg:p-10 text-right">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

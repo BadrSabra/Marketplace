@@ -42,6 +42,7 @@
       "submitting": "جاري إنشاء الحساب...",
       "has_account": "لديك حساب بالفعل؟",
       "login_link": "تسجيل الدخول",
+      "logout": "تسجيل الخروج",
       "success_title": "مرحباً!",
       "success_desc": "تم إنشاء الحساب بنجاح.",
       "failed_title": "فشل التسجيل",

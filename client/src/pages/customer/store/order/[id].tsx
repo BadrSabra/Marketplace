@@ -139,7 +139,7 @@ export default function StoreOrderDetails() {
                         </div>
                         <p className="text-xs text-muted-foreground">{t('store.order_details.store_id')}: {sub.store_id}</p>
                       </div>
-                      <div className="text-right rtl:text-left">
+                      <div className="text-left rtl:text-right">
                         <p className="text-[10px] uppercase font-bold text-muted-foreground">{t('store.order_details.subtotal')}</p>
                         <p className="text-2xl font-black text-primary">${sub.subtotal}</p>
                       </div>
@@ -151,8 +151,8 @@ export default function StoreOrderDetails() {
                           <TableRow className="rtl:flex-row-reverse">
                             <TableHead className="w-[50%] rtl:text-right">{t('store.order_details.table.product')}</TableHead>
                             <TableHead className="text-center">{t('store.order_details.table.qty')}</TableHead>
-                            <TableHead className="text-right rtl:text-left">{t('store.order_details.table.price')}</TableHead>
-                            <TableHead className="text-right rtl:text-left">{t('store.order_details.table.total')}</TableHead>
+                            <TableHead className="text-right rtl:text-right">{t('store.order_details.table.price')}</TableHead>
+                            <TableHead className="text-right rtl:text-right">{t('store.order_details.table.total')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -160,8 +160,8 @@ export default function StoreOrderDetails() {
                             <TableRow key={idx} className="rtl:flex-row-reverse">
                               <TableCell className="font-medium rtl:text-right">{item.product_name}</TableCell>
                               <TableCell className="text-center">{item.quantity}</TableCell>
-                              <TableCell className="text-right rtl:text-left">${item.price_at_order}</TableCell>
-                              <TableCell className="text-right rtl:text-left font-bold">${(item.quantity * parseFloat(item.price_at_order)).toFixed(2)}</TableCell>
+                              <TableCell className="text-right rtl:text-right">${item.price_at_order}</TableCell>
+                              <TableCell className="text-right rtl:text-right font-bold">${(item.quantity * parseFloat(item.price_at_order)).toFixed(2)}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -177,14 +177,14 @@ export default function StoreOrderDetails() {
                             onClick={() => statusMutation.mutate({ subOrderId: sub.sub_order_id, status: "CANCELLED" })}
                             disabled={statusMutation.isPending}
                           >
-                            <X className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" /> {t('store.orders.actions.cancel')}
+                            <X className="h-4 w-4 ml-2 rtl:ml-0 rtl:mr-2" /> {t('store.orders.actions.cancel')}
                           </Button>
                           <Button 
                             className="px-8"
                             onClick={() => statusMutation.mutate({ subOrderId: sub.sub_order_id, status: "ACCEPTED" })}
                             disabled={statusMutation.isPending}
                           >
-                            <Check className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" /> {t('store.orders.actions.accept')}
+                            <Check className="h-4 w-4 ml-2 rtl:ml-0 rtl:mr-2" /> {t('store.orders.actions.accept')}
                           </Button>
                         </>
                       )}
@@ -194,7 +194,7 @@ export default function StoreOrderDetails() {
                           onClick={() => statusMutation.mutate({ subOrderId: sub.sub_order_id, status: "READY" })}
                           disabled={statusMutation.isPending}
                         >
-                          <Clock className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" /> {t('store.orders.actions.mark_ready')}
+                          <Clock className="h-4 w-4 ml-2 rtl:ml-0 rtl:mr-2" /> {t('store.orders.actions.mark_ready')}
                         </Button>
                       )}
                     </div>

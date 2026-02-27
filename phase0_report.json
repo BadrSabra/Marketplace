@@ -1,0 +1,100 @@
+{
+  "frontend_root": "client",
+  "build_tool": "vite",
+  "react_version": "18.3.1",
+  "router_type": "wouter",
+  "total_tsx_files": 81,
+  "pages": [
+    {
+      "path": "client/src/pages/customer/store/orders.tsx",
+      "hardcoded_strings_count": 0,
+      "rtl_classes_count": 8,
+      "toast_messages_count": 2,
+      "completion_status": "complete"
+    },
+    {
+      "path": "client/src/pages/customer/store/order/[id].tsx",
+      "hardcoded_strings_count": 1,
+      "rtl_classes_count": 15,
+      "toast_messages_count": 2,
+      "completion_status": "complete"
+    },
+    {
+      "path": "client/src/pages/customer/store/inventory.tsx",
+      "hardcoded_strings_count": 5,
+      "rtl_classes_count": 14,
+      "toast_messages_count": 4,
+      "completion_status": "complete"
+    },
+    {
+      "path": "client/src/pages/customer/store/earnings.tsx",
+      "hardcoded_strings_count": 0,
+      "rtl_classes_count": 10,
+      "toast_messages_count": 0,
+      "completion_status": "complete"
+    },
+    {
+      "path": "client/src/pages/driver/tasks.tsx",
+      "hardcoded_strings_count": 1,
+      "rtl_classes_count": 12,
+      "toast_messages_count": 4,
+      "completion_status": "complete"
+    },
+    {
+      "path": "client/src/pages/driver/active-delivery.tsx",
+      "hardcoded_strings_count": 0,
+      "rtl_classes_count": 14,
+      "toast_messages_count": 2,
+      "completion_status": "complete"
+    },
+    {
+      "path": "client/src/pages/driver/earnings.tsx",
+      "hardcoded_strings_count": 0,
+      "rtl_classes_count": 10,
+      "toast_messages_count": 0,
+      "completion_status": "complete"
+    },
+    {
+      "path": "client/src/pages/customer/dashboard.tsx",
+      "hardcoded_strings_count": 1,
+      "rtl_classes_count": 10,
+      "toast_messages_count": 3,
+      "completion_status": "complete"
+    },
+    {
+      "path": "client/src/pages/auth/login.tsx",
+      "hardcoded_strings_count": 0,
+      "rtl_classes_count": 0,
+      "toast_messages_count": 2,
+      "completion_status": "complete"
+    },
+    {
+      "path": "client/src/pages/auth/register.tsx",
+      "hardcoded_strings_count": 0,
+      "rtl_classes_count": 0,
+      "toast_messages_count": 2,
+      "completion_status": "complete"
+    }
+  ],
+  "components": [
+    {
+      "path": "client/src/components/layout/store-layout.tsx",
+      "hardcoded_strings_count": 10,
+      "rtl_classes_count": 0,
+      "toast_messages_count": 0
+    },
+    {
+      "path": "client/src/components/layout/admin-layout.tsx",
+      "hardcoded_strings_count": 10,
+      "rtl_classes_count": 0,
+      "toast_messages_count": 0
+    }
+  ],
+  "toast_library_detected": "Shadcn UI Toast",
+  "top_rtl_conflict_files": [
+    "client/src/pages/customer/store/order/[id].tsx",
+    "client/src/pages/customer/store/inventory.tsx",
+    "client/src/pages/driver/active-delivery.tsx"
+  ],
+  "notes": "Most pages already have extensive t() usage but several still have hardcoded strings in specific areas (e.g., fallback messages, placeholders). RTL classes like 'pl-', 'pr-', 'text-left' are present in almost all pages and need to be mirrored or converted to logical properties. Layout components (StoreLayout, AdminLayout) have hardcoded labels and no RTL mirroring logic yet."
+}
