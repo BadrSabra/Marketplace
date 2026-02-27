@@ -1,0 +1,83 @@
+You are entering PHASE 1 — CRITICAL SECURITY HARDENING.
+
+Your mission:
+Fix OTP security and implement real rate limiting.
+Then create automated verification tests and provide a detailed execution report.
+
+DO NOT refactor unrelated code.
+DO NOT redesign architecture.
+Make precise, minimal, production-grade changes.
+
+=========================================
+PART 1 — SECURE OTP SYSTEM
+=========================================
+
+1. Replace OTP generation:
+   - Use crypto.randomInt(100000, 999999)
+   - Ensure 6-digit numeric string
+
+2. Add DB changes:
+   - Add expires_at TIMESTAMP column
+   - Add attempt_count INT default 0
+   - Add UNIQUE constraint to allow only one PENDING OTP per sub_order
+   - Add index on (sub_order_id, status)
+
+3. OTP Rules:
+   - Expiration: 5 minutes
+   - Only latest PENDING OTP valid
+   - Old PENDING OTPs auto-invalidated when new one created
+   - Max 5 verification attempts
+   - After 5 failed attempts → mark EXPIRED
+
+4. Verification Logic:
+   - Must check:
+     a) status = PENDING
+     b) not expired
+     c) attempt_count < 5
+   - Increment attempt_count on failure
+   - On success → mark VERIFIED
+
+=========================================
+PART 2 — REAL RATE LIMITING
+=========================================
+
+Implement express-rate-limit properly.
+
+Apply:
+
+- /api/auth/login → 5 attempts per 15 minutes
+- /api/delivery/otp/verify → 5 attempts per 5 minutes
+- /api/orders → 20 per 10 minutes per user
+- Global fallback limiter → 100 requests per 15 minutes per IP
+
+Remove mock passthrough limiter.
+
+=========================================
+PART 3 — TESTING
+=========================================
+
+After implementation:
+
+1. Write test script to:
+   - Generate OTP
+   - Attempt brute force (6 attempts)
+   - Verify expiration works
+   - Try generating multiple OTPs for same order
+   - Simulate 2 parallel OTP verifications
+
+2. Output:
+   - DB schema changes applied
+   - Test results
+   - Edge cases verified
+   - Any failure cases found
+
+=========================================
+FINAL REPORT FORMAT
+=========================================
+
+1. Code Changes Summary
+2. DB Migration Summary
+3. Security Improvements
+4. Test Execution Results
+5. Remaining Risks (if any)
+6. Updated Launch Readiness %

@@ -147,9 +147,15 @@ export const deliveryOtps = pgTable("delivery_otps", {
   orderId: uuid("order_id").notNull().references(() => orders.id),
   subOrderId: uuid("sub_order_id").references(() => subOrders.id),
   otpCode: text("otp_code").notNull(),
-  status: text("status", { enum: ["PENDING", "VERIFIED"] }).notNull().default("PENDING"),
+  status: text("status", { enum: ["PENDING", "VERIFIED", "EXPIRED"] }).notNull().default("PENDING"),
+  attemptCount: integer("attempt_count").notNull().default(0),
+  expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    subOrderPendingIdx: index("sub_order_pending_idx").on(table.subOrderId, table.status),
+  };
 });
 
 // AUDIT LOGS

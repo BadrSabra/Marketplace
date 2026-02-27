@@ -29,6 +29,7 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  app.use(generalLimiter);
   app.use(auditMiddleware);
   
   // Ledger
@@ -38,6 +39,7 @@ export async function registerRoutes(
   app.get("/api/delivery/available-tasks", authenticate, deliveryController.getAvailableTasks);
   app.get("/api/suborders/active", authenticate, authorizeRole(["DRIVER"]), subOrderController.getActiveDelivery);
   app.post("/api/delivery/otp/generate/:id", authenticate, authorizeRole(["DRIVER"]), deliveryOtpController.generateOtp);
+  app.post("/api/delivery/otp/verify/:id", authenticate, otpLimiter, deliveryOtpController.verifyOtp);
   app.post("/api/delivery/suborders/:id/offer", authenticate, authorizeRole(["DRIVER"]), deliveryOfferController.submitOffer);
   app.patch("/api/delivery/suborders/:id/accept", authenticate, authorizeRole(["DRIVER"]), deliveryOfferController.acceptTask);
   
