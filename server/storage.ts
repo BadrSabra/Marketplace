@@ -108,18 +108,26 @@ export class DatabaseStorage implements IStorage {
 
   async deleteStore(id: string): Promise<boolean> {
     const schema = await import("@shared/schema");
-    const { subOrders, products, stores } = schema;
+    const { subOrders, products, stores, orderItems, deliveryOffers, deliveryOtps } = schema;
     
-    // Check for dependent records
-    const subOrder = await db.select().from(subOrders).where(eq(subOrders.storeId, id)).limit(1);
-    if (subOrder.length > 0) return false;
-
-    const product = await db.select().from(products).where(eq(products.storeId, id)).limit(1);
-    if (product.length > 0) return false;
-
-    // Use the stores table from schema
-    await db.delete(stores).where(eq(stores.id, id));
-    return true;
+    try {
+      await db.transaction(async (tx) => {
+        // Delete dependent order items and offers first
+        const storeSubOrders = await tx.select().from(subOrders).where(eq(subOrders.storeId, id));
+        for (const so of storeSubOrders) {
+          await tx.delete(orderItems).where(eq(orderItems.subOrderId, so.id));
+          await tx.delete(deliveryOffers).where(eq(deliveryOffers.subOrderId, so.id));
+          await tx.delete(deliveryOtps).where(eq(deliveryOtps.subOrderId, so.id));
+        }
+        await tx.delete(subOrders).where(eq(subOrders.storeId, id));
+        await tx.delete(products).where(eq(products.storeId, id));
+        await tx.delete(stores).where(eq(stores.id, id));
+      });
+      return true;
+    } catch (err) {
+      console.error("Delete store error:", err);
+      return false;
+    }
   }
 }
 

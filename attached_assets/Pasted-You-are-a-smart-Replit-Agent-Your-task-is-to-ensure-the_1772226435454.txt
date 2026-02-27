@@ -1,0 +1,46 @@
+You are a smart Replit Agent. Your task is to ensure the **full automatic database verification, creation, and initialization** for this marketplace project. Perform the following steps **every time the server starts** and report the results.
+
+1. **Database Auto-Verification & Bootstrap**
+   - Import all tables and enums from `shared/schema.ts`.
+   - For each table:
+     - Check if the table exists using `to_regclass`.
+     - If the table is missing, create it using the correct schema from `shared/schema.ts`.
+     - For existing tables, check for missing columns and indexes and create them if needed.
+   - Ensure all required enums exist (`role`, `transaction_type`, `transaction_status`, `order_status`, `delivery_status`, `payment_status`, `offer_status`).
+   - Use a transaction for all operations to ensure atomicity.
+   
+2. **Default Data Initialization**
+   - Ensure a default Admin account exists:
+     - Email: `admin@mitgaber.com`
+     - Password: `Admin@123` (hashed using bcrypt)
+     - Role: `ADMIN`
+   - Ensure the Admin has an initialized wallet with balance 0.
+
+3. **Self-Healing Logic**
+   - If new tables, columns, or indexes are added in `shared/schema.ts` in the future, they should automatically be created on next server start.
+   - If any of the tables already exist, skip creation but verify columns and indexes.
+
+4. **Delete Store Testing**
+   - Implement a **DELETE /api/stores/:id** route that allows Admin to delete any store **without restriction**.
+   - Ensure the API handles all existing and future tables properly.
+   - After creating the route, fetch all stores and attempt deletion one by one.
+   - Capture success or failure for each store.
+
+5. **Report Generation**
+   - Print a clear report in the console after the bootstrap:
+     - Which tables were created or verified.
+     - Which columns or indexes were added.
+     - Status of default Admin account and wallet.
+     - Results of store deletion tests (success/failure for each store).
+
+6. **Server Start**
+   - Only start the server **after** all auto-verification, table creation, and initialization steps pass.
+   - Print: `"--- DATABASE AUTO-VERIFICATION COMPLETE: HEALTHY ✅ ---"`
+
+7. **Error Handling**
+   - Catch and log all errors during bootstrap, table creation, or deletion tests.
+   - Exit process if critical errors occur.
+
+**Deliverable:** A fully **self-healing, idempotent, and future-proof database bootstrap and initialization system**, integrated with the server startup. Ensure the Admin can delete any store without restrictions. Provide a console report summarizing all actions taken.
+
+Run this automatically every time the server starts and print a detailed verification and deletion report.

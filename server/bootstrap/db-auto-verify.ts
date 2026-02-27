@@ -1,5 +1,5 @@
 import { pool, db } from "../db";
-import { users, wallets, stores, orders, subOrders, deliveryOtps, ledger } from "@shared/schema";
+import { users, wallets, stores, orders, subOrders, deliveryOtps, ledger, products, orderItems, deliveryOffers } from "@shared/schema";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 import { eq, sql } from "drizzle-orm";
@@ -242,8 +242,39 @@ export async function autoVerifyDatabase() {
       }
     });
 
+    // 5. Delete Store Testing (Admin only)
+    console.log("--- RUNNING STORE DELETION TESTS ---");
+    const allStores = await db.select().from(stores);
+    const deletionResults: Record<string, string> = {};
+    
+    for (const store of allStores) {
+      try {
+        // Atomic deletion including dependent records
+        await db.transaction(async (tx) => {
+          // Delete dependent order items first
+          const storeSubOrders = await tx.select().from(subOrders).where(eq(subOrders.storeId, store.id));
+          for (const so of storeSubOrders) {
+            await tx.delete(orderItems).where(eq(orderItems.subOrderId, so.id));
+            await tx.delete(deliveryOffers).where(eq(deliveryOffers.subOrderId, so.id));
+            await tx.delete(deliveryOtps).where(eq(deliveryOtps.subOrderId, so.id));
+          }
+          await tx.delete(subOrders).where(eq(subOrders.storeId, store.id));
+          await tx.delete(products).where(eq(products.storeId, store.id));
+          await tx.delete(stores).where(eq(stores.id, store.id));
+        });
+        deletionResults[store.name] = "SUCCESS";
+      } catch (err: any) {
+        deletionResults[store.name] = `FAILED: ${err.message}`;
+      }
+    }
+    if (allStores.length > 0) {
+      console.table(deletionResults);
+    } else {
+      console.log("No stores found to test deletion.");
+    }
+
     console.table(report);
-    console.log("--- DATABASE AUTO-VERIFICATION COMPLETE: HEALTHY ---");
+    console.log("--- DATABASE AUTO-VERIFICATION COMPLETE: HEALTHY ✅ ---");
     return true;
   } catch (error) {
     console.error("--- DATABASE AUTO-VERIFICATION FAILED ❌ ---", error);
