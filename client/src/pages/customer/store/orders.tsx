@@ -138,12 +138,12 @@ export default function StoreOrders() {
           <div className="flex-1 space-y-2 rtl:text-right">
             <label className="text-sm font-medium">{t('store.orders.search_label')}</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground rtl:left-auto rtl:right-3" />
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
                 placeholder={t('store.orders.search_placeholder')} 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 rtl:pl-3 rtl:pr-9"
+                className="pr-9 rtl:pr-9 rtl:pl-3"
               />
             </div>
           </div>
@@ -256,7 +256,7 @@ export default function StoreOrders() {
                                   onClick={() => statusMutation.mutate({ id: sub.sub_order_id, status: "ACCEPTED" })}
                                   disabled={statusMutation.isPending}
                                 >
-                                  <Check className="h-4 w-4 mr-1 rtl:mr-0 rtl:ml-1" /> {t('store.orders.actions.accept')}
+                                  <Check className="h-4 w-4 ml-1 rtl:ml-0 rtl:mr-1" /> {t('store.orders.actions.accept')}
                                 </Button>
                                 <Button 
                                   size="sm" 
@@ -265,7 +265,7 @@ export default function StoreOrders() {
                                   onClick={() => statusMutation.mutate({ id: sub.sub_order_id, status: "CANCELLED" })}
                                   disabled={statusMutation.isPending}
                                 >
-                                  <X className="h-4 w-4 mr-1 rtl:mr-0 rtl:ml-1" /> {t('store.orders.actions.cancel')}
+                                  <X className="h-4 w-4 ml-1 rtl:ml-0 rtl:mr-1" /> {t('store.orders.actions.cancel')}
                                 </Button>
                               </>
                             )}
@@ -276,7 +276,7 @@ export default function StoreOrders() {
                                 onClick={() => statusMutation.mutate({ id: sub.sub_order_id, status: "READY" })}
                                 disabled={statusMutation.isPending}
                               >
-                                <Clock className="h-4 w-4 mr-1 rtl:mr-0 rtl:ml-1" /> {t('store.orders.actions.mark_ready')}
+                                <Clock className="h-4 w-4 ml-1 rtl:ml-0 rtl:mr-1" /> {t('store.orders.actions.mark_ready')}
                               </Button>
                             )}
                           </div>
