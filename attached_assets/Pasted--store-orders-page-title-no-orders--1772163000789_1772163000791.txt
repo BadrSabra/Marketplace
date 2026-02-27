@@ -1,0 +1,104 @@
+{
+  "store": {
+    "orders": {
+      "page_title": "طلبات المتجر",
+      "no_orders": "لا توجد طلبات حتى الآن",
+      "order_id": "رقم الطلب",
+      "customer_name": "اسم العميل",
+      "status": "الحالة",
+      "total": "الإجمالي",
+      "actions": "الإجراءات",
+      "view_details": "عرض التفاصيل"
+    },
+    "order_details": {
+      "page_title": "تفاصيل الطلب",
+      "order_id": "رقم الطلب",
+      "customer_info": "معلومات العميل",
+      "delivery_address": "عنوان التوصيل",
+      "products": "المنتجات",
+      "quantity": "الكمية",
+      "price": "السعر",
+      "status": "الحالة",
+      "update_status": "تحديث الحالة"
+    },
+    "inventory": {
+      "page_title": "إدارة المخزون",
+      "product_name": "اسم المنتج",
+      "stock": "الكمية المتاحة",
+      "price": "السعر",
+      "actions": "الإجراءات",
+      "add_product": "إضافة منتج جديد",
+      "edit_product": "تعديل المنتج",
+      "delete_product": "حذف المنتج",
+      "no_products": "لا توجد منتجات بعد"
+    },
+    "earnings": {
+      "page_title": "أرباح المتجر",
+      "total_earnings": "إجمالي الأرباح",
+      "date": "التاريخ",
+      "amount": "المبلغ",
+      "type": "نوع العملية",
+      "no_earnings": "لا توجد بيانات أرباح بعد"
+    }
+  },
+  "driver": {
+    "tasks": {
+      "page_title": "مهام التوصيل",
+      "available_tasks": "المهام المتاحة",
+      "claimed_tasks": "المهام التي تم قبولها",
+      "order_id": "رقم الطلب",
+      "pickup_address": "عنوان الاستلام",
+      "delivery_address": "عنوان التوصيل",
+      "claim_task": "قبول المهمة",
+      "task_claimed_success": "تم قبول المهمة بنجاح",
+      "task_claim_failed": "فشل في قبول المهمة"
+    },
+    "active_delivery": {
+      "page_title": "التوصيلات النشطة",
+      "order_id": "رقم الطلب",
+      "customer_name": "اسم العميل",
+      "pickup_address": "عنوان الاستلام",
+      "delivery_address": "عنوان التوصيل",
+      "delivery_status": "حالة التوصيل",
+      "mark_delivered": "تأكيد التسليم",
+      "delivery_confirmed": "تم تأكيد التسليم"
+    },
+    "earnings": {
+      "page_title": "أرباح السائق",
+      "total_earnings": "إجمالي الأرباح",
+      "date": "التاريخ",
+      "amount": "المبلغ",
+      "type": "نوع العملية",
+      "no_earnings": "لا توجد بيانات أرباح بعد"
+    }
+  },
+  "common_ui": {
+    "buttons": {
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "add": "إضافة",
+      "submit": "إرسال"
+    },
+    "alerts": {
+      "success": "تمت العملية بنجاح",
+      "error": "حدث خطأ، حاول مرة أخرى",
+      "warning": "تنبيه"
+    },
+    "table": {
+      "actions": "الإجراءات",
+      "no_data": "لا توجد بيانات"
+    },
+    "toast": {
+      "deposit_success": "تم إرسال الإيداع بنجاح",
+      "deposit_failed": "فشل الإيداع",
+      "profile_updated": "تم تحديث الملف الشخصي",
+      "order_status_updated": "تم تحديث حالة الطلب"
+    },
+    "select": {
+      "choose": "اختر",
+      "select_option": "اختر خيارًا"
+    }
+  }
+}

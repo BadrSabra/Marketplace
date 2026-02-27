@@ -1,0 +1,67 @@
+STRICT RULES:
+- Fast Mode compatible
+- No external package installs
+- No file creation/deletion unless strictly required for static i18n
+- Rollout page by page, save checkpoint after each page
+- If a page fails to compile, log the error and continue to next page
+
+OBJECTIVE:
+Continue Arabic localization (i18n) and RTL support for:
+
+Store Dashboard:
+- Orders
+- Order Details
+- Inventory
+- Earnings
+
+Driver Dashboard:
+- Tasks
+- Active Delivery
+- Earnings
+
+DATA SOURCES:
+- Static translations file: client/src/locales/translation_static.json
+- Backend toast keys: toast_messages (use previously extracted mapping)
+- RTL directional fixes: Tailwind classes and icons as previously scanned
+
+PAGE ORDER (SAFE ROLLOUT):
+1. client/src/pages/store/orders.tsx
+2. client/src/pages/store/order/[id].tsx
+3. client/src/pages/store/inventory.tsx
+4. client/src/pages/store/earnings.tsx
+5. client/src/pages/driver/tasks.tsx
+6. client/src/pages/driver/active-delivery.tsx
+7. client/src/pages/driver/earnings.tsx
+
+TASKS PER PAGE:
+1. Detect all hardcoded strings in the page.
+2. Replace each string with `t('<json_key>')` using translation_static.json.
+3. Add Arabic translations to translation_static.json if missing.
+4. Fix RTL issues:
+   - Tailwind directional classes: pl- → pr-, pr- → pl-, ml- → mr-, mr- → ml-
+   - text-left → text-right, left- → right-, right- → left-
+   - Swap directional icons (ArrowRight ↔ ArrowLeft) where needed
+   - Adjust tables, selects, checkboxes, buttons, toast positions to match RTL
+5. Map any backend toast keys to Arabic equivalents from toast_messages
+6. Ensure the page compiles and runs after changes
+7. Save a checkpoint: `Arabic RTL – <Page Name> Completed`
+
+OUTPUT FORMAT PER PAGE:
+{
+  "page_or_component": "<Page Name>",
+  "total_strings_localized": <number>,
+  "rtl_classes_fixed": <number>,
+  "backend_keys_mapped": <number>,
+  "toast_messages_mapped": <number>,
+  "next_step_suggestion": "<Next page or component>"
+}
+
+VERIFICATION:
+- After each page, compile and render to confirm i18n keys and RTL layout are correct
+- Log any pages with warnings or unresolvable RTL issues
+- Proceed to next page automatically
+
+FINAL STEP:
+- After completing all Store & Driver pages:
+   - Summarize total strings localized, total RTL fixes, toast mappings
+   - Suggest next phase: Phase 6 – Admin Panel Localization & RTL Support
