@@ -243,33 +243,19 @@ export async function autoVerifyDatabase() {
     });
 
     // 5. Delete Store Testing (Admin only)
-    console.log("--- RUNNING STORE DELETION TESTS ---");
+    console.log("--- RUNNING ENHANCED STORE DELETION TESTS ---");
     const allStores = await db.select().from(stores);
-    const deletionResults: Record<string, string> = {};
     
     for (const store of allStores) {
       try {
-        // Atomic deletion including dependent records
-        await db.transaction(async (tx) => {
-          // Delete dependent order items first
-          const storeSubOrders = await tx.select().from(subOrders).where(eq(subOrders.storeId, store.id));
-          for (const so of storeSubOrders) {
-            await tx.delete(orderItems).where(eq(orderItems.subOrderId, so.id));
-            await tx.delete(deliveryOffers).where(eq(deliveryOffers.subOrderId, so.id));
-            await tx.delete(deliveryOtps).where(eq(deliveryOtps.subOrderId, so.id));
-          }
-          await tx.delete(subOrders).where(eq(subOrders.storeId, store.id));
-          await tx.delete(products).where(eq(products.storeId, store.id));
-          await tx.delete(stores).where(eq(stores.id, store.id));
-        });
-        deletionResults[store.name] = "SUCCESS";
+        const result = await storage.deleteStore(store.id);
+        console.log(`Deletion Report for Store: ${store.name}`);
+        console.log(JSON.stringify(result, null, 2));
       } catch (err: any) {
-        deletionResults[store.name] = `FAILED: ${err.message}`;
+        console.error(`Failed to delete store ${store.name}: ${err.message}`);
       }
     }
-    if (allStores.length > 0) {
-      console.table(deletionResults);
-    } else {
+    if (allStores.length === 0) {
       console.log("No stores found to test deletion.");
     }
 

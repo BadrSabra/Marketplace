@@ -237,17 +237,12 @@ export async function registerRoutes(
   app.delete("/api/stores/:id", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
     try {
       const { id } = req.params;
-      const success = await storage.deleteStore(id);
-      if (!success) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Cannot delete store with linked products or sub-orders" 
-        });
-      }
-      res.json({ success: true, message: "Store deleted successfully" });
-    } catch (err) {
+      const report = await storage.deleteStore(id);
+      console.log("Store Deletion Report:", JSON.stringify(report, null, 2));
+      res.json({ success: true, message: "Store and all related data deleted successfully", report });
+    } catch (err: any) {
       console.error("Delete store error:", err);
-      res.status(500).json({ success: false, message: "Internal server error" });
+      res.status(500).json({ success: false, message: err.message || "Internal server error" });
     }
   });
 
