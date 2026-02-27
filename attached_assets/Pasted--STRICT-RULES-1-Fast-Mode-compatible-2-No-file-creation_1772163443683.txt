@@ -1,0 +1,91 @@
+
+
+STRICT RULES:
+
+1. Fast Mode compatible.
+2. No file creation/deletion unless strictly needed for RTL or i18n mock.
+3. Do NOT install any npm packages.
+4. Rollout page by page, save a checkpoint after each page.
+5. If a page is too complex, log it and continue with next.
+6. Application must compile and run after each page update.
+
+OBJECTIVE:
+Continue Arabic localization (i18n) and RTL support starting from Store & Driver dashboards using a lightweight mock i18n system.
+
+MOCK i18n SETUP:
+- Create a temporary mock i18n function in `client/src/i18n.ts`:
+  
+  ```ts
+  import translations from "./locales/ar/translation.json";
+  export function t(key: string) {
+    const keys = key.split(".");
+    let value: any = translations;
+    for (const k of keys) {
+      if (value[k] !== undefined) value = value[k];
+      else return key;
+    }
+    return value;
+  }
+
+Replace all useTranslation() calls in the pages with import { t } from '../i18n'.
+
+
+TASKS PER PAGE:
+
+1. Detect all hardcoded strings in the page.
+
+
+2. Replace them with t("i18n.key").
+
+
+3. Update client/src/locales/ar/translation.json with Arabic translations under a new section if needed.
+
+
+4. Fix all RTL issues:
+
+Tailwind: pl- → pr-, text-left → text-right, left- → right-.
+
+Swap directional icons (ArrowRight ↔ ArrowLeft).
+
+Tables, selects, checkboxes, buttons, toast positions adjusted for RTL.
+
+
+
+5. Map backend success/error toast messages to Arabic equivalents.
+
+
+6. Ensure the page compiles and runs.
+
+
+7. Save a checkpoint after each page.
+
+
+
+OUTPUT FORMAT PER PAGE: { "page_or_component": "<Page Name>", "total_strings_localized": <number>, "rtl_classes_fixed": <number>, "backend_keys_mapped": <number>, "toast_messages_mapped": <number>, "next_step_suggestion": "<Next page or component>" }
+
+PAGE ORDER FOR SAFE ROLLOUT:
+
+1. Store Orders
+
+
+2. Store Order Details
+
+
+3. Store Inventory
+
+
+4. Store Earnings
+
+
+5. Driver Tasks
+
+
+6. Active Delivery
+
+
+7. Driver Earnings
+
+
+
+START POINT: Resume from last checkpoint (after Phase 3 – Customer Dashboard and Phase 2 – Common UI Components).
+
