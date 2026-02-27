@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface Task {
   sub_order_id: string;
@@ -25,6 +26,7 @@ interface Task {
 }
 
 export default function DriverTasks() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [proposedFee, setProposedFee] = useState("");
@@ -44,14 +46,14 @@ export default function DriverTasks() {
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Success", description: "Offer submitted successfully" });
+      toast({ title: t('driver.tasks.toasts.offer_success_title'), description: t('driver.tasks.toasts.offer_success_desc') });
       queryClient.invalidateQueries({ queryKey: ["/api/delivery/available-tasks"] });
       setSelectedTask(null);
       setProposedFee("");
       setNotes("");
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Failed to submit offer", variant: "destructive" });
+      toast({ title: t('driver.tasks.toasts.offer_error_title'), description: error.message || t('driver.tasks.toasts.offer_error_desc'), variant: "destructive" });
     }
   });
 
@@ -61,11 +63,11 @@ export default function DriverTasks() {
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Success", description: "Task claimed successfully" });
+      toast({ title: t('driver.tasks.toasts.claim_success_title'), description: t('driver.tasks.toasts.claim_success_desc') });
       queryClient.invalidateQueries({ queryKey: ["/api/delivery/available-tasks"] });
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Failed to claim task", variant: "destructive" });
+      toast({ title: t('driver.tasks.toasts.claim_error_title'), description: error.message || t('driver.tasks.toasts.claim_error_desc'), variant: "destructive" });
     }
   });
 
@@ -80,36 +82,36 @@ export default function DriverTasks() {
   const tasks = tasksData?.tasks || [];
 
   return (
-    <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Available Delivery Tasks</h1>
-        <p className="text-muted-foreground">Browse and claim available delivery requests in your area.</p>
+    <div className="p-8 space-y-6 rtl:text-right" dir="auto">
+      <div className="rtl:text-right">
+        <h1 className="text-3xl font-bold">{t('driver.tasks.title')}</h1>
+        <p className="text-muted-foreground">{t('driver.tasks.subtitle')}</p>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Open Marketplace</CardTitle>
-          <CardDescription>Tasks currently waiting for a driver.</CardDescription>
+        <CardHeader className="rtl:text-right">
+          <CardTitle>{t('driver.tasks.marketplace_title')}</CardTitle>
+          <CardDescription>{t('driver.tasks.marketplace_subtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Order ID</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Items</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+              <TableRow className="rtl:flex-row-reverse">
+                <TableHead className="rtl:text-right">{t('driver.tasks.table.order_id')}</TableHead>
+                <TableHead className="rtl:text-right">{t('driver.tasks.table.customer')}</TableHead>
+                <TableHead className="rtl:text-right">{t('driver.tasks.table.items')}</TableHead>
+                <TableHead className="rtl:text-right">{t('driver.tasks.table.location')}</TableHead>
+                <TableHead className="rtl:text-right">{t('driver.tasks.table.status')}</TableHead>
+                <TableHead className="text-right rtl:text-left">{t('driver.tasks.table.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {tasks.length > 0 ? (
                 tasks.map((task) => (
-                  <TableRow key={task.sub_order_id} data-testid={`row-task-${task.sub_order_id}`}>
-                    <TableCell className="font-mono text-xs">#{task.order_id.split("-")[0]}</TableCell>
-                    <TableCell className="font-medium">{task.customer_name}</TableCell>
-                    <TableCell>
+                  <TableRow key={task.sub_order_id} data-testid={`row-task-${task.sub_order_id}`} className="rtl:flex-row-reverse">
+                    <TableCell className="font-mono text-xs rtl:text-right">#{task.order_id.split("-")[0]}</TableCell>
+                    <TableCell className="font-medium rtl:text-right">{task.customer_name}</TableCell>
+                    <TableCell className="rtl:text-right">
                       <div className="flex flex-col gap-1">
                         {task.items.map((item, i) => (
                           <span key={i} className="text-xs text-muted-foreground">
@@ -118,37 +120,37 @@ export default function DriverTasks() {
                         ))}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-xs">
+                    <TableCell className="rtl:text-right">
+                      <div className="flex items-center gap-1 text-xs rtl:flex-row-reverse">
                         <MapPin className="h-3 w-3 text-muted-foreground" />
                         {task.customer_address}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="rtl:text-right">
                       <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                        AVAILABLE
+                        {t('driver.tasks.statuses.AVAILABLE')}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right space-x-2">
+                    <TableCell className="text-right space-x-2 rtl:space-x-reverse rtl:text-left">
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        className="gap-2"
+                        className="gap-2 rtl:flex-row-reverse"
                         onClick={() => setSelectedTask(task)}
                         data-testid={`button-offer-${task.sub_order_id}`}
                       >
                         <Send className="h-3.5 w-3.5" />
-                        Offer
+                        {t('driver.tasks.actions.offer')}
                       </Button>
                       <Button 
                         size="sm" 
-                        className="gap-2"
+                        className="gap-2 rtl:flex-row-reverse"
                         onClick={() => acceptMutation.mutate(task.sub_order_id)}
                         disabled={acceptMutation.isPending}
                         data-testid={`button-claim-${task.sub_order_id}`}
                       >
                         {acceptMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
-                        Claim
+                        {t('driver.tasks.actions.claim')}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -156,7 +158,7 @@ export default function DriverTasks() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12 text-muted-foreground italic">
-                    No tasks currently available.
+                    {t('driver.tasks.no_tasks')}
                   </TableCell>
                 </TableRow>
               )}
@@ -166,13 +168,13 @@ export default function DriverTasks() {
       </Card>
 
       <Dialog open={!!selectedTask} onOpenChange={(open) => !open && setSelectedTask(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Submit Delivery Offer</DialogTitle>
+        <DialogContent className="rtl:text-right">
+          <DialogHeader className="rtl:text-right">
+            <DialogTitle>{t('driver.tasks.offer_dialog.title')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="fee">Proposed Delivery Fee ($)</Label>
+            <div className="space-y-2 rtl:text-right">
+              <Label htmlFor="fee">{t('driver.tasks.offer_dialog.fee_label')}</Label>
               <Input
                 id="fee"
                 type="number"
@@ -180,21 +182,23 @@ export default function DriverTasks() {
                 value={proposedFee}
                 onChange={(e) => setProposedFee(e.target.value)}
                 data-testid="input-proposed-fee"
+                className="rtl:text-right"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes (Optional)</Label>
+            <div className="space-y-2 rtl:text-right">
+              <Label htmlFor="notes">{t('driver.tasks.offer_dialog.notes_label')}</Label>
               <Textarea
                 id="notes"
-                placeholder="I can deliver this within 15 mins..."
+                placeholder={t('driver.tasks.offer_dialog.notes_placeholder')}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 data-testid="input-notes"
+                className="rtl:text-right"
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedTask(null)}>Cancel</Button>
+          <DialogFooter className="rtl:flex-row-reverse gap-2">
+            <Button variant="outline" onClick={() => setSelectedTask(null)}>{t('driver.tasks.offer_dialog.cancel')}</Button>
             <Button 
               onClick={() => offerMutation.mutate({ 
                 subOrderId: selectedTask!.sub_order_id, 
@@ -204,8 +208,8 @@ export default function DriverTasks() {
               disabled={!proposedFee || parseFloat(proposedFee) <= 0 || offerMutation.isPending}
               data-testid="button-submit-offer"
             >
-              {offerMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Submit Offer
+              {offerMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin rtl:mr-0 rtl:ml-2" />}
+              {t('driver.tasks.offer_dialog.submit')}
             </Button>
           </DialogFooter>
         </DialogContent>

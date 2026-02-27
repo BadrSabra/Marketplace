@@ -1,0 +1,65 @@
+STRICT RULES:
+
+1. Fast Mode compatible.
+2. No file creation/deletion except for i18n translation.json updates.
+3. Rollout page by page; save checkpoint after each page.
+4. If a page is too complex or crashes, log it and continue with next page.
+5. Only modify frontend pages for Arabic i18n and RTL support; backend remains untouched.
+6. Ensure each page compiles and runs after changes.
+
+OBJECTIVE:
+
+Complete Arabic localization (i18n) and RTL support for **Store & Driver Dashboards**, resuming after Phase 1-3.
+
+PAGES IN SAFE ORDER:
+
+1. Store Orders → client/src/pages/store/orders.tsx
+2. Store Order Details → client/src/pages/store/order/[id].tsx
+3. Store Inventory → client/src/pages/store/inventory.tsx
+4. Store Earnings → client/src/pages/store/earnings.tsx
+5. Driver Tasks → client/src/pages/driver/tasks.tsx
+6. Active Delivery → client/src/pages/driver/active-delivery.tsx
+7. Driver Earnings → client/src/pages/driver/earnings.tsx
+
+TASKS PER PAGE:
+
+1. Detect all hardcoded strings.
+2. Replace strings with i18n keys using react-i18next.
+3. Update client/src/locales/ar/translation.json with Arabic translations.
+4. Fix RTL issues:
+   - Tailwind classes: pl- → pr-, text-left → text-right, left- → right-.
+   - Swap directional icons if needed: ArrowRight ↔ ArrowLeft.
+   - Tables, selects, checkboxes, buttons, toast positions adjusted to RTL.
+5. Map any backend toast messages to Arabic equivalents.
+6. Compile and run page after changes.
+7. Save checkpoint after page completion.
+
+OUTPUT FORMAT PER PAGE:
+
+{
+  "page_or_component": "<Page Name>",
+  "total_strings_localized": <number>,
+  "rtl_classes_fixed": <number>,
+  "backend_keys_mapped": <number>,
+  "toast_messages_mapped": <number>,
+  "next_step_suggestion": "<Next page or component>"
+}
+
+START POINT:
+
+Resume from last checkpoint after completing:
+
+- Phase 1: Auth Pages
+- Phase 2: Common UI Components
+- Phase 3: Customer Dashboard
+
+AFTER COMPLETION:
+
+- All Store & Driver dashboards fully localized in Arabic and RTL-ready.
+- Phase 5 (Admin Panel) can proceed safely.
+
+EXTRA INSTRUCTIONS:
+
+- Log any errors encountered per page but continue to next page.
+- Only process files listed in Pages in Safe Order.
+- If a page contains nested components, apply i18n & RTL changes recursively within that page scope.

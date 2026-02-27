@@ -331,5 +331,93 @@
       "out_of_stock": "نفذ المخزون",
       "low_stock_left": "بقي {{count}} فقط"
     }
+  },
+  "driver": {
+    "dashboard": {
+      "title": "لوحة تحكم السائق",
+      "subtitle": "عرض عمليات التوصيل المتاحة وتتبع أرباحك.",
+      "my_earnings": "أرباحي"
+    },
+    "tasks": {
+      "title": "مهام التوصيل المتاحة",
+      "subtitle": "تصفح واطلب مهام التوصيل المتاحة في منطقتك.",
+      "marketplace_title": "السوق المفتوح",
+      "marketplace_subtitle": "المهام التي تنتظر سائقاً حالياً.",
+      "table": {
+        "order_id": "رقم الطلب",
+        "customer": "العميل",
+        "items": "الأصناف",
+        "location": "الموقع",
+        "status": "الحالة",
+        "actions": "إجراءات"
+      },
+      "statuses": {
+        "AVAILABLE": "متاح"
+      },
+      "actions": {
+        "offer": "تقديم عرض",
+        "claim": "استلام المهمة"
+      },
+      "no_tasks": "لا توجد مهام متاحة حالياً.",
+      "offer_dialog": {
+        "title": "تقديم عرض توصيل",
+        "fee_label": "رسوم التوصيل المقترحة ($)",
+        "notes_label": "ملاحظات (اختياري)",
+        "notes_placeholder": "يمكنني التوصيل خلال 15 دقيقة...",
+        "cancel": "إلغاء",
+        "submit": "تقديم العرض"
+      },
+      "toasts": {
+        "offer_success_title": "تم بنجاح",
+        "offer_success_desc": "تم تقديم العرض بنجاح",
+        "offer_error_title": "خطأ",
+        "offer_error_desc": "فشل تقديم العرض",
+        "claim_success_title": "تم بنجاح",
+        "claim_success_desc": "تم استلام المهمة بنجاح",
+        "claim_error_title": "خطأ",
+        "claim_error_desc": "فشل استلام المهمة"
+      }
+    },
+    "active_delivery": {
+      "title": "التوصيل النشط",
+      "no_delivery_title": "لا توجد عمليات توصيل نشطة",
+      "no_delivery_desc": "ليس لديك أي مهام مسندة في الوقت الحالي.",
+      "estimated_delivery": "التوصيل المتوقع خلال {{time}}",
+      "total_value": "القيمة الإجمالية",
+      "remaining_time": "الوقت المتبقي",
+      "delivery_otp": "رمز التحقق للتوصيل",
+      "actions": {
+        "generate_otp": "إنشاء رمز التحقق",
+        "mark_picked_up": "تحديد كمستلم",
+        "confirm_delivery": "تأكيد التوصيل",
+        "call_customer": "الاتصال بالعميل"
+      },
+      "toasts": {
+        "otp_success_title": "تم إنشاء الرمز",
+        "otp_success_desc": "تم إرسال رمز التحقق إلى العميل",
+        "status_success_title": "تم تحديث الحالة",
+        "status_success_desc": "تم تحديد التوصيل كـ {{status}}"
+      }
+    },
+    "earnings": {
+      "title": "لوحة تحكم الأرباح",
+      "inconsistency_alert": "تم اكتشاف عدم اتساق في الرصيد",
+      "warning_title": "تحذير",
+      "negative_balance_warning": "حسابك به رصيد سالب. يرجى الاتصال بالدعم.",
+      "available_balance": "الرصيد المتاح",
+      "total_commissions": "إجمالي العمولات المكتسبة",
+      "history_title": "سجل الأرباح",
+      "no_transactions": "لم يتم العثور على معاملات",
+      "filters": {
+        "all": "جميع الأنواع"
+      },
+      "table": {
+        "date": "التاريخ",
+        "type": "النوع",
+        "order_id": "رقم الطلب",
+        "amount": "المبلغ",
+        "status": "الحالة"
+      }
+    }
   }
 }
