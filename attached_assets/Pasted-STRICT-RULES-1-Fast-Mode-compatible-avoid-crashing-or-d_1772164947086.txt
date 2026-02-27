@@ -1,0 +1,103 @@
+STRICT RULES:
+
+1. Fast Mode compatible; avoid crashing or deleting unrelated files.
+2. Work page by page; save a checkpoint after each page.
+3. Analyze first, then modify.
+4. Maintain all existing i18n, RTL, and frontend structure.
+5. Provide detailed JSON reports after each page.
+
+PHASE 0 – FRONTEND ANALYSIS (READ-ONLY):
+
+Objective:
+- Create a full map of the frontend status including all pages and components, highlighting incomplete pages.
+
+Tasks:
+1. Traverse all TSX files under client/src/pages and client/src/components.
+2. For each page/component:
+   a. Count hardcoded strings (text not using t() or i18n keys).
+   b. Count RTL conflicts (Tailwind classes like text-left, pl-, pr-, left-, right- etc.).
+   c. Count toast notifications (detect toast() usage).
+3. Identify top files with most hardcoded strings and RTL conflicts.
+4. Detect toast library used (e.g., Shadcn UI Toast / Radix).
+5. Verify which pages are incomplete (placeholders, missing content, or missing UI elements).
+
+Output Format (JSON):
+{
+  "frontend_root": "client",
+  "build_tool": "<tool>",
+  "react_version": "<version>",
+  "router_type": "<router>",
+  "total_tsx_files": <number>,
+  "pages": [
+    {
+      "path": "<file_path>",
+      "hardcoded_strings_count": <number>,
+      "rtl_classes_count": <number>,
+      "toast_messages_count": <number>,
+      "completion_status": "<complete | incomplete | partial>"
+    }
+  ],
+  "components": [
+    {
+      "path": "<file_path>",
+      "hardcoded_strings_count": <number>,
+      "rtl_classes_count": <number>,
+      "toast_messages_count": <number>
+    }
+  ],
+  "toast_library_detected": "<library_name>",
+  "top_rtl_conflict_files": ["<file1>", "<file2>", "..."],
+  "notes": "<any observations about incomplete pages>"
+}
+
+---
+
+PHASE 1 – ARABIC LOCALIZATION & RTL SUPPORT:
+
+Objective:
+- Apply Arabic i18n and full RTL support page by page for all incomplete pages identified in Phase 0.
+
+Tasks per page:
+1. Extract all hardcoded strings.
+2. Replace with i18n keys using react-i18next or the project’s custom t() system.
+3. Update client/src/locales/ar/translation.json with Arabic translations.
+4. Fix all RTL issues:
+   - Tailwind classes: pl->pr, pr->pl, text-left->text-right, left->right, right->left.
+   - Swap directional icons (ArrowRight <-> ArrowLeft).
+   - Adjust tables, selects, checkboxes, buttons, toast positions.
+5. Map backend toast keys/messages to Arabic equivalents.
+6. Ensure the page compiles and displays correctly.
+7. Save a checkpoint after each page.
+
+Output format per page:
+{
+  "page_or_component": "<Page Name>",
+  "total_strings_localized": <number>,
+  "rtl_classes_fixed": <number>,
+  "backend_keys_mapped": <number>,
+  "toast_messages_mapped": <number>,
+  "completion_status": "<complete | partial>",
+  "next_step_suggestion": "<next page>"
+}
+
+---
+
+PAGE ORDER SUGGESTION (SAFE ROLLOUT):
+1. Store Orders
+2. Store Order Details
+3. Store Inventory
+4. Store Earnings
+5. Driver Tasks
+6. Active Delivery
+7. Driver Earnings
+8. Customer Dashboard
+9. Auth Pages (already mostly done)
+10. Common UI Components (already mostly done)
+
+---
+
+NOTES:
+- Always check build after changes.
+- Log any page that is too complex and continue.
+- Report JSON must be accurate and include any incomplete pages.
+- Focus on finishing incomplete frontend pages as a priority before minor RTL/text fixes.
