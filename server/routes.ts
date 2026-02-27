@@ -215,6 +215,11 @@ export async function registerRoutes(
     res.json(cleanUsers);
   });
 
+  // --- PUBLIC ROUTES ---
+  const { publicStoresController } = await import("./modules/public/public.controller");
+  app.get("/api/public/stores", publicStoresController.getStores);
+  app.get("/api/public/stores/:id", publicStoresController.getStore);
+
   // --- STORES MODULE ---
   app.get(api.stores.list.path, async (req, res) => {
     const stores = await storage.getStores();

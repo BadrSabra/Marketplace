@@ -60,10 +60,13 @@ function ProtectedRoute({
   return <Component />;
 }
 
+import LandingPage from "@/pages/public/LandingPage";
+import PublicStorePage from "@/pages/public/PublicStorePage";
+
 function RoleBasedDashboard() {
   const { user } = useAuth();
   
-  if (!user) return <Redirect to="/login" />;
+  if (!user) return <LandingPage />;
 
   switch (user.role) {
     case "ADMIN":
@@ -84,6 +87,7 @@ function Router() {
       <Route path="/login" component={LoginPage} />
       <Route path="/register" component={RegisterPage} />
       <Route path="/" component={RoleBasedDashboard} />
+      <Route path="/store/:id" component={PublicStorePage} />
       
       {/* Customer Routes */}
       <Route path="/customer/wallet">
