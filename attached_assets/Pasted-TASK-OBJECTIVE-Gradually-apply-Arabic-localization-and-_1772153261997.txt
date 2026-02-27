@@ -1,0 +1,80 @@
+TASK OBJECTIVE:
+Gradually apply Arabic localization and RTL support to the platform without breaking existing functionality.
+Work in **Fast Mode**, phased rollout, safe for production testing.
+Do NOT enter Autonomous Mode.
+
+RULES:
+1. Work **only in small safe increments** (phased rollout by page/component).
+2. Do **not modify files outside /client/src/pages and /client/src/components** unless explicitly safe.
+3. Do NOT touch backend logic beyond mapping messages to Arabic equivalents.
+4. Keep all safety and wallet/ledger integrity intact.
+5. Console output only; **no new files** unless instructed for translation JSON.
+
+PHASED ROLLOUT:
+1. Auth Pages (Login/Register) → simplest, lowest complexity
+2. Common UI Components (buttons, alerts, tables)
+3. Customer Dashboard Pages
+4. Store & Driver Dashboards
+5. Admin Panel
+
+DATA AVAILABLE:
+1. Frontend hardcoded strings (pages + components)
+2. Backend messages with keys (wallet, ledger, deposits, auth)
+3. Toast messages with trigger locations
+4. RTL risk scan (high-risk files + classes)
+5. Routing map (Wouter + all routes/components)
+
+ACTIONS PER PAGE/COMPONENT:
+1. Replace all **hardcoded frontend strings** with i18n keys.
+2. Generate Arabic translations for all extracted strings/messages:
+   - Auth Pages sample:
+     - "Create Account" → "إنشاء حساب"
+     - "Full Name" → "الاسم الكامل"
+     - "Email Address" → "البريد الإلكتروني"
+     - "Password" → "كلمة المرور"
+     - "Sign In" → "تسجيل الدخول"
+     - "Customer" → "زبون"
+     - "Store Owner" → "صاحب متجر"
+     - "Delivery Driver" → "سائق توصيل"
+   - Toast/alert messages: map English text → Arabic equivalent.
+   - Backend validation messages: map key → Arabic translation.
+3. Update **directional Tailwind classes** for RTL:
+   - text-left → text-right
+   - text-right → text-left
+   - pl-* → pr-*
+   - pr-* → pl-*
+   - ml-* → mr-*
+   - mr-* → ml-*
+   - left-* → right-*
+   - right-* → left-*
+4. Ensure **RTL layout testing** on each page.
+5. Apply translations incrementally and **report all changes** in console.
+
+OUTPUT FORMAT:
+After each page/component update, print JSON report:
+
+{
+  "page_or_component": "",
+  "total_strings_localized": 0,
+  "rtl_classes_fixed": 0,
+  "backend_keys_mapped": 0,
+  "toast_messages_mapped": 0,
+  "next_step_suggestion": ""
+}
+
+ADDITIONAL:
+- Use existing i18n infrastructure (client/src/locales/ar/*.ts/json or inline JSON if missing).
+- For backend keys, keep original key naming (wallet.amount_positive, auth.invalid_credentials, etc.) and add Arabic translations.
+- Only apply **frontend strings and RTL layout fixes** in first steps; backend message mapping can be staged later.
+
+PHASE 1 – **Auth Pages (Login/Register)**:
+- Pages: client/src/pages/auth/login.tsx, client/src/pages/auth/register.tsx
+- Components: any buttons, forms, alerts on these pages
+- Task:
+  1. Replace all hardcoded strings with i18n keys.
+  2. Provide Arabic translations for each string.
+  3. Adjust RTL classes as above.
+  4. Test rendering in RTL and Arabic.
+  5. Output JSON report with counts and next step recommendation.
+
+END OF PROMPT
