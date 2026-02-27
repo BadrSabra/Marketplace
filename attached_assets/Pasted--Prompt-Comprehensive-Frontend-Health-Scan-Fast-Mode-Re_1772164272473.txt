@@ -1,0 +1,132 @@
+
+
+Prompt: Comprehensive Frontend Health Scan (Fast Mode, Read-Only)
+
+STRICT RULES:
+
+Fast Mode compatible.
+
+Read-only: do NOT modify, create, or delete any file.
+
+Do NOT install dependencies.
+
+Folder depth: max 2 unless explicitly required.
+
+Output must be in strict JSON format.
+
+If a page/component is too complex, log it and continue with the rest.
+
+
+OBJECTIVE:
+Detect the current status of the frontend to evaluate readiness for Arabic localization and RTL support.
+
+OUTPUT FORMAT (JSON strict):
+
+{
+  "frontend_root": "",
+  "build_tool": "",
+  "react_version": "",
+  "router_type": "",
+  "folder_tree_depth_2": {},
+  "pages": {
+    "total": 0,
+    "list": [
+      {
+        "path": "",
+        "tsx_count": 0,
+        "hardcoded_strings_count": 0,
+        "rtl_classes_count": 0,
+        "toast_messages_count": 0
+      }
+    ]
+  },
+  "components": {
+    "total": 0,
+    "list": [
+      {
+        "path": "",
+        "tsx_count": 0,
+        "hardcoded_strings_count": 0,
+        "rtl_classes_count": 0,
+        "toast_messages_count": 0
+      }
+    ]
+  },
+  "css_files": [],
+  "total_tsx_files": 0,
+  "total_hardcoded_strings": 0,
+  "total_rtl_conflicts": 0,
+  "top_rtl_conflict_files": [],
+  "toast_library_detected": "",
+  "toast_trigger_files": [],
+  "toast_messages": [],
+  "notes": "Optional notes about complex pages or missing dependencies"
+}
+
+TASKS / STEPS:
+
+1. Detect Structure:
+
+Identify frontend root folder (e.g., client).
+
+Extract build tool (Vite, Next.js, etc.) and React version.
+
+Detect routing system (React Router, Wouter, etc.).
+
+List folder tree depth 2 for pages and components.
+
+
+
+2. Pages & Components Scan:
+
+Count .tsx files for each page and component.
+
+List all pages with path, TSX file count.
+
+List all components with path, TSX file count.
+
+
+
+3. CSS & Tailwind:
+
+List all CSS files in client/src and client/src/components.
+
+Count all directional Tailwind classes: text-left, text-right, pl-, pr-, ml-, mr-, left-, right-.
+
+Identify top 10 files with the most RTL conflicts.
+
+
+
+4. Hardcoded Strings & i18n Readiness:
+
+Extract all hardcoded strings in pages and components.
+
+Count per file and provide totals per pages/components.
+
+
+
+5. Toast Messages:
+
+Detect the toast library used (if any).
+
+Identify all toast trigger files and messages.
+
+
+
+6. RTL Readiness Check:
+
+Count all directional classes per file.
+
+Flag pages/components at high risk for RTL breakage.
+
+
+
+7. Notes Section:
+
+Record any pages/components with complex imports or missing files.
+
+Note missing essential files (CSS, i18n, index.css, etc.).
+
+
+
+
