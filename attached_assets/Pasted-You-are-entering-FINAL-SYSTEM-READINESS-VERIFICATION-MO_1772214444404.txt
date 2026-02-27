@@ -1,0 +1,139 @@
+You are entering FINAL SYSTEM READINESS VERIFICATION MODE.
+
+This is the last audit before strategic decision making.
+
+You must extract implementation-level truths.
+No summaries.
+No assumptions.
+No interpretations.
+Only verifiable code-backed facts.
+
+Do NOT modify code.
+
+=========================================
+SECTION 1 — OTP SECURITY & VALIDITY
+=========================================
+
+Provide exact implementation details:
+
+- OTP length.
+- OTP generation method (exact function used).
+- Is cryptographic randomness used?
+- Can multiple OTPs exist for same sub_order?
+- Is OTP unique per sub_order?
+- Is there DB index on OTP?
+- Is there expiration timestamp column?
+- Is expiration enforced in verification logic?
+- Is OTP invalidated after verification?
+- Can VERIFIED OTP be reused?
+- Is there retry limit?
+- Is there rate limiting on verify endpoint?
+- Is brute-force protection implemented?
+- Can old OTP be verified after new OTP is generated?
+
+=========================================
+SECTION 2 — DELIVERY ASSIGNMENT ATOMICITY
+=========================================
+
+Provide exact transactional logic:
+
+- Is READY → ASSIGNED inside one transaction?
+- Is row-level locking used? (exact syntax)
+- Can two drivers pass READY check simultaneously?
+- Is assigned_driver_id protected by DB constraint?
+- Is there unique constraint preventing multiple drivers?
+- What prevents double acceptance?
+- Are delivery_offers updated atomically?
+- What happens if transaction fails mid-way?
+
+Simulate worst-case race scenario and describe if system survives.
+
+=========================================
+SECTION 3 — WALLET / LEDGER CONSISTENCY
+=========================================
+
+Provide exact financial integrity model:
+
+- Is ledger write automatic on every wallet update?
+- Are there wallet update paths without ledger entry?
+- Is accounting truly double-entry?
+- Can wallet.balance diverge from:
+  a) sum(wallet_transactions)
+  b) ledger totals
+- Is there reconciliation job?
+- Are financial writes always in one transaction?
+- Can admin override create imbalance?
+- Is negative balance mathematically impossible or just validated?
+
+=========================================
+SECTION 4 — DATA INTEGRITY GUARANTEES
+=========================================
+
+- Full list of DB-level constraints (not ORM-level only).
+- Foreign key ON DELETE behavior.
+- Missing unique constraints.
+- Missing composite indexes.
+- Any nullable critical column?
+- Any soft-deletes without filtering?
+
+=========================================
+SECTION 5 — AUTHORIZATION EDGE VALIDATION
+=========================================
+
+For each role (ADMIN, STORE_OWNER, DRIVER, CUSTOMER):
+
+- Can they access another user's data via ID manipulation?
+- Is ownership verified at query level or only middleware?
+- Any endpoint missing ownership validation?
+- Any direct ID-based fetch without user filter?
+
+=========================================
+SECTION 6 — FAILURE & RECOVERY BEHAVIOR
+=========================================
+
+- What happens if DB fails mid-transaction?
+- What happens if OTP verification fails after wallet deduction?
+- Any partial writes possible?
+- Any async operations not awaited?
+- Any background tasks without error handling?
+
+=========================================
+SECTION 7 — PERFORMANCE & SCALE LIMITS
+=========================================
+
+- Identify N+1 query patterns (exact code location).
+- Identify full-table scans.
+- Identify missing pagination.
+- Largest query in system.
+- Memory-heavy operations.
+- What breaks first at 1,000 orders/day?
+- What breaks first at 10,000 orders/day?
+
+=========================================
+SECTION 8 — PRODUCTION HARDENING CHECK
+=========================================
+
+- NODE_ENV usage.
+- JWT expiration duration.
+- Token invalidation strategy.
+- CORS configuration.
+- Helmet usage.
+- Global rate limiting?
+- Any hardcoded secret fallback?
+- Debug logs enabled?
+- Health endpoint exposure risk?
+
+=========================================
+
+FINAL OUTPUT FORMAT:
+
+1. Critical Risks (Launch Blocking)
+2. High Risks
+3. Medium Risks
+4. Safe & Stable Areas
+5. True Launch Readiness % (Brutally Honest)
+6. Is MVP launch in one city safe? (YES / NO with reasoning)
+
+No optimism bias.
+No politeness.
+Only engineering truth.
