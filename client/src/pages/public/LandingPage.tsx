@@ -12,17 +12,17 @@ export default function LandingPage() {
       <main className="flex-grow">
         <HeroSection />
         
-        <div className="container py-8">
+        <div className="container py-6 md:py-8 px-4">
           <Alert className="bg-primary/5 border-primary/20">
             <Info className="h-4 w-4 text-primary" />
-            <AlertDescription className="font-medium" data-testid="banner-hyperlocal-notice">
+            <AlertDescription className="font-medium text-sm md:text-base" data-testid="banner-hyperlocal-notice">
               نخدم حالياً قرية ميت جابر والمناطق المجاورة فقط
             </AlertDescription>
           </Alert>
 
-          <section className="py-12">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-3xl font-bold tracking-tight">المتاجر المتاحة</h2>
+          <section className="py-8 md:py-12">
+            <div className="flex items-center justify-between mb-6 md:mb-8">
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">المتاجر المتاحة</h2>
             </div>
             <StoreGrid />
           </section>

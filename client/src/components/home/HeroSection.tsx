@@ -5,24 +5,24 @@ import { Badge } from "@/components/ui/badge";
 
 export default function HeroSection() {
   return (
-    <section className="relative py-20 overflow-hidden bg-slate-50 dark:bg-slate-900">
-      <div className="container relative z-10 text-center">
-        <Badge variant="secondary" className="mb-4 px-4 py-1 rounded-full text-sm font-medium" data-testid="badge-local-service">
+    <section className="relative py-12 md:py-20 overflow-hidden bg-slate-50 dark:bg-slate-900">
+      <div className="container relative z-10 text-center px-4">
+        <Badge variant="secondary" className="mb-4 px-4 py-1 rounded-full text-xs md:text-sm font-medium" data-testid="badge-local-service">
           <MapPin className="mr-1 h-3 w-3" />
           خدمة محلية داخل ميت جابر فقط
         </Badge>
-        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6" data-testid="text-hero-title">
+        <h1 className="text-3xl md:text-6xl font-extrabold tracking-tight mb-4 md:mb-6" data-testid="text-hero-title">
           سوق ميت جابر
         </h1>
-        <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto" data-testid="text-hero-subtitle">
+        <p className="text-lg md:text-xl text-muted-foreground mb-6 md:mb-8 max-w-2xl mx-auto px-4" data-testid="text-hero-subtitle">
           اطلب من متاجر قريتك والقرى المجاورة بسهولة وأمان
         </p>
         
-        <div className="max-w-md mx-auto relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="max-w-md mx-auto relative mb-4 px-4">
+          <Search className="absolute left-7 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
             placeholder="ابحث عن متجر..." 
-            className="pl-10 h-12 text-lg rounded-xl shadow-sm"
+            className="pl-10 h-12 text-base md:text-lg rounded-xl shadow-sm w-full"
             data-testid="input-store-search"
           />
         </div>

@@ -46,11 +46,11 @@ export default function PublicStorePage() {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
-        <div className="container py-12 flex-grow space-y-8">
-          <Skeleton className="h-48 w-full rounded-2xl" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="container py-8 md:py-12 flex-grow space-y-6 md:space-y-8 px-4">
+          <Skeleton className="h-32 md:h-48 w-full rounded-2xl" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
             {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-64 rounded-xl" />
+              <Skeleton key={i} className="h-56 md:h-64 rounded-xl" />
             ))}
           </div>
         </div>
@@ -63,8 +63,8 @@ export default function PublicStorePage() {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
-        <div className="container py-20 text-center flex-grow">
-          <h2 className="text-2xl font-bold mb-4">المتجر غير موجود</h2>
+        <div className="container py-20 text-center flex-grow px-4">
+          <h2 className="text-xl md:text-2xl font-bold mb-4">المتجر غير موجود</h2>
           <Button onClick={() => setLocation("/")}>العودة للرئيسية</Button>
         </div>
         <Footer />
@@ -79,18 +79,18 @@ export default function PublicStorePage() {
       <main className="flex-grow">
         {/* Store Hero */}
         <div className="bg-slate-50 dark:bg-slate-900 border-b">
-          <div className="container py-12">
-            <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
-              <div className="h-32 w-32 bg-white dark:bg-slate-800 rounded-2xl shadow-sm flex items-center justify-center border-2 overflow-hidden">
-                <StoreIcon className="h-16 w-16 text-slate-300" />
+          <div className="container py-8 md:py-12 px-4">
+            <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-start text-center md:text-right">
+              <div className="h-24 w-24 md:h-32 md:w-32 bg-white dark:bg-slate-800 rounded-2xl shadow-sm flex items-center justify-center border-2 overflow-hidden shrink-0">
+                <StoreIcon className="h-12 w-12 md:h-16 md:w-16 text-slate-300" />
               </div>
-              <div className="flex-grow text-center md:text-right">
-                <div className="flex items-center justify-center md:justify-start gap-4 mb-2">
-                  <h1 className="text-4xl font-bold">{store.name}</h1>
-                  <Badge variant="default">مفتوح</Badge>
+              <div className="flex-grow">
+                <div className="flex flex-col md:flex-row items-center md:justify-start gap-2 md:gap-4 mb-2">
+                  <h1 className="text-2xl md:text-4xl font-bold">{store.name}</h1>
+                  <Badge variant="default" className="w-fit">مفتوح</Badge>
                 </div>
-                <p className="text-muted-foreground text-lg mb-4 max-w-2xl">{store.description}</p>
-                <div className="flex items-center justify-center md:justify-start gap-2 text-sm">
+                <p className="text-sm md:text-lg text-muted-foreground mb-4 max-w-2xl mx-auto md:mx-0">{store.description}</p>
+                <div className="flex items-center justify-center md:justify-start gap-2 text-xs md:text-sm text-muted-foreground">
                   <span className="font-medium">{store.locationText || "ميت جابر"}</span>
                 </div>
               </div>
@@ -98,24 +98,24 @@ export default function PublicStorePage() {
           </div>
         </div>
 
-        <div className="container py-12">
-          <h2 className="text-2xl font-bold mb-8">المنتجات</h2>
+        <div className="container py-8 md:py-12 px-4">
+          <h2 className="text-xl md:text-2xl font-bold mb-6 md:mb-8">المنتجات</h2>
           
           {products && products.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
               {products.map((product: any) => (
                 <Card key={product.id} className="overflow-hidden group">
-                  <div className="h-48 bg-slate-100 flex items-center justify-center relative">
-                    <span className="text-4xl">📦</span>
+                  <div className="h-40 md:h-48 bg-slate-100 flex items-center justify-center relative">
+                    <span className="text-3xl md:text-4xl">📦</span>
                   </div>
                   <CardContent className="p-4">
-                    <h3 className="font-bold text-lg mb-1">{product.name}</h3>
-                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{product.description}</p>
+                    <h3 className="font-bold text-base md:text-lg mb-1 truncate">{product.name}</h3>
+                    <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4 line-clamp-2 h-8 md:h-10">{product.description}</p>
                     <div className="flex items-center justify-between">
-                      <span className="text-xl font-bold text-primary">{product.price} ج.م</span>
-                      <Button size="sm" onClick={handleAddToCart}>
-                        <ShoppingCart className="h-4 w-4 mr-2" />
-                        إضافة للسلة
+                      <span className="text-lg md:text-xl font-bold text-primary">{product.price} ج.م</span>
+                      <Button size="sm" onClick={handleAddToCart} className="text-xs md:text-sm">
+                        <ShoppingCart className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                        إضافة
                       </Button>
                     </div>
                   </CardContent>
@@ -123,7 +123,7 @@ export default function PublicStorePage() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-20 bg-slate-50 rounded-2xl">
+            <div className="text-center py-12 md:py-20 bg-slate-50 rounded-2xl px-4">
               <p className="text-muted-foreground">لا توجد منتجات متاحة حالياً في هذا المتجر</p>
             </div>
           )}
