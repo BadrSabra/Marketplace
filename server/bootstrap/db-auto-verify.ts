@@ -112,6 +112,63 @@ export async function autoVerifyDatabase() {
         type transaction_type NOT NULL,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
+      )`,
+      wallet_transactions: `CREATE TABLE wallet_transactions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        wallet_id UUID NOT NULL REFERENCES wallets(id),
+        type transaction_type NOT NULL,
+        amount DECIMAL(12,2) NOT NULL,
+        related_order_id UUID,
+        status transaction_status NOT NULL DEFAULT 'PENDING',
+        created_at TIMESTAMP DEFAULT NOW()
+      )`,
+      products: `CREATE TABLE products (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        store_id UUID NOT NULL REFERENCES stores(id),
+        name VARCHAR NOT NULL,
+        description TEXT,
+        price DECIMAL(10,2) NOT NULL,
+        stock INTEGER NOT NULL DEFAULT 0,
+        category VARCHAR NOT NULL DEFAULT 'General',
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )`,
+      order_items: `CREATE TABLE order_items (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        sub_order_id UUID NOT NULL REFERENCES sub_orders(id),
+        product_id UUID NOT NULL REFERENCES products(id),
+        quantity INTEGER NOT NULL,
+        price_at_order DECIMAL(10,2) NOT NULL
+      )`,
+      delivery_offers: `CREATE TABLE delivery_offers (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        sub_order_id UUID NOT NULL REFERENCES sub_orders(id),
+        driver_id UUID NOT NULL REFERENCES users(id),
+        offered_fee DECIMAL(10,2) NOT NULL,
+        status offer_status NOT NULL DEFAULT 'PENDING',
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )`,
+      ratings: `CREATE TABLE ratings (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        order_id UUID NOT NULL REFERENCES orders(id),
+        from_user_id UUID NOT NULL REFERENCES users(id),
+        to_user_id UUID NOT NULL REFERENCES users(id),
+        rating INTEGER NOT NULL,
+        comment TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      )`,
+      audit_logs: `CREATE TABLE audit_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        action_type TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        entity_id UUID NOT NULL,
+        performed_by_user_id UUID NOT NULL REFERENCES users(id),
+        performed_by_role TEXT NOT NULL,
+        old_value JSONB,
+        new_value JSONB,
+        metadata JSONB,
+        created_at TIMESTAMP DEFAULT NOW()
       )`
     };
 
