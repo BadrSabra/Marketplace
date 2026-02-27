@@ -1,0 +1,306 @@
+{
+  "store": {
+    "orders": {
+      "page_title": "طلبات المتجر",
+      "title": "طلبات المتجر",
+      "subtitle": "إدارة وعرض طلبات متجرك",
+      "search_label": "البحث عن الطلبات",
+      "search_placeholder": "البحث باسم العميل أو رقم الطلب...",
+      "status_filter": "تصفية حسب الحالة",
+      "sort_by": "ترتيب حسب",
+      "active_orders": "الطلبات النشطة",
+      "orders_description": "قائمة بجميع الطلبات الواردة لمتجرك",
+      "view_details": "عرض التفاصيل",
+      "no_orders": "لا توجد طلبات حتى الآن",
+      "no_items": "لا توجد عناصر",
+      "order_id": "رقم الطلب",
+      "customer_name": "اسم العميل",
+      "status": "الحالة",
+      "total": "الإجمالي",
+      "actions": {
+        "accept": "قبول",
+        "cancel": "إلغاء",
+        "mark_ready": "تحديد كجاهز"
+      },
+      "statuses": {
+        "ALL": "الكل",
+        "PENDING": "قيد الانتظار",
+        "ACCEPTED": "مقبول",
+        "READY": "جاهز للاستلام",
+        "PICKED_UP": "تم الاستلام",
+        "DELIVERED": "تم التوصيل",
+        "CANCELLED": "ملغي",
+        "ASSIGNED": "تم التعيين"
+      },
+      "sort_options": {
+        "date_desc": "الأحدث أولاً",
+        "date_asc": "الأقدم أولاً",
+        "amount_desc": "الأعلى قيمة",
+        "amount_asc": "الأقل قيمة"
+      },
+      "table": {
+        "info": "المعلومات",
+        "customer": "العميل",
+        "items": "العناصر",
+        "total": "الإجمالي",
+        "status": "الحالة",
+        "actions": "الإجراءات"
+      },
+      "toasts": {
+        "success_title": "تم بنجاح",
+        "success_desc": "تم تحديث حالة الطلب بنجاح",
+        "error_title": "خطأ",
+        "error_desc": "فشل في تحديث حالة الطلب"
+      }
+    },
+    "order_details": {
+      "page_title": "تفاصيل الطلب",
+      "title": "تفاصيل الطلب",
+      "order_number": "طلب رقم",
+      "not_found": "الطلب غير موجود",
+      "not_found_desc": "عذراً، لم نتمكن من العثور على الطلب الذي تبحث عنه.",
+      "back_to_orders": "العودة للطلبات",
+      "items_title": "عناصر الطلب",
+      "items_subtitle": "تفاصيل المنتجات والكميات",
+      "sub_order_number": "طلب فرعي رقم",
+      "subtotal": "المجموع الفرعي",
+      "customer_info": "معلومات العميل",
+      "name": "الاسم",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "address": "العنوان",
+      "payment_summary": "ملخص الدفع",
+      "payment_status": "حالة الدفع",
+      "total_price": "السعر الإجمالي",
+      "your_balance": "رصيدك الحالي",
+      "funds_note": "يتم تحويل الأموال إلى محفظتك بعد اكتمال التوصيل.",
+      "delivery_address": "عنوان التوصيل",
+      "products": "المنتجات",
+      "quantity": "الكمية",
+      "price": "السعر",
+      "status": "الحالة",
+      "update_status": "تحديث الحالة",
+      "table": {
+        "product": "المنتج",
+        "qty": "الكمية",
+        "price": "السعر",
+        "total": "الإجمالي"
+      }
+    },
+    "inventory": {
+      "page_title": "إدارة المخزون",
+      "title": "إدارة المخزون",
+      "subtitle": "إدارة منتجات متجرك وكمياتها",
+      "add_product": "إضافة منتج جديد",
+      "edit_product": "تعديل المنتج",
+      "delete_product": "حذف المنتج",
+      "delete_confirm": "هل أنت متأكد من حذف هذا المنتج؟",
+      "search_placeholder": "البحث عن المنتجات...",
+      "status_filter": "الحالة",
+      "stock_filter": "مستوى المخزون",
+      "sort_by": "ترتيب حسب",
+      "list_title": "قائمة المنتجات",
+      "list_description": "لديك حالياً {{count}} منتجات في مخزونك",
+      "no_history": "لا توجد منتجات بعد",
+      "statuses": {
+        "ALL": "الكل",
+        "ACTIVE": "نشط",
+        "INACTIVE": "غير نشط"
+      },
+      "stock_levels": {
+        "ALL": "الكل",
+        "LOW": "مخزون منخفض",
+        "OUT": "نفذ المخزون"
+      },
+      "sort_options": {
+        "name_asc": "الاسم (أ-ي)",
+        "price_asc": "السعر (الأقل)",
+        "price_desc": "السعر (الأعلى)",
+        "stock_asc": "الكمية (الأقل)",
+        "stock_desc": "الكمية (الأكثر)"
+      },
+      "table": {
+        "name": "المنتج",
+        "sku": "الرمز",
+        "price": "السعر",
+        "stock": "المخزون",
+        "status": "الحالة",
+        "actions": "الإجراءات"
+      },
+      "form": {
+        "required_note": "يرجى ملء جميع الحقول المطلوبة لإضافة أو تحديث المنتج.",
+        "name": "اسم المنتج",
+        "name_placeholder": "أدخل اسم المنتج",
+        "description": "الوصف",
+        "description_placeholder": "أدخل وصف المنتج",
+        "price": "السعر ($)",
+        "stock": "الكمية في المخزون",
+        "category": "الفئة",
+        "category_placeholder": "أدخل فئة المنتج",
+        "submit_add": "إضافة المنتج",
+        "submit_update": "تحديث المنتج"
+      },
+      "toasts": {
+        "create_success": "تم إنشاء المنتج بنجاح",
+        "create_error": "خطأ في إنشاء المنتج",
+        "update_success": "تم تحديث المنتج بنجاح",
+        "update_error": "خطأ في تحديث المنتج",
+        "delete_success": "تم حذف المنتج بنجاح"
+      }
+    },
+    "earnings": {
+      "page_title": "أرباح المتجر",
+      "title": "أرباح المتجر",
+      "subtitle": "تتبع مبيعاتك وأرباحك",
+      "available_balance": "الرصيد المتاح",
+      "balance_note": "الأموال المتاحة للسحب",
+      "total_commissions": "إجمالي العمولات",
+      "commissions_note": "إجمالي الأرباح المكتسبة",
+      "held_funds": "أموال معلقة",
+      "held_note": "بانتظار اكتمال التوصيل",
+      "recent_transactions": "العمليات الأخيرة",
+      "transactions_subtitle": "سجل بجميع العمليات المالية",
+      "no_history": "لا توجد بيانات أرباح بعد",
+      "table": {
+        "date": "التاريخ",
+        "type": "النوع",
+        "reference": "المرجع",
+        "amount": "المبلغ",
+        "status": "الحالة"
+      }
+    }
+  },
+  "driver": {
+    "tasks": {
+      "page_title": "مهام التوصيل",
+      "title": "مهام التوصيل",
+      "subtitle": "ابحث عن مهام توصيل جديدة",
+      "marketplace_title": "سوق المهام المتاحة",
+      "marketplace_subtitle": "المهام التي تنتظر سائقاً لاستلامها",
+      "no_tasks": "لا توجد مهام متاحة حالياً",
+      "table": {
+        "order_id": "رقم الطلب",
+        "customer": "العميل",
+        "items": "العناصر",
+        "location": "الموقع",
+        "status": "الحالة",
+        "actions": "الإجراءات"
+      },
+      "actions": {
+        "offer": "تقديم عرض",
+        "claim": "قبول المهمة"
+      },
+      "statuses": {
+        "AVAILABLE": "متاح"
+      },
+      "offer_dialog": {
+        "title": "تقديم عرض توصيل",
+        "fee_label": "رسوم التوصيل المقترحة ($)",
+        "notes_label": "ملاحظات إضافية",
+        "notes_placeholder": "أي معلومات إضافية للمتجر...",
+        "cancel": "إلغاء",
+        "submit": "إرسال العرض"
+      },
+      "toasts": {
+        "offer_success_title": "تم الإرسال",
+        "offer_success_desc": "تم إرسال عرضك بنجاح",
+        "offer_error_title": "خطأ",
+        "offer_error_desc": "فشل في إرسال العرض",
+        "claim_success_title": "تم القبول",
+        "claim_success_desc": "تم قبول المهمة بنجاح",
+        "claim_error_title": "خطأ",
+        "claim_error_desc": "فشل في قبول المهمة"
+      }
+    },
+    "active_delivery": {
+      "page_title": "التوصيلات النشطة",
+      "title": "التوصيلات النشطة",
+      "estimated_delivery": "الوقت المتبقي المقدر: {{time}}",
+      "total_value": "إجمالي القيمة",
+      "remaining_time": "الوقت المتبقي",
+      "delivery_otp": "رمز التفعيل (OTP)",
+      "no_delivery_title": "لا توجد مهمة نشطة",
+      "no_delivery_desc": "اذهب إلى صفحة المهام للبحث عن طلبات توصيل.",
+      "actions": {
+        "generate_otp": "إنشاء رمز OTP",
+        "mark_picked_up": "تم الاستلام من المتجر",
+        "confirm_delivery": "تأكيد التسليم للعميل",
+        "call_customer": "الاتصال بالعميل"
+      },
+      "toasts": {
+        "otp_success_title": "تم إنشاء الرمز",
+        "otp_success_desc": "تم إنشاء رمز التفعيل بنجاح",
+        "status_success_title": "تم التحديث",
+        "status_success_desc": "تم تحديث حالة التوصيل إلى {{status}}"
+      }
+    },
+    "earnings": {
+      "page_title": "أرباح السائق",
+      "title": "أرباح السائق",
+      "inconsistency_alert": "تنبيه: عدم اتساق في البيانات",
+      "warning_title": "تنبيه رصيد سالب",
+      "negative_balance_warning": "رصيدك حالياً سالب، يرجى تسوية المبالغ المستحقة.",
+      "available_balance": "الرصيد المتاح",
+      "total_commissions": "إجمالي الأرباح",
+      "history_title": "سجل المعاملات",
+      "no_transactions": "لا توجد معاملات بعد",
+      "filters": {
+        "all": "جميع العمليات"
+      },
+      "table": {
+        "date": "التاريخ",
+        "type": "النوع",
+        "order_id": "رقم الطلب",
+        "amount": "المبلغ",
+        "status": "الحالة"
+      }
+    }
+  },
+  "customer": {
+    "transactions": {
+      "order_placeholder": "رقم الطلب..."
+    },
+    "wallet": {
+      "type": "نوع العملية",
+      "all_types": "جميع الأنواع",
+      "previous": "السابق",
+      "next": "التالي",
+      "page_info": "صفحة {{page}} من {{total}}",
+      "types": {
+        "COMMISSION": "عمولة",
+        "DEPOSIT": "إيداع",
+        "WITHDRAWAL": "سحب",
+        "REFUND": "استرداد"
+      }
+    }
+  },
+  "common_ui": {
+    "buttons": {
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "add": "إضافة",
+      "submit": "إرسال"
+    },
+    "alerts": {
+      "success": "تمت العملية بنجاح",
+      "error": "حدث خطأ، حاول مرة أخرى",
+      "warning": "تنبيه"
+    },
+    "table": {
+      "actions": "الإجراءات",
+      "no_data": "لا توجد بيانات"
+    },
+    "toast": {
+      "deposit_success": "تم إرسال الإيداع بنجاح",
+      "deposit_failed": "فشل الإيداع",
+      "profile_updated": "تم تحديث الملف الشخصي",
+      "order_status_updated": "تم تحديث حالة الطلب"
+    },
+    "select": {
+      "choose": "اختر",
+      "select_option": "اختر خيارًا"
+    }
+  }
+}
