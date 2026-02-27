@@ -1,0 +1,109 @@
+Task: Replace the current "Customer Dashboard" with a real Marketplace Home page.
+
+Context:
+This platform is a hyperlocal marketplace. The current customer dashboard only displays static text and does not reflect a real shopping experience.
+
+Objective:
+Convert this page into the main Marketplace browsing interface.
+
+-----------------------------------------
+ARCHITECTURAL RULES
+-----------------------------------------
+
+- Do NOT modify database schema.
+- Use existing Store model.
+- Do NOT invent new fields.
+- If status field exists, use it.
+- If not, reuse existing approval/active flag.
+- Backend filtering must happen server-side.
+
+-----------------------------------------
+1) Rename & Routing
+-----------------------------------------
+
+- Change page title from "لوحة تحكم العميل" to:
+  "السوق"
+- Update navigation labels.
+- Keep route protected for authenticated customers.
+- Route path should be:
+  /marketplace
+
+-----------------------------------------
+2) API Layer
+-----------------------------------------
+
+Create or use:
+
+GET /api/stores?status=active
+
+Requirements:
+- Return ONLY approved/active stores
+- Implement pagination (limit=12, page param)
+- Sort by newest first
+- Response must include:
+
+{
+  id,
+  name,
+  description,
+  logoUrl,
+  status,
+  isOpen,
+  createdAt
+}
+
+-----------------------------------------
+3) UI Structure
+-----------------------------------------
+
+Create modular components:
+
+- StoreGrid
+- StoreCard
+- MarketplaceHeader
+
+StoreCard must include:
+- Logo (fallback placeholder if null)
+- Name
+- Short description (max 100 chars)
+- Open/Closed badge
+- Button: "عرض المتجر"
+
+-----------------------------------------
+4) Navigation
+-----------------------------------------
+
+On click:
+Navigate to:
+/store/:id
+
+That page must:
+- Fetch store details
+- Fetch store products
+- Display product grid
+- Show empty state if no products
+
+-----------------------------------------
+5) UX States
+-----------------------------------------
+
+Implement:
+- Loading skeleton
+- Empty state:
+  "لا توجد متاجر متاحة حالياً"
+- Error state with retry button
+
+-----------------------------------------
+6) Constraints
+-----------------------------------------
+
+- Do NOT hardcode sample data
+- Do NOT fake API calls
+- Use real backend data
+- Keep responsive design
+- Keep logic separated from UI
+
+-----------------------------------------
+
+Deliverable:
+A production-ready Marketplace Home page replacing the old customer dashboard.
