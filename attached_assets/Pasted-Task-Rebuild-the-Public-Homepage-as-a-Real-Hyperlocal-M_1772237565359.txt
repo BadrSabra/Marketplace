@@ -1,0 +1,223 @@
+Task: Rebuild the Public Homepage as a Real Hyperlocal Marketplace Landing Page
+
+Context:
+The current "/" route incorrectly renders the Customer Dashboard.
+We need to rebuild "/" as a true public marketplace homepage.
+
+The platform is a hyperlocal marketplace serving:
+- قرية ميت جابر
+- القرى المجاورة فقط
+
+This must be production-ready and architecturally correct.
+
+====================================================
+CRITICAL RULES
+====================================================
+
+- "/" must be PUBLIC (no auth required)
+- Do NOT modify database schema
+- Do NOT break existing dashboards
+- Do NOT break authentication system
+- Keep clean architecture
+- No mock data
+- No hardcoded stores
+
+====================================================
+1) ROUTING FIX
+====================================================
+
+- Create new component: HomePage
+- Set route "/" → <HomePage />
+- Move CustomerDashboard to:
+    "/dashboard"
+- Protect "/dashboard" with auth guard
+- Remove any auto-redirect from "/" to dashboard
+
+====================================================
+2) NAVBAR (Sticky + Responsive)
+====================================================
+
+Create a reusable Navbar component.
+
+Left:
+- Logo (click → "/")
+
+Center:
+- السوق
+- كيف يعمل
+- تسجيل متجر
+
+Right:
+
+If NOT logged in:
+- زر "تسجيل الدخول"
+- زر "إنشاء حساب"
+
+If logged in:
+- Avatar dropdown:
+    - حسابي → /dashboard
+    - تسجيل خروج
+
+Make fully responsive (mobile hamburger menu).
+
+====================================================
+3) HERO SECTION
+====================================================
+
+Large clean hero section.
+
+Title:
+"سوق ميت جابر"
+
+Subtitle:
+"اطلب من متاجر قريتك والقرى المجاورة بسهولة وأمان"
+
+Add badge:
+"منصة محلية تخدم ميت جابر والقرى المجاورة فقط"
+
+Optional:
+Search input (by store name)
+
+====================================================
+4) HYPERLOCAL CLARIFICATION BANNER
+====================================================
+
+Add small highlighted section:
+
+"نخدم حالياً قرية ميت جابر والمناطق المجاورة فقط"
+
+This reinforces service area.
+
+====================================================
+5) STORES API (Public)
+====================================================
+
+Create endpoint:
+
+GET /api/public/stores?page=1&limit=12
+
+Backend Rules:
+- Only approved stores
+- Only active stores
+- Sorted by newest
+- Paginated
+- No sensitive fields
+
+Response:
+
+{
+  id,
+  name,
+  description,
+  logoUrl,
+  isOpen,
+  createdAt
+}
+
+====================================================
+6) STORES GRID SECTION
+====================================================
+
+Create StoreGrid component.
+
+- Responsive grid (3–4 columns desktop, 1–2 mobile)
+- Fetch data from API
+- Implement pagination (Load More button)
+
+====================================================
+7) StoreCard Component
+====================================================
+
+Each card must include:
+
+- Store logo (fallback image if null)
+- Store name
+- Short description (truncate 100 chars)
+- Status badge:
+    - مفتوح (green)
+    - مغلق (gray)
+- Button:
+    "عرض المتجر"
+
+On click:
+Navigate to:
+"/store/:id"
+
+====================================================
+8) STORE PAGE (Public)
+====================================================
+
+The store page must:
+
+- Be publicly accessible
+- Fetch store info
+- Fetch products
+- Display products grid
+
+If user clicks:
+"إضافة للسلة"
+
+AND not logged in:
+→ Redirect to /login
+
+====================================================
+9) UX STATES
+====================================================
+
+Implement:
+
+- Loading skeleton
+- Empty state:
+   "لا توجد متاجر متاحة حالياً"
+- Error state with retry button
+
+====================================================
+10) FOOTER
+====================================================
+
+Simple clean footer:
+
+Sections:
+
+- عن المنصة
+- تسجيل متجر
+- تواصل معنا
+- جميع الحقوق محفوظة © Mit Gaber Market
+
+====================================================
+11) SEO OPTIMIZATION
+====================================================
+
+Set:
+
+<title>
+"سوق ميت جابر | اطلب من متاجر قريتك أونلاين"
+
+<meta name="description">
+"منصة محلية لطلب المنتجات من متاجر قرية ميت جابر والقرى المجاورة مع توصيل سريع وآمن."
+
+Ensure:
+- Semantic HTML
+- Proper heading structure (H1 only once)
+- Clean markup
+
+====================================================
+12) CLEAN COMPONENT STRUCTURE
+====================================================
+
+Components:
+
+- HomePage
+- Navbar
+- HeroSection
+- HyperlocalBanner
+- StoreGrid
+- StoreCard
+- Footer
+
+Keep modular and scalable.
+
+====================================================
+
+Deliverable:
+A production-ready hyperlocal marketplace homepage replacing the old dashboard.
