@@ -88,7 +88,7 @@ function RoleBasedDashboard() {
     case "STORE_OWNER":
       return <StoreDashboard />;
     case "DRIVER":
-      return <DriverDashboard />;
+      return <Redirect to="/driver/tasks" />;
     case "CUSTOMER":
     default:
       return <CustomerDashboard />;

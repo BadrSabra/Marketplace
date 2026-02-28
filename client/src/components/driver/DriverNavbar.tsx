@@ -18,7 +18,7 @@ import {
 import { useState } from "react";
 
 export default function DriverNavbar() {
-  const { user, logoutMutation } = useAuth();
+  const { user, logout } = useAuth();
   const [location] = useLocation();
   const [isOnline, setIsOnline] = useState(true);
 
@@ -66,14 +66,12 @@ export default function DriverNavbar() {
               <XCircle className="w-4 h-4 text-red-500" />
             )}
             <span className="text-sm font-medium">{isOnline ? "متصل" : "غير متصل"}</span>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-6 px-2 text-xs"
+            <button 
+              className="h-6 px-2 text-xs bg-transparent hover:bg-muted rounded"
               onClick={() => setIsOnline(!isOnline)}
             >
               تغيير
-            </Button>
+            </button>
           </div>
 
           <div className="hidden md:flex items-center gap-4 border-l pl-4">
@@ -81,8 +79,7 @@ export default function DriverNavbar() {
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => logoutMutation.mutate()}
-              disabled={logoutMutation.isPending}
+              onClick={() => logout()}
             >
               <LogOut className="w-5 h-5" />
             </Button>
@@ -100,7 +97,7 @@ export default function DriverNavbar() {
                 <Button 
                   variant="destructive" 
                   className="w-full mt-4 justify-start gap-2"
-                  onClick={() => logoutMutation.mutate()}
+                  onClick={() => logout()}
                 >
                   <LogOut className="w-5 h-5" />
                   تسجيل الخروج
