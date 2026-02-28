@@ -18,17 +18,17 @@
     },
     "register": {
       "title": "إنشاء حساب",
-      "subtitle": "انضم إلى سوق ميت غمر",
+      "subtitle": "انضم إلى سوق ميت جابر",
       "name_label": "الاسم الكامل",
-      "name_placeholder": "جون دو",
+      "name_placeholder": "عبدالرحمن",
       "email_label": "البريد الإلكتروني",
-      "email_placeholder": "john@example.com",
+      "email_placeholder": "01000000000",
       "password_label": "كلمة المرور",
       "password_placeholder": "••••••••",
       "role_label": "أنا...",
       "role_placeholder": "اختر الدور",
       "roles": {
-        "customer": "زبون",
+        "customer": "عميل",
         "store_owner": "صاحب متجر",
         "driver": "سائق توصيل"
       },
