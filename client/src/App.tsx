@@ -168,6 +168,7 @@ function Router() {
       <Route path="/orders">
         {() => <ProtectedRoute component={OrdersPage} />}
       </Route>
+      <Route path="/admin/stores" component={StoresPage} />
       
       <Route component={NotFound} />
     </Switch>

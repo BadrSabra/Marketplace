@@ -27,13 +27,13 @@ export default function Navbar() {
 
           <div className="hidden md:flex gap-6 text-sm font-medium">
             <Link href="/stores">
-              <a className="hover:text-primary transition-colors" data-testid="link-market">السوق</a>
+              <span className="hover:text-primary transition-colors cursor-pointer" data-testid="link-market">السوق</span>
             </Link>
             <Link href="/how-it-works">
-              <a className="hover:text-primary transition-colors" data-testid="link-how-it-works">كيف يعمل</a>
+              <span className="hover:text-primary transition-colors cursor-pointer" data-testid="link-how-it-works">كيف يعمل</span>
             </Link>
             <Link href="/register?role=STORE_OWNER">
-              <a className="hover:text-primary transition-colors" data-testid="link-register-store">تسجيل متجر</a>
+              <span className="hover:text-primary transition-colors cursor-pointer" data-testid="link-register-store">تسجيل متجر</span>
             </Link>
           </div>
         </div>
@@ -101,22 +101,22 @@ export default function Navbar() {
         <div className="md:hidden border-t bg-background p-4 space-y-4 animate-in slide-in-from-top duration-200">
           <div className="flex flex-col gap-4">
             <Link href="/stores">
-              <a className="text-lg font-medium" onClick={() => setIsMobileMenuOpen(false)}>السوق</a>
+              <span className="text-lg font-medium cursor-pointer" onClick={() => setIsMobileMenuOpen(false)}>السوق</span>
             </Link>
             <Link href="/how-it-works">
-              <a className="text-lg font-medium" onClick={() => setIsMobileMenuOpen(false)}>كيف يعمل</a>
+              <span className="text-lg font-medium cursor-pointer" onClick={() => setIsMobileMenuOpen(false)}>كيف يعمل</span>
             </Link>
             <Link href="/register?role=STORE_OWNER">
-              <a className="text-lg font-medium" onClick={() => setIsMobileMenuOpen(false)}>تسجيل متجر</a>
+              <span className="text-lg font-medium cursor-pointer" onClick={() => setIsMobileMenuOpen(false)}>تسجيل متجر</span>
             </Link>
             <hr />
             {user ? (
               <>
                 <Link href="/">
-                  <a className="text-lg font-medium" onClick={() => setIsMobileMenuOpen(false)}>لوحة التحكم</a>
+                  <span className="text-lg font-medium cursor-pointer" onClick={() => setIsMobileMenuOpen(false)}>لوحة التحكم</span>
                 </Link>
                 <Link href="/customer/profile">
-                  <a className="text-lg font-medium" onClick={() => setIsMobileMenuOpen(false)}>حسابي</a>
+                  <span className="text-lg font-medium cursor-pointer" onClick={() => setIsMobileMenuOpen(false)}>حسابي</span>
                 </Link>
                 <Button 
                   variant="destructive" 
