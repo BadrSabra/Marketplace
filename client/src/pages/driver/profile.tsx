@@ -27,9 +27,15 @@ export default function DriverProfilePage() {
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
+      const token = localStorage.getItem("jwt_token");
+      const headers = {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      };
+      
       // Use the actual driver profile endpoint if it exists, otherwise fallback
-      await apiRequest("PATCH", "/api/driver/profile", data).catch(() => 
-        apiRequest("PATCH", "/api/customer/profile", data)
+      await apiRequest("PATCH", "/api/driver/profile", data, { headers }).catch(() => 
+        apiRequest("PATCH", "/api/customer/profile", data, { headers })
       );
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast({ title: "تم تحديث الملف الشخصي بنجاح" });
