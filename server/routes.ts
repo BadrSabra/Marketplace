@@ -173,7 +173,8 @@ export async function registerRoutes(
         name: z.string().min(1).max(50).regex(/^[a-zA-Z\s]*$/, "Name can only contain letters").optional(),
         phone: z.string().min(10).max(15).regex(/^\d+$/, "Phone must be numeric").optional(),
         transportType: z.string().optional(),
-        avatarUrl: z.string().url().or(z.literal("")).optional(),
+        avatarUrl: z.string().optional(),
+        driversLicenseUrl: z.string().optional(),
         addresses: z.array(z.string().min(1)).optional(),
       });
 
