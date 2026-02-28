@@ -32,6 +32,12 @@ export default function Navbar() {
             <Link href="/how-it-works">
               <span className="hover:text-primary transition-colors cursor-pointer" data-testid="link-how-it-works">كيف يعمل</span>
             </Link>
+            <Link href="/about">
+              <span className="hover:text-primary transition-colors cursor-pointer" data-testid="link-about">من نحن</span>
+            </Link>
+            <Link href="/faq">
+              <span className="hover:text-primary transition-colors cursor-pointer" data-testid="link-faq">الأسئلة الشائعة</span>
+            </Link>
             <Link href="/register?role=STORE_OWNER">
               <span className="hover:text-primary transition-colors cursor-pointer" data-testid="link-register-store">تسجيل متجر</span>
             </Link>
@@ -105,6 +111,12 @@ export default function Navbar() {
             </Link>
             <Link href="/how-it-works">
               <span className="text-lg font-medium cursor-pointer" onClick={() => setIsMobileMenuOpen(false)}>كيف يعمل</span>
+            </Link>
+            <Link href="/about">
+              <span className="text-lg font-medium cursor-pointer" onClick={() => setIsMobileMenuOpen(false)}>من نحن</span>
+            </Link>
+            <Link href="/faq">
+              <span className="text-lg font-medium cursor-pointer" onClick={() => setIsMobileMenuOpen(false)}>الأسئلة الشائعة</span>
             </Link>
             <Link href="/register?role=STORE_OWNER">
               <span className="text-lg font-medium cursor-pointer" onClick={() => setIsMobileMenuOpen(false)}>تسجيل متجر</span>

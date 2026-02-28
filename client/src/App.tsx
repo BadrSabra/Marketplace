@@ -78,6 +78,8 @@ import LandingPage from "@/pages/public/LandingPage";
 import PublicStorePage from "@/pages/public/PublicStorePage";
 import PublicStoresPage from "@/pages/public/StoresPage";
 import HowItWorks from "@/pages/public/HowItWorks";
+import AboutPage from "@/pages/public/about";
+import FAQPage from "@/pages/public/faq";
 
 function RoleBasedDashboard() {
   const { user } = useAuth();
@@ -104,6 +106,8 @@ function Router() {
       <Route path="/register" component={RegisterPage} />
       <Route path="/" component={RoleBasedDashboard} />
       <Route path="/how-it-works" component={HowItWorks} />
+      <Route path="/about" component={AboutPage} />
+      <Route path="/faq" component={FAQPage} />
       <Route path="/store/:id" component={PublicStorePage} />
       <Route path="/stores" component={PublicStoresPage} />
       
