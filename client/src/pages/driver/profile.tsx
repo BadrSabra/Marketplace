@@ -27,7 +27,10 @@ export default function DriverProfilePage() {
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
-      await apiRequest("PATCH", "/api/customer/profile", data);
+      // Use the actual driver profile endpoint if it exists, otherwise fallback
+      await apiRequest("PATCH", "/api/driver/profile", data).catch(() => 
+        apiRequest("PATCH", "/api/customer/profile", data)
+      );
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast({ title: "تم تحديث الملف الشخصي بنجاح" });
     } catch (error: any) {

@@ -166,11 +166,12 @@ export async function registerRoutes(
     res.json(cleanUser);
   });
 
-  app.patch("/api/customer/profile", authenticate, authorizeRole(["CUSTOMER"]), async (req, res) => {
+  app.patch("/api/customer/profile", authenticate, async (req, res) => {
     try {
       const userId = (req as any).user.id;
+      const userRole = (req as any).user.role;
       const updateSchema = z.object({
-        name: z.string().min(1).max(50).regex(/^[a-zA-Z\s]*$/, "Name can only contain letters").optional(),
+        name: z.string().min(1).max(50).regex(/^[a-zA-Z\u0600-\u06FF\s]*$/, "Name can only contain letters").optional(),
         phone: z.string().min(10).max(15).regex(/^\d+$/, "Phone must be numeric").optional(),
         transportType: z.string().optional(),
         avatarUrl: z.string().optional(),
@@ -192,7 +193,7 @@ export async function registerRoutes(
         entityType: "user",
         entityId: userId,
         performedByUserId: userId,
-        performedByRole: "CUSTOMER",
+        performedByRole: userRole,
         oldValue: oldUser,
         newValue: updatedUser,
       });
@@ -205,6 +206,12 @@ export async function registerRoutes(
       }
       res.status(500).json({ message: "Internal error" });
     }
+  });
+
+  app.patch("/api/driver/profile", authenticate, authorizeRole(["DRIVER"]), async (req, res) => {
+    // Reuse customer profile logic since it's the same table
+    req.url = "/api/customer/profile";
+    return app._router.handle(req, res, () => {});
   });
 
   app.get(api.users.list.path, authenticate, authorizeRole(["ADMIN"]), async (req, res) => {

@@ -51,10 +51,10 @@ export const depositLimiter = rateLimit({
 
 export const payloadSizeLimit = (req: Request, res: Response, next: NextFunction) => {
   const contentLength = parseInt(req.headers['content-length'] || '0');
-  if (contentLength > 1024 * 1024) { // 1MB
+  if (contentLength > 10 * 1024 * 1024) { // 10MB
     return res.status(413).json({
       success: false,
-      error: { code: "PAYLOAD_TOO_LARGE", message: "Request payload exceeds 1MB limit" }
+      error: { code: "PAYLOAD_TOO_LARGE", message: "Request payload exceeds 10MB limit" }
     });
   }
   next();
