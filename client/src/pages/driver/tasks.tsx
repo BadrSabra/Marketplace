@@ -1,218 +1,229 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useEffect } from "react";
+import { useDriverTasks, useAvailableOffers, usePlaceOffer, useVerifyOtp } from "@/hooks/use-driver";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, MapPin, Package, Clock, Send, CheckCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import { format } from "date-fns";
+import { Loader2, Store, MapPin, Package, Clock } from "lucide-react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
-import { t } from "@/i18n";
 
-interface Task {
-  sub_order_id: string;
-  order_id: string;
-  customer_name: string;
-  customer_address: string;
-  items: { product_name: string; quantity: number }[];
-  subtotal: number;
-  created_at: string;
-  status: string;
-}
-
-export default function DriverTasks() {
+export default function DriverTasksPage() {
+  const { data: tasks, isLoading: tasksLoading, error: tasksError } = useDriverTasks();
+  const { data: offers, isLoading: offersLoading, error: offersError } = useAvailableOffers();
   const { toast } = useToast();
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [proposedFee, setProposedFee] = useState("");
-  const [notes, setNotes] = useState("");
 
-  const { data: tasksData, isLoading } = useQuery<{ tasks: Task[] }>({
-    queryKey: ["/api/delivery/available-tasks"],
-    refetchInterval: 30000,
-  });
+  useEffect(() => {
+    console.log("TASKS_PAGE_MOUNTED");
+  }, []);
 
-  const offerMutation = useMutation({
-    mutationFn: async (data: { subOrderId: string; proposedFee: number; notes?: string }) => {
-      const res = await apiRequest("POST", `/api/delivery/suborders/${data.subOrderId}/offer`, {
-        proposedFee: data.proposedFee,
-        notes: data.notes
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: t('driver.tasks.toasts.offer_success_title'), description: t('driver.tasks.toasts.offer_success_desc') });
-      queryClient.invalidateQueries({ queryKey: ["/api/delivery/available-tasks"] });
-      setSelectedTask(null);
-      setProposedFee("");
-      setNotes("");
-    },
-    onError: (error: any) => {
-      toast({ title: t('driver.tasks.toasts.offer_error_title'), description: error.message || t('driver.tasks.toasts.offer_error_desc'), variant: "destructive" });
-    }
-  });
-
-  const acceptMutation = useMutation({
-    mutationFn: async (subOrderId: string) => {
-      const res = await apiRequest("PATCH", `/api/delivery/suborders/${subOrderId}/accept`);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: t('driver.tasks.toasts.claim_success_title'), description: t('driver.tasks.toasts.claim_success_desc') });
-      queryClient.invalidateQueries({ queryKey: ["/api/delivery/available-tasks"] });
-    },
-    onError: (error: any) => {
-      toast({ title: t('driver.tasks.toasts.claim_error_title'), description: error.message || t('driver.tasks.toasts.claim_error_desc'), variant: "destructive" });
-    }
-  });
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+  if (tasksLoading || offersLoading) {
+    return <TasksSkeleton />;
   }
 
-  const tasks = tasksData?.tasks || [];
+  return (
+    <div className="container mx-auto p-4 space-y-8">
+      <header className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-right">المهام</h1>
+          <div className="flex gap-2 mt-2">
+            <Badge variant="outline">Assigned: {tasks?.filter(t => t.status === 'ASSIGNED').length || 0}</Badge>
+            <Badge variant="outline">In Progress: {tasks?.filter(t => t.status === 'ON_THE_WAY').length || 0}</Badge>
+          </div>
+        </div>
+      </header>
+
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold text-right">المهام المسندة</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {tasks?.length === 0 ? (
+            <Card className="col-span-full p-8 text-center text-muted-foreground">
+              لا توجد مهام مسندة حالياً
+            </Card>
+          ) : (
+            tasks?.map(task => <TaskCard key={task.subOrderId} task={task} />)
+          )}
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold text-right">العروض المتاحة</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {offers?.length === 0 ? (
+            <Card className="col-span-full p-8 text-center text-muted-foreground">
+              لا توجد عروض متاحة حالياً
+              <Button variant="link" onClick={() => window.location.reload()}>التحديث</Button>
+            </Card>
+          ) : (
+            offers?.map(offer => <OfferCard key={offer.id} offer={offer} />)
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function TaskCard({ task }: { task: any }) {
+  const [isOtpOpen, setIsOtpOpen] = useState(false);
 
   return (
-    <div className="p-8 space-y-6 rtl:text-right" dir="rtl">
-      <div className="text-right">
-        <h1 className="text-3xl font-bold">{t('driver.tasks.title')}</h1>
-        <p className="text-muted-foreground">{t('driver.tasks.subtitle')}</p>
-      </div>
-
-      <Card>
-        <CardHeader className="text-right">
-          <CardTitle>{t('driver.tasks.marketplace_title')}</CardTitle>
-          <CardDescription>{t('driver.tasks.marketplace_subtitle')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow className="flex-row-reverse">
-                <TableHead className="text-right">{t('driver.tasks.table.order_id')}</TableHead>
-                <TableHead className="text-right">{t('driver.tasks.table.customer')}</TableHead>
-                <TableHead className="text-right">{t('driver.tasks.table.items')}</TableHead>
-                <TableHead className="text-right">{t('driver.tasks.table.location')}</TableHead>
-                <TableHead className="text-right">{t('driver.tasks.table.status')}</TableHead>
-                <TableHead className="text-left">{t('driver.tasks.table.actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tasks.length > 0 ? (
-                tasks.map((task) => (
-                  <TableRow key={task.sub_order_id} data-testid={`row-task-${task.sub_order_id}`} className="flex-row-reverse">
-                    <TableCell className="font-mono text-xs text-right">#{task.order_id.split("-")[0]}</TableCell>
-                    <TableCell className="font-medium text-right">{task.customer_name}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex flex-col gap-1">
-                        {task.items.map((item, i) => (
-                          <span key={i} className="text-xs text-muted-foreground">
-                            {item.quantity}x {item.product_name}
-                          </span>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center gap-1 text-xs flex-row-reverse">
-                        <MapPin className="h-3 w-3 text-muted-foreground" />
-                        {task.customer_address}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                        {t('driver.tasks.statuses.AVAILABLE')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-left space-x-2 space-x-reverse">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="gap-2 flex-row-reverse"
-                        onClick={() => setSelectedTask(task)}
-                        data-testid={`button-offer-${task.sub_order_id}`}
-                      >
-                        <Send className="h-3.5 w-3.5" />
-                        {t('driver.tasks.actions.offer')}
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        className="gap-2 flex-row-reverse"
-                        onClick={() => acceptMutation.mutate(task.sub_order_id)}
-                        disabled={acceptMutation.isPending}
-                        data-testid={`button-claim-${task.sub_order_id}`}
-                      >
-                        {acceptMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
-                        {t('driver.tasks.actions.claim')}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground italic">
-                    {t('driver.tasks.no_tasks')}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <Dialog open={!!selectedTask} onOpenChange={(open) => !open && setSelectedTask(null)}>
-        <DialogContent className="text-right">
-          <DialogHeader className="text-right">
-            <DialogTitle>{t('driver.tasks.offer_dialog.title')}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2 text-right">
-              <Label htmlFor="fee">{t('driver.tasks.offer_dialog.fee_label')}</Label>
-              <Input
-                id="fee"
-                type="number"
-                placeholder="5.00"
-                value={proposedFee}
-                onChange={(e) => setProposedFee(e.target.value)}
-                data-testid="input-proposed-fee"
-                className="text-right"
-              />
+    <Card className="flex flex-col h-full" data-testid={`card-task-${task.subOrderId}`}>
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          {task.store.logoUrl ? (
+            <img src={task.store.logoUrl} alt={task.store.name} className="w-10 h-10 rounded-full" />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Store className="w-6 h-6 text-primary" />
             </div>
-            <div className="space-y-2 text-right">
-              <Label htmlFor="notes">{t('driver.tasks.offer_dialog.notes_label')}</Label>
-              <Textarea
-                id="notes"
-                placeholder={t('driver.tasks.offer_dialog.notes_placeholder')}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                data-testid="input-notes"
-                className="text-right"
-              />
-            </div>
+          )}
+          <div>
+            <CardTitle className="text-lg">{task.store.name}</CardTitle>
+            <Badge variant={task.status === 'ON_THE_WAY' ? 'default' : 'secondary'}>
+              {task.status}
+            </Badge>
           </div>
-          <DialogFooter className="flex-row-reverse gap-2">
-            <Button variant="outline" onClick={() => setSelectedTask(null)}>{t('driver.tasks.offer_dialog.cancel')}</Button>
-            <Button 
-              onClick={() => offerMutation.mutate({ 
-                subOrderId: selectedTask!.sub_order_id, 
-                proposedFee: parseFloat(proposedFee),
-                notes 
-              })}
-              disabled={!proposedFee || parseFloat(proposedFee) <= 0 || offerMutation.isPending}
-              data-testid="button-submit-offer"
-            >
-              {offerMutation.isPending && <Loader2 className="h-4 w-4 ml-2 animate-spin ml-0 mr-2" />}
-              {t('driver.tasks.offer_dialog.submit')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 space-y-3">
+        <div className="flex items-start gap-2 text-sm">
+          <MapPin className="w-4 h-4 mt-1 shrink-0 text-muted-foreground" />
+          <span>{task.deliveryAddress}</span>
+        </div>
+        <div className="flex items-start gap-2 text-sm">
+          <Package className="w-4 h-4 mt-1 shrink-0 text-muted-foreground" />
+          <span>{task.items.map((i: any) => i.name).join(", ")}</span>
+        </div>
+        {task.assignedAt && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock className="w-3 h-3" />
+            <span>Assigned: {new Date(task.assignedAt).toLocaleTimeString()}</span>
+          </div>
+        )}
+      </CardContent>
+      <CardFooter className="gap-2">
+        {task.otpId && (task.status === 'READY' || task.status === 'ASSIGNED') && (
+          <Button className="w-full" onClick={() => setIsOtpOpen(true)} data-testid={`button-verify-otp-${task.subOrderId}`}>Verify OTP</Button>
+        )}
+        {task.status === 'ASSIGNED' && (
+          <Button variant="outline" className="w-full" data-testid={`button-pickup-${task.subOrderId}`}>Mark Picked Up</Button>
+        )}
+      </CardFooter>
+      <DeliveryOTPModal 
+        isOpen={isOtpOpen} 
+        onClose={() => setIsOtpOpen(false)} 
+        otpId={task.otpId} 
+      />
+    </Card>
+  );
+}
+
+function OfferCard({ offer }: { offer: any }) {
+  const [bidAmount, setBidAmount] = useState("");
+  const placeBidMutation = usePlaceOffer();
+
+  const handlePlaceBid = () => {
+    const amount = parseFloat(bidAmount);
+    if (isNaN(amount) || amount <= 0) {
+      return;
+    }
+    placeBidMutation.mutate({ subOrderId: offer.subOrderId, bidAmount });
+  };
+
+  return (
+    <Card className="flex flex-col h-full" data-testid={`card-offer-${offer.id}`}>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">{offer.store.name}</CardTitle>
+          <span className="font-bold text-primary">{offer.subtotal} EGP</span>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 space-y-2 text-sm">
+        <div className="flex items-start gap-2">
+          <MapPin className="w-4 h-4 mt-1 shrink-0 text-muted-foreground" />
+          <span>Pickup: {offer.pickupAddress || 'Store Location'}</span>
+        </div>
+        <div className="text-muted-foreground">
+          Posted: {new Date(offer.createdAt).toLocaleString()}
+        </div>
+      </CardContent>
+      <CardFooter className="flex-col gap-2">
+        <Input 
+          type="number" 
+          placeholder="Bid Amount" 
+          value={bidAmount}
+          onChange={(e) => setBidAmount(e.target.value)}
+          disabled={placeBidMutation.isPending}
+          data-testid={`input-bid-${offer.id}`}
+        />
+        <Button 
+          className="w-full" 
+          onClick={handlePlaceBid}
+          disabled={placeBidMutation.isPending}
+          data-testid={`button-bid-${offer.id}`}
+        >
+          {placeBidMutation.isPending ? <Loader2 className="animate-spin mr-2" /> : "Place Bid"}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+
+function DeliveryOTPModal({ isOpen, onClose, otpId }: { isOpen: boolean, onClose: () => void, otpId: string }) {
+  const [otpCode, setOtpCode] = useState("");
+  const verifyOtpMutation = useVerifyOtp();
+
+  const handleSubmit = () => {
+    verifyOtpMutation.mutate({ otpId, otpCode }, {
+      onSuccess: () => {
+        onClose();
+        console.log("OTP_TEST: correctOtp -> success");
+      }
+    });
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Verify Delivery OTP</DialogTitle>
+        </DialogHeader>
+        <div className="py-4">
+          <Input 
+            placeholder="6-digit OTP" 
+            value={otpCode}
+            onChange={(e) => setOtpCode(e.target.value)}
+            maxLength={6}
+            data-testid="input-otp"
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} data-testid="button-cancel-otp">Cancel</Button>
+          <Button onClick={handleSubmit} disabled={verifyOtpMutation.isPending} data-testid="button-submit-otp">
+            {verifyOtpMutation.isPending && <Loader2 className="animate-spin mr-2" />}
+            Verify
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TasksSkeleton() {
+  return (
+    <div className="container mx-auto p-4 space-y-8">
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-32" />
+        <div className="flex gap-2">
+          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-5 w-24" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[1, 2, 3].map(i => <Skeleton key={i} className="h-[250px] w-full" />)}
+      </div>
     </div>
   );
 }

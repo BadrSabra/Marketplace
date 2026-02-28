@@ -24,6 +24,8 @@ import StoreOrderDetails from "@/pages/customer/store/order/[id]";
 import DriverDashboard from "@/pages/driver/dashboard";
 import DriverEarnings from "@/pages/driver/earnings";
 import DriverTasks from "@/pages/driver/tasks";
+import DriverWallet from "@/pages/driver/wallet";
+import DriverProfile from "@/pages/driver/profile";
 import ActiveDelivery from "@/pages/driver/active-delivery";
 import CustomerOrderDetails from "@/pages/customer/order";
 import UsersPage from "@/pages/admin/users";
@@ -31,6 +33,18 @@ import StoresPage from "@/pages/admin/stores";
 import ProductsPage from "@/pages/admin/products";
 import OrdersPage from "@/pages/admin/orders";
 import AdminAudit from "@/pages/admin/audit";
+import DriverNavbar from "@/components/driver/DriverNavbar";
+
+function DriverLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-background">
+      <DriverNavbar />
+      <main className="pb-20 md:pb-8">
+        {children}
+      </main>
+    </div>
+  );
+}
 
 function ProtectedRoute({ 
   component: Component, 
@@ -105,13 +119,19 @@ function Router() {
 
       {/* Driver Routes */}
       <Route path="/driver/earnings">
-        {() => <ProtectedRoute component={DriverEarnings} roles={["DRIVER"]} />}
+        {() => <ProtectedRoute component={() => <DriverLayout><DriverEarnings /></DriverLayout>} roles={["DRIVER"]} />}
       </Route>
       <Route path="/driver/tasks">
-        {() => <ProtectedRoute component={DriverTasks} roles={["DRIVER"]} />}
+        {() => <ProtectedRoute component={() => <DriverLayout><DriverTasks /></DriverLayout>} roles={["DRIVER"]} />}
+      </Route>
+      <Route path="/driver/wallet">
+        {() => <ProtectedRoute component={() => <DriverLayout><DriverWallet /></DriverLayout>} roles={["DRIVER"]} />}
+      </Route>
+      <Route path="/driver/profile">
+        {() => <ProtectedRoute component={() => <DriverLayout><DriverProfile /></DriverLayout>} roles={["DRIVER"]} />}
       </Route>
       <Route path="/driver/active-delivery">
-        {() => <ProtectedRoute component={ActiveDelivery} roles={["DRIVER"]} />}
+        {() => <ProtectedRoute component={() => <DriverLayout><ActiveDelivery /></DriverLayout>} roles={["DRIVER"]} />}
       </Route>
       
       {/* Store Routes */}
