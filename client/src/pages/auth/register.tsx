@@ -19,7 +19,7 @@ const t = (key: string) => {
     "auth.register.subtitle": "انضم إلى سوق ميت جابر",
     "auth.register.name_label": "الاسم الكامل",
     "auth.register.name_placeholder": "عبدالرحمن",
-    "auth.register.email_label": "البريد الإلكتروني",
+    "auth.register.email_label": "رقم الهاتف المحمول أو البريد الإلكتروني",
     "auth.register.email_placeholder": "01000000000",
     "auth.register.password_label": "كلمة المرور",
     "auth.register.password_placeholder": "••••••••",
