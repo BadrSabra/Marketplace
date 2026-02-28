@@ -76,6 +76,7 @@ function ProtectedRoute({
 
 import LandingPage from "@/pages/public/LandingPage";
 import PublicStorePage from "@/pages/public/PublicStorePage";
+import PublicStoresPage from "@/pages/public/StoresPage";
 import HowItWorks from "@/pages/public/HowItWorks";
 
 function RoleBasedDashboard() {
@@ -104,6 +105,7 @@ function Router() {
       <Route path="/" component={RoleBasedDashboard} />
       <Route path="/how-it-works" component={HowItWorks} />
       <Route path="/store/:id" component={PublicStorePage} />
+      <Route path="/stores" component={PublicStoresPage} />
       
       {/* Customer Routes */}
       <Route path="/customer/wallet">
@@ -159,10 +161,7 @@ function Router() {
         {() => <ProtectedRoute component={UsersPage} roles={["ADMIN"]} />}
       </Route>
       
-      {/* Shared/Common Protected Routes */}
-      <Route path="/stores">
-        {() => <ProtectedRoute component={StoresPage} />}
-      </Route>
+      <Route path="/stores" component={PublicStoresPage} />
       <Route path="/products">
         {() => <ProtectedRoute component={ProductsPage} />}
       </Route>
