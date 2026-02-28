@@ -52,7 +52,7 @@ const steps = {
   driver: [
     {
       title: "انضم كقائد",
-      description: "سجل بياناتك وانضم لشبكة التوصيل في ميت غمر.",
+      description: "سجل بياناتك وانضم لشبكة التوصيل في ميت جابر.",
       icon: Truck,
     },
     {
@@ -79,10 +79,10 @@ export default function HowItWorks() {
           {/* Header Section */}
           <div className="text-center space-y-4">
             <h1 className="text-4xl font-bold tracking-tight text-primary sm:text-5xl">
-              كيف يعمل متجر ميت غمر؟
+              كيف يعمل متجر ميت جابر؟
             </h1>
             <p className="text-xl text-muted-foreground">
-              منصة متكاملة تربط العملاء بالمتاجر المحلية وعمال التوصيل في ميت غمر.
+              منصة متكاملة تربط العملاء بالمتاجر المحلية وعمال التوصيل في ميت جابر.
             </p>
           </div>
 
@@ -159,7 +159,7 @@ export default function HowItWorks() {
           <div className="bg-primary text-primary-foreground rounded-3xl p-8 text-center space-y-6">
             <h2 className="text-3xl font-bold">جاهز للبدء؟</h2>
             <p className="text-lg opacity-90 max-w-2xl mx-auto">
-              انضم لآلاف المستخدمين في ميت غمر واستمتع بتجربة تسوق محلية فريدة من نوعها.
+              انضم لآلاف المستخدمين في ميت جابر واستمتع بتجربة تسوق محلية فريدة من نوعها.
             </p>
             <div className="flex flex-wrap justify-center gap-4 pt-4">
               <Link href="/register">
