@@ -76,6 +76,7 @@ function ProtectedRoute({
 
 import LandingPage from "@/pages/public/LandingPage";
 import PublicStorePage from "@/pages/public/PublicStorePage";
+import HowItWorks from "@/pages/public/HowItWorks";
 
 function RoleBasedDashboard() {
   const { user } = useAuth();
@@ -101,6 +102,7 @@ function Router() {
       <Route path="/login" component={LoginPage} />
       <Route path="/register" component={RegisterPage} />
       <Route path="/" component={RoleBasedDashboard} />
+      <Route path="/how-it-works" component={HowItWorks} />
       <Route path="/store/:id" component={PublicStorePage} />
       
       {/* Customer Routes */}
