@@ -1,0 +1,216 @@
+
+Task: Build the Driver Frontend (Driver Dashboard) end-to-end, integrated with the existing backend of Mit Gaber Hyperlocal Marketplace. Implement everything step-by-step, test each piece, and print a final verification report.
+
+General rules for Agent:
+1. Work only inside client/src for frontend changes. Do not modify backend code except to call existing endpoints.
+2. Use TypeScript, React, React Router v6, TanStack Query, Tailwind CSS, and shadcn/ui components.
+3. All network calls must use real backend endpoints listed below. Do not hardcode data.
+4. Protect driver pages by checking JWT and role === 'DRIVER'. If token missing/invalid redirect to /login.
+5. Wrap all API interactions with graceful error handling and console logging.
+6. After each major step, run the local dev server and confirm no compile/runtime errors. Print logs to console.
+
+--- START IMPLEMENTATION STEPS ---
+
+## STEP A — Project scaffolding & routing (files & registration)
+1. Create page components and routes:
+   - File: `client/src/pages/driver/tasks.tsx` → `DriverTasksPage`
+   - File: `client/src/pages/driver/wallet.tsx` → `DriverWalletPage`
+   - File: `client/src/pages/driver/profile.tsx` → `DriverProfilePage`
+2. Register routes in `client/src/App.tsx` (or router file):
+   - Add protected routes:
+     ```
+     <Route path="/driver/tasks" element={<ProtectedRoute role="DRIVER"><DriverTasksPage/></ProtectedRoute>} />
+     <Route path="/driver/wallet" element={<ProtectedRoute role="DRIVER"><DriverWalletPage/></ProtectedRoute>} />
+     <Route path="/driver/profile" element={<ProtectedRoute role="DRIVER"><DriverProfilePage/></ProtectedRoute>} />
+     ```
+   - Implement `ProtectedRoute` if missing: it should read JWT from `auth` context/store, decode role, and redirect to `/login` if not authorized.
+3. Create `client/src/components/driver/` folder for components:
+   - `TaskCard.tsx`, `OfferCard.tsx`, `DeliveryOTPModal.tsx`, `WalletSummary.tsx`, `TransactionList.tsx`, `DriverNavbar.tsx`, `Skeletons.tsx`.
+
+After implementing routing, run `npm run dev` (or `pnpm`/`yarn` equivalent) and confirm the app compiles. Print: `ROUTE_REGISTRATION: OK` or errors.
+
+## STEP B — Data layer: hooks & API contracts
+1. Create API client functions (if not exist) in `client/src/lib/api/driver.ts`:
+   - Use existing `fetch` wrapper if present (`client/src/lib/api.ts`) so auth header is applied automatically.
+2. Implement these functions with exact request/response shapes and typed interfaces.
+
+**API endpoints & expected shapes** (agent MUST verify actual backend response; if mismatch, log and adapt code):
+
+- `GET /api/driver/tasks`
+  - Expected response: `Array<DriverTask>`
+  ```ts
+  type DriverTask = {
+    subOrderId: string;
+    store: { id: string; name: string; logoUrl?: string };
+    items: { productId: string; name: string; qty: number; price: string }[];
+    deliveryAddress: string;
+    status: "READY" | "ASSIGNED" | "ON_THE_WAY" | "DELIVERED" | "CANCELLED";
+    otpId?: string;
+    assignedAt?: string;
+    estimatedDistance?: number;
+  }
+
+GET /api/delivery/offers/available
+Expected: Array<Offer>
+type Offer = {
+  id: string;
+  subOrderId: string;
+  store: { id: string; name: string; logoUrl?: string };
+  subtotal: string;
+  pickupAddress?: string;
+  createdAt: string;
+}
+
+POST /api/delivery/offers (place bid)
+Body: { subOrderId: string, bidAmount: string }
+Response: { success: boolean, offerId?: string, error?: string }
+POST /api/delivery/offers/:id/respond
+Body: { action: "accept" | "reject" } (if backend expects different, adapt based on actual endpoint)
+POST /api/delivery/otp/verify/:otpId
+Body: { otpCode: string }
+Response: { success: boolean, message?: string }
+GET /api/driver/wallet
+Response: { balance: string, currency?: string }
+GET /api/driver/wallet/transactions?page=1&limit=20
+Response: { transactions: Transaction[], total: number }
+type Transaction = { id: string; amount: string; type: "CREDIT" | "DEBIT"; reference?: string; createdAt: string; }
+
+Implement TanStack Query hooks in client/src/hooks/use-driver.ts:
+useDriverTasks()
+useAvailableOffers()
+usePlaceOffer() (mutation)
+useVerifyOtp() (mutation)
+useDriverWallet()
+useWalletTransactions(page)
+Set default query options:
+staleTime: 30_000,
+cacheTime: 5 * 60_000,
+retry: 1,
+refetchOnWindowFocus: false
+
+Log each fetch result to console with a prefix: e.g., DRIVER_TASKS_FETCH: success, count = X.
+STEP C — Driver Navbar & Layout
+Create client/src/components/driver/DriverNavbar.tsx:
+Show driver name, online/offline status indicator, links to Tasks/Wallet/Profile, and Logout button.
+On logout clear auth token and redirect to /login.
+Wrap driver pages in a consistent layout: DriverLayout (sidebar/header + main content).
+UI details:
+Use p-4 padding, max-w-7xl mx-auto.
+Mobile: hamburger menu collapsing.
+STEP D — DriverTasksPage (main page)
+Page structure:
+Header area: "المهام" + small stats: Assigned / In Progress / Completed counts.
+Two sections: a. Assigned Tasks (from useDriverTasks) — Task cards grouped by status (ASSIGNED, ON_THE_WAY). b. Available Offers (from useAvailableOffers) — Offer cards where driver can place a bid.
+TaskCard details:
+Show store logo, store name, order summary (items truncated), address, estimated delivery time if exists.
+Buttons depending on status:
+If READY or ASSIGNED and otpId present → show "Verify OTP" opens DeliveryOTPModal.
+If ASSIGNED show "Mark Picked Up", "Start Delivery" (these buttons should call relevant API if exists — if not, log as TODO).
+Include link to open full order details modal.
+DeliveryOTPModal:
+Input for 6-digit OTP.
+On submit call useVerifyOtp().mutate({ otpId, otpCode }).
+While verifying show spinner, on success show toast "Delivery confirmed" and invalidate relevant queries (useDriverTasks, useAvailableOffers).
+UX states:
+Loading: skeleton list with 3 TaskCard placeholders.
+Empty: show illustrated empty state + CTA "التحديث" (retry).
+Errors: show banner with API error and Retry button.
+Testing:
+After mount, print: TASKS_PAGE_MOUNTED.
+On fetch success print: TASKS_FETCHED count=X.
+On OTP success print deletion/invalidation summary.
+STEP E — AvailableOffers section & placing bids
+OfferCard shows store name, subtotal, time posted, brief items summary, and an input for bidAmount.
+On "Place Bid" click:
+Validate amount > 0 and numeric.
+Call usePlaceOffer().mutate({ subOrderId, bidAmount }).
+On success show toast, disable the offer card (optimistic update: mark as "you_bidded": true).
+On failure show error toast with message from backend.
+Edge cases:
+If backend requires unique (subOrderId, driverId) ensure client handles 409 by showing a specific message.
+STEP F — Wallet page
+DriverWalletPage layout:
+WalletSummary at top: current balance from useDriverWallet().
+Below, TransactionList (paginated) from useWalletTransactions(page).
+TransactionList:
+Show amount with color green/red, type, date, and reference.
+Implement pagination Load More or infinite scroll with TanStack Query getNextPageParam.
+UX:
+Loading skeleton for wallet and for transaction list.
+Empty state: "لا توجد معاملات بعد".
+Testing:
+After wallet fetch print WALLET_FETCHED balance=xxx.
+After transactions fetched print TRANSACTIONS_FETCHED total=YYY.
+STEP G — Profile page
+Show editable fields: name, phone, vehicle info (if platform uses).
+On submit call PATCH endpoint; show success toast or error.
+Revalidate auth user info on success.
+STEP H — Real-time updates (polling fallback)
+If WebSocket / server-sent events are not available, implement polling:
+useDriverTasks & useAvailableOffers should have refetchInterval: 15_000 when page visible.
+If a WebSocket endpoint exists, subscribe to driver:{id}:tasks events and update TanStack Query cache accordingly.
+Log whichever method used: REALTIME_MODE: polling or REALTIME_MODE: websocket.
+STEP I — Error handling, notifications & retry strategies
+Use a toast system (existing useToast).
+On network failure, show inline retry buttons.
+For mutations (bid, verify OTP) implement onError with rollback if optimistic update used.
+STEP J — Accessibility & Responsiveness
+Ensure keyboard navigation, semantic HTML (buttons for actions), aria labels for modals.
+Breakpoints:
+Mobile: <640px → single column
+Tablet: 640–1024px → 2 columns
+Desktop: >=1024px → 3 columns
+Color contrast: status badges green/gray with readable text.
+STEP K — Testing checklist (automated manual steps Agent must run and log)
+For each step below, Agent must execute and print a detailed console log of results.
+Page compile: run dev server; print DEV_SERVER: OK or error log.
+Auth check: with a test driver token (or login flow), visit /driver/tasks. Expected HTTP calls and responses:
+GET /api/driver/tasks → 200 array
+GET /api/delivery/offers/available → 200 array
+Print counts for both. Example console output:
+DRIVER_TEST_REPORT:
+tasks_count: 3
+offers_count: 2
+wallet_balance: "120.00"
+
+Place bid test:
+Choose one offer, place a bid of realistic amount.
+Expect 2xx response; then verify via GET /api/delivery/offers/available that offer is updated or via separate endpoint.
+Print: BID_TEST: success | offerId: xxx or BID_TEST: failed error: ...
+OTP verification test:
+For a test task with otpId, call verify with wrong OTP (expect failure) and with correct OTP (expect success).
+Print: OTP_TEST: wrongOtp -> error, OTP_TEST: correctOtp -> success
+Wallet & transactions test:
+Fetch wallet and first page transactions; print balance and number of transactions retrieved.
+If payments triggered by delivery completion, simulate one to see wallet change (if backend supports test seeding).
+Delete safety:
+Ensure Driver actions do not allow deleting stores/users (security). If any endpoint allows unauthorized delete log as critical issue.
+Performance sanity:
+Confirm each list fetch uses pagination or limited size; print any endpoints returning huge arrays.
+Final console report: Agent must print a JSON report to console at the end, exactly in this format:
+{
+  "driver_frontend": "implemented",
+  "routes_registered": ["/driver/tasks","/driver/wallet","/driver/profile"],
+  "api_checks": {
+    "GET /api/driver/tasks": {"status":"ok","count": 3},
+    "GET /api/delivery/offers/available": {"status":"ok","count": 2},
+    "GET /api/driver/wallet": {"status":"ok","balance":"120.00"}
+  },
+  "tests": {
+    "place_bid": {"status":"success","offerId":"..."},
+    "verify_otp": {"status":"success","otpId":"..."},
+    "realtime_mode": "polling|websocket"
+  },
+  "errors": []
+}
+
+If any failure occurs, fill errors with objects { step: "...", message: "...", stack?: "..." }.
+--- FINISH —
+Final notes for the Agent (must obey)
+Do not invent API behavior — always request the endpoint and adapt to actual response; if the response schema differs, log the difference and adapt the TypeScript types.
+After implementing, commit changes and produce the final console JSON report above.
+If any backend endpoint required by the frontend is missing, list it in errors with exact path and suggested minimal backend contract (method, path, request body, response shape).
+Do not push to production domain; run locally and print results.
+Execute now, step by step. After finishing, paste the final JSON report and a short human-readable summary of what was implemented and what remains (if any).
+
+-
