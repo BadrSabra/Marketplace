@@ -5,11 +5,22 @@ import { Wallet, ArrowUpRight, ArrowDownLeft, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function DriverWalletPage() {
-  const { data: wallet, isLoading: walletLoading } = useDriverWallet();
-  const { data: transactionsData, isLoading: transactionsLoading } = useWalletTransactions();
+  const { data: wallet, isLoading: walletLoading, error: walletError } = useDriverWallet();
+  const { data: transactionsData, isLoading: transactionsLoading, error: transactionsError } = useWalletTransactions();
 
   if (walletLoading || transactionsLoading) {
     return <WalletSkeleton />;
+  }
+
+  if (walletError || transactionsError) {
+    return (
+      <div className="container mx-auto p-4 space-y-6">
+        <Card className="bg-destructive/10 text-destructive p-6 border-destructive">
+          <p className="font-bold">حدث خطأ أثناء تحميل البيانات</p>
+          <p className="text-sm">يرجى المحاولة مرة أخرى في وقت لاحق</p>
+        </Card>
+      </div>
+    );
   }
 
   return (

@@ -24,7 +24,7 @@ export default function ActiveDelivery() {
   const { toast } = useToast();
   const [timeLeft, setTimeLeft] = useState(1800); // 30 mins default
 
-  const { data: task, isLoading } = useQuery<ActiveTask>({
+  const { data: task, isLoading, error } = useQuery<ActiveTask>({
     queryKey: ["/api/suborders/active"],
     refetchInterval: 10000,
   });
@@ -63,6 +63,16 @@ export default function ActiveDelivery() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 text-center" dir="rtl">
+        <Card className="bg-destructive/10 text-destructive p-6 border-destructive">
+          <p className="font-bold">حدث خطأ أثناء تحميل بيانات التوصيل</p>
+        </Card>
       </div>
     );
   }

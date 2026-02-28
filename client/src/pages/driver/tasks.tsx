@@ -23,6 +23,17 @@ export default function DriverTasksPage() {
     return <TasksSkeleton />;
   }
 
+  if (tasksError || offersError) {
+    return (
+      <div className="container mx-auto p-4 space-y-8">
+        <Card className="bg-destructive/10 text-destructive p-6 border-destructive text-center">
+          <p className="font-bold">حدث خطأ أثناء تحميل المهام أو العروض</p>
+          <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>إعادة المحاولة</Button>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-4 space-y-8">
       <header className="flex justify-between items-center">

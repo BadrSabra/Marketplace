@@ -7,9 +7,14 @@ export function useDriverTasks() {
   return useQuery({
     queryKey: ["/api/driver/tasks"],
     queryFn: async () => {
-      const data = await driverApi.getDriverTasks();
-      console.log("DRIVER_TASKS_FETCH: success, count =", data.length);
-      return data;
+      try {
+        const data = await driverApi.getDriverTasks();
+        console.log("DRIVER_TASKS_FETCH: success, count =", data?.length || 0);
+        return data || [];
+      } catch (error) {
+        console.error("DRIVER_TASKS_FETCH: error", error);
+        throw error;
+      }
     },
     staleTime: 30_000,
     gcTime: 5 * 60_000,
@@ -22,9 +27,14 @@ export function useAvailableOffers() {
   return useQuery({
     queryKey: ["/api/delivery/offers/available"],
     queryFn: async () => {
-      const data = await driverApi.getAvailableOffers();
-      console.log("AVAILABLE_OFFERS_FETCH: success, count =", data.length);
-      return data;
+      try {
+        const data = await driverApi.getAvailableOffers();
+        console.log("AVAILABLE_OFFERS_FETCH: success, count =", data?.length || 0);
+        return data || [];
+      } catch (error) {
+        console.error("AVAILABLE_OFFERS_FETCH: error", error);
+        throw error;
+      }
     },
     staleTime: 30_000,
     gcTime: 5 * 60_000,
@@ -67,9 +77,14 @@ export function useDriverWallet() {
   return useQuery({
     queryKey: ["/api/driver/wallet"],
     queryFn: async () => {
-      const data = await driverApi.getDriverWallet();
-      console.log("DRIVER_WALLET_FETCH: success, balance =", data.balance);
-      return data;
+      try {
+        const data = await driverApi.getDriverWallet();
+        console.log("DRIVER_WALLET_FETCH: success, balance =", data?.balance);
+        return data || { balance: "0.00" };
+      } catch (error) {
+        console.error("DRIVER_WALLET_FETCH: error", error);
+        throw error;
+      }
     },
   });
 }
@@ -78,9 +93,14 @@ export function useWalletTransactions(page = 1) {
   return useQuery({
     queryKey: ["/api/driver/wallet/transactions", page],
     queryFn: async () => {
-      const data = await driverApi.getWalletTransactions(page);
-      console.log("TRANSACTIONS_FETCHED: total =", data.total);
-      return data;
+      try {
+        const data = await driverApi.getWalletTransactions(page);
+        console.log("TRANSACTIONS_FETCHED: total =", data?.total || 0);
+        return data || { transactions: [], total: 0 };
+      } catch (error) {
+        console.error("TRANSACTIONS_FETCHED: error", error);
+        throw error;
+      }
     },
   });
 }
