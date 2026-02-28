@@ -1,0 +1,69 @@
+Task: Complete Driver Frontend Overhaul for Mit Gaber Hyperlocal Marketplace
+
+Objective: Fully update the driver-facing frontend to integrate correctly with backend APIs, handle loading/error/empty states, and ensure modular, non-redundant, fully tested components.
+
+Instructions:
+
+1. **Update Hooks**
+- Refactor all driver hooks (`useWallet`, `useDriverOrders`, `useStoreProducts`, `useDeliveryOffers`) to:
+  - Use JWT token from localStorage for Authorization.
+  - Fetch data from correct API endpoints.
+  - Return a consistent `{data, loading, error}` structure.
+  - Gracefully handle empty data.
+  - Be fully reusable and modular.
+
+2. **Update Driver Components**
+- Consume the updated hooks in all driver components.
+- Implement:
+  - Loading skeletons/spinners while fetching data.
+  - User-friendly empty state messages.
+  - Error messages if API fails.
+  - Fully responsive layouts.
+- Avoid rendering incomplete UI.
+
+3. **API Integration & Testing**
+- Verify and fix all API calls:
+  - Wallet balance (`/api/wallet`)
+  - Driver orders (`/api/orders/my-store`)
+  - Store products (`/api/products/:id`)
+  - Delivery offers & OTP verification
+- Ensure no broken endpoints like `[object Object]`.
+- Programmatically test each API call with JWT token and verify returned data.
+- Log detailed results for each API test.
+
+4. **UX & UI**
+- Include sections for:
+  - Wallet summary
+  - Active deliveries/orders
+  - Available delivery offers
+- Ensure interactive elements (buttons, links) function correctly.
+- Add error boundaries to prevent crashes on API failures.
+
+5. **Code Quality**
+- Do not duplicate hooks or components.
+- Keep modular structure (`WalletCard`, `OrdersList`, `DeliveryOffersGrid`).
+- Maintain proper TypeScript typings.
+- Ensure alignment with the existing frontend architecture.
+
+6. **Validation**
+- Test all scenarios:
+  - No orders
+  - Orders exist
+  - Wallet empty
+  - API errors
+- Confirm all components render correctly and no data is duplicated.
+
+7. **Deliverable**
+- Fully updated, working driver frontend.
+- All hooks refactored and integrated with API.
+- All components handle loading, empty, and error states.
+- All APIs verified.
+- No broken or redundant code.
+
+Constraints:
+- Only modify driver-related frontend (`client/src/pages/driver` and `client/src/hooks`).
+- Preserve current backend API structure.
+- Ensure modular, reusable, and maintainable code.
+
+Execution Note:
+- After updates, run the app and print a detailed console report of API call success/failure and component state validations.
