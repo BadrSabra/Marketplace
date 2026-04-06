@@ -20,13 +20,12 @@ export default function StoreDashboard() {
   const myStore = stores?.find(s => s.ownerId === user?.id);
 
   const { data: products, isLoading: isProductsLoading } = useQuery<any[]>({
-    queryKey: ["/api/products", { storeId: myStore?.id }],
+    queryKey: [`/api/products?store_id=${myStore?.id}`],
     enabled: !!myStore?.id,
   });
 
   const { data: orders, isLoading: isOrdersLoading } = useQuery<any[]>({
     queryKey: ["/api/orders/my-store"],
-    enabled: !!myStore?.id,
   });
 
   const { data: wallet, isLoading: isWalletLoading } = useQuery<any>({

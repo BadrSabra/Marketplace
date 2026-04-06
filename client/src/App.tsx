@@ -90,7 +90,7 @@ function RoleBasedDashboard() {
     case "ADMIN":
       return <AdminDashboard />;
     case "STORE_OWNER":
-      return <StoreDashboard />;
+      return <Redirect to="/store/dashboard" />;
     case "DRIVER":
       return <Redirect to="/driver/tasks" />;
     case "CUSTOMER":
@@ -143,6 +143,9 @@ function Router() {
       </Route>
       
       {/* Store Routes */}
+      <Route path="/store/dashboard">
+        {() => <ProtectedRoute component={StoreDashboard} roles={["STORE_OWNER"]} />}
+      </Route>
       <Route path="/store/dashboard/orders">
         {() => <ProtectedRoute component={StoreOrders} roles={["STORE_OWNER"]} />}
       </Route>

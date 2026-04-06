@@ -29,7 +29,7 @@ export default function StoreOrders() {
   const myStore = stores?.find(s => s.ownerId === user?.id);
 
   const { data: products } = useQuery<any[]>({
-    queryKey: ["/api/products", { storeId: myStore?.id }],
+    queryKey: [`/api/products?store_id=${myStore?.id}`],
     enabled: !!myStore?.id,
   });
 
@@ -45,7 +45,7 @@ export default function StoreOrders() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders/my-store"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/products", { storeId: myStore?.id }] });
+      queryClient.invalidateQueries({ queryKey: [`/api/products?store_id=${myStore?.id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
       toast({ 
         title: t('store.orders.toasts.success_title'), 

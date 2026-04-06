@@ -70,7 +70,7 @@ export default function StoreInventory() {
   const myStore = stores?.find(s => s.ownerId === user?.id);
 
   const { data: products, isLoading } = useQuery<Product[]>({
-    queryKey: ["/api/products", { storeId: myStore?.id }],
+    queryKey: [`/api/products?store_id=${myStore?.id}`],
     enabled: !!myStore?.id,
   });
 
@@ -96,7 +96,7 @@ export default function StoreInventory() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/products", { storeId: myStore?.id }] });
+      queryClient.invalidateQueries({ queryKey: [`/api/products?store_id=${myStore?.id}`] });
       toast({ title: t('store.inventory.toasts.create_success') });
       setIsDialogOpen(false);
       form.reset();
@@ -119,7 +119,7 @@ export default function StoreInventory() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/products", { storeId: myStore?.id }] });
+      queryClient.invalidateQueries({ queryKey: [`/api/products?store_id=${myStore?.id}`] });
       toast({ title: t('store.inventory.toasts.update_success') });
       setIsDialogOpen(false);
       setEditingProduct(null);
@@ -139,7 +139,7 @@ export default function StoreInventory() {
       await apiRequest("DELETE", `/api/products/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/products", { storeId: myStore?.id }] });
+      queryClient.invalidateQueries({ queryKey: [`/api/products?store_id=${myStore?.id}`] });
       toast({ title: t('store.inventory.toasts.delete_success') });
     },
   });

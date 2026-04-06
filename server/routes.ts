@@ -474,6 +474,7 @@ export async function registerRoutes(
   app.get("/api/orders", authenticate, orderController.getMyOrders);
   // Alias used by the frontend hook — must be registered BEFORE /api/orders/:id
   app.get("/api/orders/my-orders", authenticate, orderController.getMyOrders);
+  app.get("/api/orders/my-store", authenticate, authorizeRole(["STORE_OWNER", "ADMIN"]), orderController.getMyStoreOrders);
   app.get("/api/orders/:id", authenticate, orderController.get);
   app.post("/api/orders", authenticate, orderLimiter, orderController.create);
   app.patch("/api/suborders/:id/cancel", authenticate, orderController.cancelSubOrder);

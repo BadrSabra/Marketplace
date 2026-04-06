@@ -6,15 +6,19 @@ import { ProductDTO, CreateProductDTO, UpdateProductDTO } from "./products.types
 export class ProductsService {
   private mapToDTO(product: any): ProductDTO {
     return {
+      id: product.id,
       product_id: product.id,
+      storeId: product.storeId,
       store_id: product.storeId,
       name: product.name,
       price: Number(product.price),
       stock: product.stock,
       description: product.description || undefined,
       category: product.category,
-      created_at: product.createdAt.toISOString(),
-      updated_at: product.updatedAt.toISOString(),
+      createdAt: product.createdAt?.toISOString(),
+      updatedAt: product.updatedAt?.toISOString(),
+      created_at: product.createdAt?.toISOString(),
+      updated_at: product.updatedAt?.toISOString(),
     };
   }
 
@@ -51,7 +55,7 @@ export class ProductsService {
       query = query.where(and(...conditions));
     }
 
-    const limit = filters.limit || 10;
+    const limit = filters.limit || 200;
     const offset = ((filters.page || 1) - 1) * limit;
     
     const results = await query.limit(limit).offset(offset);
