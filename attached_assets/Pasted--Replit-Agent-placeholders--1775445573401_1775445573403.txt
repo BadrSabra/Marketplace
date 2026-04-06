@@ -1,0 +1,54 @@
+تمام، سأكتب لك برومبت متكامل لتوجيه Replit Agent أو أي أداة ذكية لتنفيذ استبدال placeholders في صفحة StoreDashboard تلقائيًا وجلب البيانات من الـ backend. هذا البرومبت سيكون منظمًا بالخطوات: جلب البيانات → استبدال placeholders → اختبار:
+
+برومبت متكامل: استبدال {{name}} و {{store}} في Store Dashboard
+أنت الآن مسؤول عن تحسين صفحة Store Dashboard في مشروع Mit Gaber Hyperlocal Marketplace.
+
+هدفك:
+- استبدال placeholders {{name}} و {{store}} بالبيانات الحقيقية للمستخدم والمتجر عند تسجيل الدخول.
+- التأكد من أن البيانات تظهر بشكل صحيح بعد كل تسجيل دخول جديد.
+- اختبار أن كل عناصر الصفحة المرتبطة بالـ store تعمل (رصيد المحفظة، المنتجات، الطلبات، الأرباح).
+
+خطوات التنفيذ:
+
+1️⃣ **جلب بيانات المستخدم والمتجر**
+- استخدم JWT الموجود بعد تسجيل الدخول أو التسجيل.
+- استدعي `/api/auth/me` لجلب بيانات المستخدم (تأكد من وجود `name`).
+- استدعي `/api/stores/<storeId>` لجلب بيانات المتجر (تأكد من وجود `store.name`).
+
+2️⃣ **تخزين البيانات في state**
+- في ملف `StoreDashboard.tsx` أو المكافئ:
+  ```ts
+  const [userName, setUserName] = useState('');
+  const [storeName, setStoreName] = useState('');
+
+  useEffect(() => {
+    setUserName(user.name);
+    setStoreName(store.name);
+  }, [user, store]);
+
+3️⃣ استبدال الـ placeholders في JSX
+استبدل جميع occurrences لـ:
+{{name}} → {userName}
+{{store}} → {storeName}
+مثال: <h2>مرحباً بك مجدداً، {userName}. إليك ما يحدث في {storeName}.</h2>
+
+4️⃣ التأكد من كل البيانات الأخرى في الصفحة
+رصيد المحفظة → fetch من /api/wallet المرتبط بالـ storeId.
+الطلبات المعلقة → fetch من /api/orders/my-store.
+المنتجات النشطة → fetch من /api/products?store_id=<storeId>.
+صحة المخزون → حساب الأصناف المنتهية أو المباعة من نفس endpoint.
+تحديث أي أزرار أو روابط باستخدام storeId الحقيقي.
+5️⃣ اختبار الصفحة
+تسجيل دخول مستخدم Store Owner جديد.
+التأكد من أن:
+اسم المستخدم يظهر بشكل صحيح.
+اسم المتجر يظهر بشكل صحيح.
+جميع الروابط تعمل (/store/dashboard/orders, /store/inventory, /store/earnings).
+تنبيهات المخزون صحيحة.
+تحقق من أي خطأ في console أو network.
+6️⃣ إعادة التحقق لكل متاجر جديدة
+بعد كل تسجيل متجر جديد، تحقق أن البيانات تظهر مباشرة بدون أخطاء "المتجر غير موجود".
+⚡ Output المطلوب من Agent:
+كود StoreDashboard محدث مع استبدال placeholders.
+تأكيد أن fetch endpoints صحيحة وأن state متصلة بالـ JSX.
+تقرير اختبار يظهر أن اسم المستخدم والمتجر يتم عرضه بشكل صحيح.

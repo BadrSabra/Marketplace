@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Package, Wallet, ShoppingBag, TrendingUp, AlertTriangle } from "lucide-react";
+import { Package, Wallet, ShoppingBag, TrendingUp, AlertTriangle, Store } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { StoreLayout } from "@/components/layout/store-layout";
@@ -12,11 +12,11 @@ import { cn } from "@/lib/utils";
 
 export default function StoreDashboard() {
   const { user } = useAuth();
-  
-  const { data: stores } = useQuery<any[]>({
+
+  const { data: stores, isLoading: isStoresLoading } = useQuery<any[]>({
     queryKey: ["/api/stores"],
   });
-  
+
   const myStore = stores?.find(s => s.ownerId === user?.id);
 
   const { data: products, isLoading: isProductsLoading } = useQuery<any[]>({
@@ -32,11 +32,25 @@ export default function StoreDashboard() {
     queryKey: ["/api/wallet"],
   });
 
-  if (isProductsLoading || isOrdersLoading || isWalletLoading) {
+  const isLoading = isStoresLoading || isProductsLoading || isOrdersLoading || isWalletLoading;
+
+  if (isLoading) {
     return (
       <StoreLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center justify-center min-h-[400px]" data-testid="dashboard-loading">
           <Spinner size="xl" />
+        </div>
+      </StoreLayout>
+    );
+  }
+
+  if (stores && !myStore) {
+    return (
+      <StoreLayout>
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 text-center" data-testid="dashboard-no-store">
+          <Store className="h-12 w-12 text-muted-foreground" />
+          <p className="text-lg font-medium text-muted-foreground">{t('store.dashboard.your_store')}</p>
+          <p className="text-sm text-muted-foreground">{t('store.dashboard.attention_note')}</p>
         </div>
       </StoreLayout>
     );
@@ -44,15 +58,21 @@ export default function StoreDashboard() {
 
   const lowStockProducts = products?.filter(p => p.stock > 0 && p.stock < 5) || [];
   const outOfStockProducts = products?.filter(p => p.stock === 0) || [];
-  const pendingOrders = orders?.flatMap(o => o.sub_orders).filter(s => s.status === "PENDING") || [];
+  const pendingOrders = orders?.flatMap(o => o.sub_orders ?? []).filter(s => s.status === "PENDING") || [];
+
+  const userName = user?.name || "";
+  const storeName = myStore?.name || t('store.dashboard.your_store');
+  const walletBalance = parseFloat(wallet?.balance || "0").toFixed(2);
 
   return (
     <StoreLayout>
       <div className="space-y-8 rtl:text-right" dir="auto">
         <header className="rtl:text-right">
-          <h1 className="text-3xl font-bold tracking-tight">{t('store.dashboard.overview')}</h1>
-          <p className="text-muted-foreground mt-1">
-            {t('store.dashboard.welcome', { name: user?.name, store: myStore?.name || t('store.dashboard.your_store') })}
+          <h1 className="text-3xl font-bold tracking-tight" data-testid="dashboard-title">
+            {t('store.dashboard.overview')}
+          </h1>
+          <p className="text-muted-foreground mt-1" data-testid="dashboard-welcome">
+            {t('store.dashboard.welcome', { name: userName, store: storeName })}
           </p>
         </header>
 
@@ -63,7 +83,7 @@ export default function StoreDashboard() {
               <Wallet className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${parseFloat(wallet?.balance || "0").toFixed(2)}</div>
+              <div className="text-2xl font-bold" data-testid="stat-wallet-balance">${walletBalance}</div>
               <p className="text-xs text-muted-foreground mt-1">{t('store.earnings.balance_note')}</p>
             </CardContent>
           </Card>
@@ -74,7 +94,7 @@ export default function StoreDashboard() {
               <ShoppingBag className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{pendingOrders.length}</div>
+              <div className="text-2xl font-bold" data-testid="stat-pending-orders">{pendingOrders.length}</div>
               <p className="text-xs text-muted-foreground mt-1">{t('store.dashboard.attention_note')}</p>
             </CardContent>
           </Card>
@@ -85,7 +105,7 @@ export default function StoreDashboard() {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{products?.length || 0}</div>
+              <div className="text-2xl font-bold" data-testid="stat-active-products">{products?.length || 0}</div>
               <p className="text-xs text-muted-foreground mt-1">{t('store.dashboard.catalog_note')}</p>
             </CardContent>
           </Card>
@@ -96,7 +116,7 @@ export default function StoreDashboard() {
               <AlertTriangle className={cn("h-4 w-4", lowStockProducts.length + outOfStockProducts.length > 0 ? "text-yellow-500" : "text-green-500")} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{outOfStockProducts.length}</div>
+              <div className="text-2xl font-bold" data-testid="stat-out-of-stock">{outOfStockProducts.length}</div>
               <p className="text-xs text-muted-foreground mt-1">{t('store.dashboard.out_of_stock_note')}</p>
             </CardContent>
           </Card>
@@ -110,7 +130,11 @@ export default function StoreDashboard() {
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2 rtl:flex-row-reverse">
               <Link href="/store/dashboard/orders">
-                <Button className="w-full justify-start h-16 gap-4 rtl:flex-row-reverse" variant="outline">
+                <Button
+                  className="w-full justify-start h-16 gap-4 rtl:flex-row-reverse"
+                  variant="outline"
+                  data-testid="btn-manage-orders"
+                >
                   <div className="bg-primary/10 p-2 rounded-lg text-primary">
                     <ShoppingBag className="h-5 w-5" />
                   </div>
@@ -121,7 +145,11 @@ export default function StoreDashboard() {
                 </Button>
               </Link>
               <Link href="/store/inventory">
-                <Button className="w-full justify-start h-16 gap-4 rtl:flex-row-reverse" variant="outline">
+                <Button
+                  className="w-full justify-start h-16 gap-4 rtl:flex-row-reverse"
+                  variant="outline"
+                  data-testid="btn-product-catalog"
+                >
                   <div className="bg-blue-500/10 p-2 rounded-lg text-blue-500">
                     <Package className="h-5 w-5" />
                   </div>
@@ -132,7 +160,11 @@ export default function StoreDashboard() {
                 </Button>
               </Link>
               <Link href="/store/earnings">
-                <Button className="w-full justify-start h-16 gap-4 rtl:flex-row-reverse" variant="outline">
+                <Button
+                  className="w-full justify-start h-16 gap-4 rtl:flex-row-reverse"
+                  variant="outline"
+                  data-testid="btn-view-earnings"
+                >
                   <div className="bg-green-500/10 p-2 rounded-lg text-green-500">
                     <TrendingUp className="h-5 w-5" />
                   </div>
@@ -153,23 +185,33 @@ export default function StoreDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4 rtl:text-right">
+              <div className="space-y-4 rtl:text-right" data-testid="inventory-alerts">
                 {outOfStockProducts.length === 0 && lowStockProducts.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4 text-center border rounded-lg border-dashed">
+                  <p className="text-sm text-muted-foreground py-4 text-center border rounded-lg border-dashed" data-testid="alerts-healthy">
                     {t('store.dashboard.healthy_note')}
                   </p>
                 ) : (
                   <>
                     {outOfStockProducts.map(p => (
-                      <div key={p.id} className="flex items-center justify-between p-2 border rounded-lg bg-destructive/5 border-destructive/20 rtl:flex-row-reverse">
+                      <div
+                        key={p.id}
+                        className="flex items-center justify-between p-2 border rounded-lg bg-destructive/5 border-destructive/20 rtl:flex-row-reverse"
+                        data-testid={`alert-out-of-stock-${p.id}`}
+                      >
                         <span className="text-sm font-medium">{p.name}</span>
                         <Badge variant="destructive">{t('store.dashboard.out_of_stock')}</Badge>
                       </div>
                     ))}
                     {lowStockProducts.map(p => (
-                      <div key={p.id} className="flex items-center justify-between p-2 border rounded-lg bg-yellow-50 border-yellow-200 rtl:flex-row-reverse">
+                      <div
+                        key={p.id}
+                        className="flex items-center justify-between p-2 border rounded-lg bg-yellow-50 border-yellow-200 rtl:flex-row-reverse"
+                        data-testid={`alert-low-stock-${p.id}`}
+                      >
                         <span className="text-sm font-medium">{p.name}</span>
-                        <Badge variant="outline" className="text-yellow-700 border-yellow-300">{t('store.dashboard.low_stock_left', { count: p.stock })}</Badge>
+                        <Badge variant="outline" className="text-yellow-700 border-yellow-300">
+                          {t('store.dashboard.low_stock_left', { count: p.stock })}
+                        </Badge>
                       </div>
                     ))}
                   </>
