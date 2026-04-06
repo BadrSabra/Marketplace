@@ -2,7 +2,9 @@ import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, wallets, stores } from "@shared/schema";
+import { users, wallets, stores, orders, subOrders, auditLogs } from "@shared/schema";
+import { walletService } from "./modules/wallet/wallet.service";
+import { ledgerService } from "./modules/ledger/ledger.service";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -14,7 +16,7 @@ import { subOrderController } from "./modules/orders/suborder.controller";
 import { walletController } from "./modules/wallet/wallet.controller";
 import { orderController } from "./modules/orders/order.controller";
 
-const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
+const JWT_SECRET = process.env.JWT_SECRET!;
 
 import { deliveryController } from "./modules/delivery/delivery.controller";
 import depositRouter from "./modules/deposits/deposits.controller";
@@ -126,10 +128,15 @@ export async function registerRoutes(
            const computedHash = crypto.createHmac('sha512', salt).update(input.password).digest('hex');
            finalMatch = (computedHash === hash);
            
-           // If it matches via fallback, update it to a proper bcrypt hash for next time
+           // If it matches via fallback, upgrade to bcrypt for next login
            if (finalMatch) {
-             const newHashedPassword = await bcrypt.hash(input.password, 10);
-             await db.update(users).set({ password: newHashedPassword }).where(eq(users.id, user.id));
+             try {
+               const newHashedPassword = await bcrypt.hash(input.password, 10);
+               await db.update(users).set({ password: newHashedPassword, updatedAt: new Date() }).where(eq(users.id, user.id));
+             } catch (upgradeErr) {
+               // Non-fatal: log and continue — user is still authenticated
+               console.error("[AUTH] Failed to upgrade password hash for user", user.id, upgradeErr);
+             }
            }
         }
       }
@@ -166,10 +173,11 @@ export async function registerRoutes(
     res.json(cleanUser);
   });
 
-  app.patch("/api/customer/profile", authenticate, async (req, res) => {
+  // Shared profile update handler used by both customer and driver routes
+  async function handleProfileUpdate(req: any, res: any) {
     try {
-      const userId = (req as any).user.id;
-      const userRole = (req as any).user.role;
+      const userId = req.user.id;
+      const userRole = req.user.role;
       const updateSchema = z.object({
         name: z.string().min(1).max(50).regex(/^[a-zA-Z\u0600-\u06FF\s]*$/, "Name can only contain letters").optional(),
         phone: z.string().min(10).max(15).regex(/^\d+$/, "Phone must be numeric").optional(),
@@ -181,7 +189,7 @@ export async function registerRoutes(
 
       const input = updateSchema.parse(req.body);
       const oldUser = await storage.getUser(userId);
-      
+
       const [updatedUser] = await db.update(users)
         .set({ ...input, updatedAt: new Date() })
         .where(eq(users.id, userId))
@@ -194,8 +202,8 @@ export async function registerRoutes(
         entityId: userId,
         performedByUserId: userId,
         performedByRole: userRole,
-        oldValue: oldUser,
-        newValue: updatedUser,
+        oldValue: { name: oldUser?.name, phone: oldUser?.phone },
+        newValue: { name: updatedUser.name, phone: updatedUser.phone },
       });
 
       const { password, ...cleanUser } = updatedUser;
@@ -206,13 +214,10 @@ export async function registerRoutes(
       }
       res.status(500).json({ message: "Internal error" });
     }
-  });
+  }
 
-  app.patch("/api/driver/profile", authenticate, authorizeRole(["DRIVER"]), async (req, res) => {
-    // Reuse customer profile logic since it's the same table
-    req.url = "/api/customer/profile";
-    return app._router.handle(req, res, () => {});
-  });
+  app.patch("/api/customer/profile", authenticate, handleProfileUpdate);
+  app.patch("/api/driver/profile", authenticate, authorizeRole(["DRIVER"]), handleProfileUpdate);
 
   app.get(api.users.list.path, authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
     const users = await storage.getUsers();
@@ -298,6 +303,30 @@ export async function registerRoutes(
   app.get("/api/admin/orders", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
     const allOrders = await db.select().from(orders).orderBy(sql`${orders.createdAt} DESC`);
     res.json(allOrders);
+  });
+
+  // Admin: force-update ALL sub_orders of a parent order to a given status
+  app.patch("/api/admin/orders/:id/status", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const statusSchema = z.object({ status: z.enum(["DELIVERED", "CANCELLED"]) });
+      const { status } = statusSchema.parse(req.body);
+
+      const [parentOrder] = await db.select().from(orders).where(eq(orders.id, id));
+      if (!parentOrder) return res.status(404).json({ message: "Order not found" });
+
+      await db.transaction(async (tx) => {
+        await tx.update(subOrders).set({ status, updatedAt: new Date() }).where(eq(subOrders.orderId, id));
+        await tx.update(orders)
+          .set({ overallStatus: status, updatedAt: new Date() })
+          .where(eq(orders.id, id));
+      });
+
+      res.json({ message: `Order and all sub-orders marked as ${status}` });
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      res.status(500).json({ message: "Internal error" });
+    }
   });
 
   app.get("/api/admin/stores", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
@@ -443,6 +472,8 @@ export async function registerRoutes(
 
   // --- ORDERS MODULE ---
   app.get("/api/orders", authenticate, orderController.getMyOrders);
+  // Alias used by the frontend hook — must be registered BEFORE /api/orders/:id
+  app.get("/api/orders/my-orders", authenticate, orderController.getMyOrders);
   app.get("/api/orders/:id", authenticate, orderController.get);
   app.post("/api/orders", authenticate, orderLimiter, orderController.create);
   app.patch("/api/suborders/:id/cancel", authenticate, orderController.cancelSubOrder);
@@ -516,7 +547,6 @@ export async function registerRoutes(
         const driver = await storage.createUser({ name: "Delivery Driver", email: "driver@example.com", password: hashedPassword, phone: "444444444", role: "DRIVER", isApproved: true });
         
         // Create wallets for seeded users
-        const { walletService } = await import("./modules/wallet/wallet.service");
         await walletService.getOrCreateWallet(admin.id);
         await walletService.getOrCreateWallet(customer.id);
         await walletService.getOrCreateWallet(storeOwner.id);

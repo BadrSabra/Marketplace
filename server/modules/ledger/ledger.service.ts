@@ -276,24 +276,6 @@ export class LedgerService {
     return { consistent: true, balance: wallet.balance };
   }
 
-  async verifyLedgerConsistency(userId: string) {
-    const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, userId));
-    if (!wallet) throw new Error("Wallet not found");
-
-    const credits = await db.select({ sum: sql<string>`sum(amount)` }).from(ledger).where(eq(ledger.creditUserId, userId));
-    const debits = await db.select({ sum: sql<string>`sum(amount)` }).from(ledger).where(eq(ledger.debitUserId, userId));
-
-    const totalCredits = parseFloat(credits[0]?.sum || "0");
-    const totalDebits = parseFloat(debits[0]?.sum || "0");
-    const calculatedBalance = (totalCredits - totalDebits).toFixed(2);
-
-    if (calculatedBalance !== parseFloat(wallet.balance).toFixed(2)) {
-      console.error(`[CRITICAL] Ledger inconsistency for user ${userId}: Wallet=${wallet.balance}, Calculated=${calculatedBalance}`);
-      return { consistent: false, walletBalance: wallet.balance, calculatedBalance };
-    }
-
-    return { consistent: true, balance: wallet.balance };
-  }
 }
 
 export const ledgerService = new LedgerService();

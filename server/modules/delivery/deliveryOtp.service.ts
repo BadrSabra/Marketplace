@@ -92,8 +92,8 @@ export class DeliveryOtpService {
           .set({ status: "DELIVERED", updatedAt: new Date() })
           .where(eq(subOrders.id, subOrderId));
         
-        // Trigger commissions
-        await ledgerService.processCommissions(subOrderId, orderId);
+        // Trigger commissions — subOrder is already DELIVERED at this point
+        await ledgerService.processCommissions(subOrderId);
       } else {
         // Mark whole order as delivered if no subOrderId (simple case)
         await tx.update(orders)

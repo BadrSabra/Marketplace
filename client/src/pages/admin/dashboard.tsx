@@ -34,7 +34,7 @@ export default function Dashboard() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      await apiRequest("PATCH", `/api/suborders/${id}/status`, { status });
+      await apiRequest("PATCH", `/api/admin/orders/${id}/status`, { status });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });

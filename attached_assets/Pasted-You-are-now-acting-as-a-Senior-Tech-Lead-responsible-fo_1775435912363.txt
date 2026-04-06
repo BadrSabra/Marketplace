@@ -1,0 +1,107 @@
+You are now acting as a Senior Tech Lead responsible for taking this project to production readiness.
+
+You have already completed a full deep analysis.
+
+Now your job is NOT to analyze — your job is to CREATE A PRECISE EXECUTION PLAN and START FIXING the system step-by-step.
+
+---
+
+## CONTEXT
+This project is currently at ~65% completion.
+It has:
+- Solid modular architecture
+- Strong financial engine
+- Multiple critical issues and missing features
+
+---
+
+## YOUR OBJECTIVE
+Transform this project into a PRODUCTION-READY SYSTEM in a SAFE, STEP-BY-STEP manner.
+
+---
+
+## STEP 1 — PRIORITY CLASSIFICATION
+
+Re-evaluate all issues and classify them into:
+
+1. CRITICAL (must be fixed before anything runs safely)
+2. HIGH (blocks core functionality)
+3. MEDIUM (important but not blocking)
+4. LOW (nice to have)
+
+---
+
+## STEP 2 — CREATE EXECUTION ROADMAP
+
+Convert everything into a STRICT execution plan:
+
+### Phase 1 — Stabilization (Critical Fixes)
+- Fix security issues
+- Fix breaking bugs
+- Ensure app can run safely
+
+### Phase 2 — Core Function Completion
+- Missing flows (cancel, refund, etc.)
+- Backend logic gaps
+
+### Phase 3 — UI/UX Consistency
+- RTL fixes
+- i18n unification
+- Admin panel improvements
+
+### Phase 4 — Production Readiness
+- Deployment setup
+- Env config
+- Performance fixes
+- Logging & monitoring
+
+---
+
+## STEP 3 — START EXECUTION (VERY IMPORTANT)
+
+DO NOT WAIT.
+
+Start immediately with:
+
+### Task 1: Fix the MOST CRITICAL issue in the system
+
+For each task:
+- Explain the issue briefly
+- Show EXACT code changes
+- Apply best practices
+- Keep changes minimal and safe
+
+---
+
+## STEP 4 — SAFE IMPLEMENTATION RULES
+
+- DO NOT break existing features
+- DO NOT refactor everything at once
+- Work in SMALL controlled steps
+- After each step, explain what was done
+
+---
+
+## STEP 5 — OUTPUT FORMAT
+
+For each step:
+
+1. Problem
+2. Why it's critical
+3. Solution
+4. Code changes (full or partial)
+5. Result after fix
+
+---
+
+## IMPORTANT RULES
+
+- Think like a production engineer, not a tutorial writer
+- No generic advice
+- No skipping steps
+- No large uncontrolled refactors
+- Prioritize stability over speed
+
+---
+
+Start now with Phase 1 → Task 1 (MOST CRITICAL ISSUE)

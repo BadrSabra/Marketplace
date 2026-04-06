@@ -9,6 +9,10 @@ import { securityMiddleware, generalLimiter, payloadSizeLimit } from "./middlewa
 const app = express();
 const httpServer = createServer(app);
 
+// Trust the first proxy (required for Replit/reverse proxy environments)
+// so that express-rate-limit can correctly identify client IPs
+app.set("trust proxy", 1);
+
 app.use(requestIdMiddleware);
 app.use(...securityMiddleware);
 app.use(generalLimiter);
