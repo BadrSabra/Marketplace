@@ -10,6 +10,7 @@ export interface ProductDTO {
   stock: number;
   description?: string;
   category: string;
+  imageUrl?: string | null;
   createdAt?: string;
   updatedAt?: string;
   created_at?: string;

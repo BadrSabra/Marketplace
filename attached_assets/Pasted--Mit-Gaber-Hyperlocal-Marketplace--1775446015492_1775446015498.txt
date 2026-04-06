@@ -1,0 +1,62 @@
+أنت الآن مسؤول عن تطوير صفحة إدارة المنتجات في مشروع Mit Gaber Hyperlocal Marketplace.
+
+هدفك النهائي:
+- تمكين Store Owner من إضافة صورة لكل منتج عند الإنشاء أو التعديل.
+- عرض صورة المنتج في قائمة المنتجات بجانب اسم المنتج.
+- حفظ رابط الصورة في قاعدة البيانات وربطه بالـ productId.
+- دعم كل أنواع الصور المقبولة (jpg, png, webp) بحجم أقصى 5MB.
+- ضمان أن كل CRUD على المنتجات (إنشاء، تعديل، حذف) يعمل مع الصور بشكل كامل.
+- إدارة cache وqueryKeys لضمان عرض الصور مباشرة بعد أي تعديل.
+- توليد تقرير اختبار شامل لكل وظيفة متعلقة بالصور.
+
+خطوات التنفيذ التفصيلية:
+
+1️⃣ Backend – رفع الصورة
+- إنشاء أو تعديل endpoint:
+  POST /api/products/:id/image
+- استقبال ملف الصورة (multipart/form-data)
+- التحقق من:
+  - النوع (jpg, png, webp)
+  - الحجم ≤ 5MB
+- تخزين الصورة في مكان آمن (local storage أو S3)
+- تحديث حقل imageUrl في جدول المنتجات للـ productId الصحيح
+- إرجاع JSON: { success: true, imageUrl: "<url>" }
+
+2️⃣ Frontend – نموذج إضافة/تعديل المنتج
+- إضافة حقل رفع صورة في Add/Edit Product Form:
+  <input type="file" accept="image/*" onChange={handleImageChange} />
+- عند اختيار الصورة:
+  - رفعها إلى backend
+  - حفظ رابط الصورة في state المنتج product.imageUrl
+  - تحديث cache عبر queryClient.invalidateQueries(["/api/products?store_id=<storeId>"])
+
+3️⃣ Frontend – عرض الصور في جدول المنتجات
+- إضافة عمود جديد في جدول المنتجات: <th>صورة</th>
+- عرض الصورة لكل منتج:
+  {product.imageUrl ? <img src={product.imageUrl} alt={product.name} width={50} height={50} /> : "لا توجد صورة"}
+
+4️⃣ Frontend – التحقق من عمليات CRUD
+- إنشاء منتج جديد مع صورة → الصورة تظهر مباشرة في الجدول
+- تعديل منتج وإضافة/تغيير الصورة → الجدول يتحدث تلقائيًا
+- حذف المنتج → الصورة تختفي من الجدول
+- التأكد من عمل cache invalidation لجميع mutations (create/update/delete)
+
+5️⃣ التحقق من الربط الكامل مع DTOs
+- تحديث ProductsService.mapToDTO() ليشمل imageUrl
+- التأكد من أن كل queryKeys للمنتجات تحتوي على store_id كما في النظام الحالي
+
+6️⃣ اختبار شامل
+- كل حالات CRUD على المنتجات مع الصور
+- التأكد من عرض الصور في:
+  - Dashboard
+  - Inventory
+  - Orders
+- التحقق من حماية role: فقط STORE_OWNER يمكنه رفع أو تعديل الصور
+- التحقق من استجابة backend على ملفات غير صالحة أو كبيرة جدًا (400 Bad Request)
+- توليد تقرير اختبار يوضح أن جميع الصور مرتبطة بالمنتجات الصحيحة وأن cache يعمل بشكل متسق
+
+⚡ Output المطلوب:
+- كود frontend جاهز (React + TanStack Query)
+- كود backend جاهز (Node.js / Express)
+- التأكد من تكامل الصورة مع CRUD والـ DTOs والـ cache
+- تقرير اختبار شامل لكل حالات الصور في النظام
