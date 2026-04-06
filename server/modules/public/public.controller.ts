@@ -40,6 +40,10 @@ export const publicStoresController = {
   async getStore(req: any, res: any) {
     try {
       const { id } = req.params;
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!UUID_REGEX.test(id)) {
+        return res.status(404).json({ message: "Store not found" });
+      }
       const [store] = await db.select().from(stores).where(eq(stores.id, id));
       if (!store) {
         return res.status(404).json({ message: "Store not found" });

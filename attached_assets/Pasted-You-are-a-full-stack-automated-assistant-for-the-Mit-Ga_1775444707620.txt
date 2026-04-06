@@ -1,0 +1,96 @@
+You are a full-stack automated assistant for the Mit Gaber Hyperlocal Marketplace project. Your task is to **verify, fix, and test the Store Owner registration flow** to ensure that a newly registered store owner can access their store immediately without seeing "المتجر غير موجود".
+
+---
+
+## Step 1: Register a new STORE_OWNER
+
+1. Call the backend register endpoint:
+   - POST /api/auth/register
+   - Body: { name, email, password, role: "STORE_OWNER", storeName }
+2. Capture the JWT returned.
+3. Decode JWT:
+   - Verify it contains { id, role: "STORE_OWNER" }
+   - Verify it contains storeId. If missing, fetch the store using `/api/stores?ownerId=<userId>` and attach `storeId` to JWT.
+
+Output:
+{
+  "user": { "id": "...", "role": "STORE_OWNER", "storeId": "..." },
+  "jwt": "..."
+}
+
+---
+
+## Step 2: Verify Store Creation
+
+1. Call GET /api/stores?ownerId=<userId>
+   - Ensure store exists
+   - Ensure storeId matches JWT
+2. Check store fields: id, name, ownerId
+3. If store does not exist, create it automatically and attach to user
+
+Output:
+{
+  "store": { "id": "...", "name": "...", "ownerId": "..." },
+  "status": "created" | "exists"
+}
+
+---
+
+## Step 3: Verify Frontend Route & Dashboard
+
+1. Ensure `/store/dashboard` route is registered in App.tsx
+2. Navigate to `/store/dashboard` with STORE_OWNER JWT
+3. Verify:
+   - Store name displayed
+   - Products query uses `/api/products?store_id=<storeId>`
+   - Orders query uses `/api/orders/my-store`
+4. Ensure buttons (Add/Edit/Delete Product) enabled
+5. Ensure cache invalidation works for product CRUD
+
+Output:
+{
+  "dashboardRoute": "pass | fail",
+  "productsQuery": "pass | fail",
+  "ordersQuery": "pass | fail",
+  "buttonsState": "pass | fail",
+  "cache": "pass | fail"
+}
+
+---
+
+## Step 4: Role Protection
+
+1. Attempt to access `/store/dashboard` as:
+   - CUSTOMER → should get 403
+   - DRIVER → should get 403
+   - No auth → should get 401
+2. Attempt to edit another store owner's product → should get 403
+
+Output:
+{
+  "customerAccess": "403 pass | fail",
+  "driverAccess": "403 pass | fail",
+  "noAuthAccess": "401 pass | fail",
+  "crossOwnerEdit": "403 pass | fail"
+}
+
+---
+
+## Step 5: Final Verification & Report
+
+1. Compile all results in a structured JSON report
+2. If any step fails, provide detailed logs including:
+   - Endpoint
+   - Response
+   - QueryKeys
+   - Frontend state
+3. Ensure **no other roles are affected**.
+
+Final Output Example:
+{
+  "registration": { "userId": "...", "storeId": "...", "jwt": "..." },
+  "storeCreation": "exists | created",
+  "dashboardCheck": { "route": "pass", "products": "pass", "orders": "pass", "buttons": "pass", "cache": "pass" },
+  "roleProtection": { "customer": "403", "driver": "403", "noAuth": "401", "crossOwnerEdit": "403" },
+  "testsSummary": "All checks passed. New STORE_OWNER flow verified and functional."
+}

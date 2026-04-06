@@ -108,6 +108,25 @@ function Router() {
       <Route path="/how-it-works" component={HowItWorks} />
       <Route path="/about" component={AboutPage} />
       <Route path="/faq" component={FAQPage} />
+
+      {/* Store Owner Routes — MUST be before /store/:id wildcard */}
+      <Route path="/store/dashboard">
+        {() => <ProtectedRoute component={StoreDashboard} roles={["STORE_OWNER"]} />}
+      </Route>
+      <Route path="/store/dashboard/orders">
+        {() => <ProtectedRoute component={StoreOrders} roles={["STORE_OWNER"]} />}
+      </Route>
+      <Route path="/store/earnings">
+        {() => <ProtectedRoute component={StoreEarnings} roles={["STORE_OWNER"]} />}
+      </Route>
+      <Route path="/store/inventory">
+        {() => <ProtectedRoute component={StoreInventory} roles={["STORE_OWNER"]} />}
+      </Route>
+      <Route path="/store/order/:id">
+        {() => <ProtectedRoute component={StoreOrderDetails} roles={["STORE_OWNER"]} />}
+      </Route>
+
+      {/* Public store page — wildcard AFTER specific /store/* paths */}
       <Route path="/store/:id" component={PublicStorePage} />
       <Route path="/stores" component={PublicStoresPage} />
       
@@ -142,23 +161,6 @@ function Router() {
         {() => <ProtectedRoute component={() => <DriverLayout><ActiveDelivery /></DriverLayout>} roles={["DRIVER"]} />}
       </Route>
       
-      {/* Store Routes */}
-      <Route path="/store/dashboard">
-        {() => <ProtectedRoute component={StoreDashboard} roles={["STORE_OWNER"]} />}
-      </Route>
-      <Route path="/store/dashboard/orders">
-        {() => <ProtectedRoute component={StoreOrders} roles={["STORE_OWNER"]} />}
-      </Route>
-      <Route path="/store/earnings">
-        {() => <ProtectedRoute component={StoreEarnings} roles={["STORE_OWNER"]} />}
-      </Route>
-      <Route path="/store/inventory">
-        {() => <ProtectedRoute component={StoreInventory} roles={["STORE_OWNER"]} />}
-      </Route>
-      <Route path="/store/order/:id">
-        {() => <ProtectedRoute component={StoreOrderDetails} roles={["STORE_OWNER"]} />}
-      </Route>
-      
       {/* Admin Routes */}
       <Route path="/admin/dashboard">
         {() => <ProtectedRoute component={AdminDashboard} roles={["ADMIN"]} />}
@@ -169,16 +171,14 @@ function Router() {
       <Route path="/admin/users">
         {() => <ProtectedRoute component={UsersPage} roles={["ADMIN"]} />}
       </Route>
-      
-      <Route path="/stores" component={PublicStoresPage} />
+      <Route path="/admin/stores">
+        {() => <ProtectedRoute component={StoresPage} roles={["ADMIN"]} />}
+      </Route>
       <Route path="/products">
         {() => <ProtectedRoute component={ProductsPage} />}
       </Route>
       <Route path="/orders">
         {() => <ProtectedRoute component={OrdersPage} />}
-      </Route>
-      <Route path="/admin/stores">
-        {() => <ProtectedRoute component={StoresPage} roles={["ADMIN"]} />}
       </Route>
       
       <Route component={NotFound} />
