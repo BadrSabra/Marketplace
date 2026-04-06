@@ -157,7 +157,9 @@ function Router() {
       </Route>
       
       {/* Admin Routes */}
-      <Route path="/admin/dashboard" component={AdminDashboard} />
+      <Route path="/admin/dashboard">
+        {() => <ProtectedRoute component={AdminDashboard} roles={["ADMIN"]} />}
+      </Route>
       <Route path="/admin/audit">
         {() => <ProtectedRoute component={AdminAudit} roles={["ADMIN"]} />}
       </Route>
@@ -172,7 +174,9 @@ function Router() {
       <Route path="/orders">
         {() => <ProtectedRoute component={OrdersPage} />}
       </Route>
-      <Route path="/admin/stores" component={StoresPage} />
+      <Route path="/admin/stores">
+        {() => <ProtectedRoute component={StoresPage} roles={["ADMIN"]} />}
+      </Route>
       
       <Route component={NotFound} />
     </Switch>
