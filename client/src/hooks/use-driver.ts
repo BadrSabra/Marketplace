@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import * as driverApi from "../lib/api/driver";
-import { queryClient } from "../lib/queryClient";
+import { queryClient, apiRequest } from "../lib/queryClient";
 import { useToast } from "./use-toast";
 
 export function useDriverTasks() {
@@ -101,6 +101,20 @@ export function useWalletTransactions(page = 1) {
         console.error("TRANSACTIONS_FETCHED: error", error);
         throw error;
       }
+    },
+  });
+}
+
+export function useMarkPickedUp() {
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: (subOrderId: string) =>
+      apiRequest("PATCH", `/api/suborders/${subOrderId}/status`, { status: "PICKED_UP" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/suborders/active"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to mark as picked up", description: error.message, variant: "destructive" });
     },
   });
 }

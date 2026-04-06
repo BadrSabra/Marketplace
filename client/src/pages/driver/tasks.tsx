@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useDriverTasks, useAvailableOffers, usePlaceOffer, useVerifyOtp } from "@/hooks/use-driver";
+import { useDriverTasks, useAvailableOffers, usePlaceOffer, useVerifyOtp, useMarkPickedUp } from "@/hooks/use-driver";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -78,6 +78,7 @@ export default function DriverTasksPage() {
 
 function TaskCard({ task }: { task: any }) {
   const [isOtpOpen, setIsOtpOpen] = useState(false);
+  const markPickedUpMutation = useMarkPickedUp();
 
   return (
     <Card className="flex flex-col h-full" data-testid={`card-task-${task.subOrderId}`}>
@@ -119,7 +120,15 @@ function TaskCard({ task }: { task: any }) {
           <Button className="w-full" onClick={() => setIsOtpOpen(true)} data-testid={`button-verify-otp-${task.subOrderId}`}>Verify OTP</Button>
         )}
         {task.status === 'ASSIGNED' && (
-          <Button variant="outline" className="w-full" data-testid={`button-pickup-${task.subOrderId}`}>Mark Picked Up</Button>
+          <Button
+            variant="outline"
+            className="w-full"
+            data-testid={`button-pickup-${task.subOrderId}`}
+            onClick={() => markPickedUpMutation.mutate(task.subOrderId)}
+            disabled={markPickedUpMutation.isPending}
+          >
+            Mark Picked Up
+          </Button>
         )}
       </CardFooter>
       <DeliveryOTPModal 
