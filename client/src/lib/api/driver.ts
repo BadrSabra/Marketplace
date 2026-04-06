@@ -23,7 +23,7 @@ export type OfferExtended = {
 };
 
 export async function getDriverTasks(): Promise<DriverTaskExtended[]> {
-  const res = await apiFetch("/api/driver/tasks");
+  const res = await apiFetch("/api/suborders/active");
   return res.json();
 }
 

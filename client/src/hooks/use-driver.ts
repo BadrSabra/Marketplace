@@ -5,7 +5,7 @@ import { useToast } from "./use-toast";
 
 export function useDriverTasks() {
   return useQuery({
-    queryKey: ["/api/driver/tasks"],
+    queryKey: ["/api/suborders/active"],
     queryFn: async () => {
       try {
         const data = await driverApi.getDriverTasks();
@@ -64,7 +64,7 @@ export function useVerifyOtp() {
       driverApi.verifyOtp(otpId, otpCode),
     onSuccess: () => {
       toast({ title: "Delivery confirmed" });
-      queryClient.invalidateQueries({ queryKey: ["/api/driver/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/suborders/active"] });
       queryClient.invalidateQueries({ queryKey: ["/api/delivery/offers/available"] });
     },
     onError: (error: Error) => {

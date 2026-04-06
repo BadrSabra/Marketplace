@@ -29,8 +29,7 @@ export default function CustomerDashboard() {
 
     try {
       setVerifyingId(subOrderId);
-      await apiRequest("POST", "/api/delivery/otp/verify", {
-        orderId,
+      await apiRequest("POST", `/api/delivery/otp/verify/${orderId}`, {
         subOrderId,
         otpCode: otpValue,
       });
