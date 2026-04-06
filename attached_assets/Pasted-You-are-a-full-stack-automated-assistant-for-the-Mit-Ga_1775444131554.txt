@@ -1,0 +1,90 @@
+You are a full-stack automated assistant for the Mit Gaber Hyperlocal Marketplace project. Your task is to **verify, test, and validate the Store Owner flow** after the latest fixes. Follow the steps meticulously.
+
+---
+
+## Step 1: Extract & Audit Data
+
+Before performing any actions, extract all relevant information in structured JSON:
+
+1. **User Data**
+   - Verify JWT contains `role: STORE_OWNER` and `id`.
+   - Confirm `storeId` exists and is linked to the user.
+   - Check any active sessions.
+
+2. **Store & Dashboard Data**
+   - Fetch store record: `GET /api/stores → filter by ownerId`.
+   - Check store existence, creation date, and basic metadata.
+   - Fetch all store products: ensure correct `storeId` filter is applied.
+   - Fetch store orders: `GET /api/orders/my-store`.
+
+3. **Frontend State**
+   - Identify queryKeys related to products, orders, store.
+   - Check for any disabled buttons or broken forms.
+   - Verify `/store/dashboard` route is present in router.
+
+4. **Backend Endpoints**
+   - `/api/orders/my-store`
+   - `/api/products?store_id=<id>`
+   - `/api/stores`
+   - `/api/wallet`
+   - Check status codes (200, 401, 404) and response consistency.
+
+Output JSON example:
+
+{
+  "user": {"id": "123", "role": "STORE_OWNER", "storeId": "abc"},
+  "storeData": {"exists": true, "createdAtRegistration": true, "productsCount": 12, "ordersCount": 5},
+  "frontendState": {"queryKeys": ["/api/products?store_id=abc","/api/orders/my-store"], "disabledButtons": []},
+  "backendStatus": {"/api/orders/my-store": 401, "/api/products?store_id=abc": 200, "/api/stores": 200, "/api/wallet": 200}
+}
+
+---
+
+## Step 2: Execute Verification & Automated Testing
+
+1. **Routes & Redirects**
+   - Confirm `/store/dashboard` route exists.
+   - Confirm redirect from `/` → `/store/dashboard` for STORE_OWNER.
+   - Attempt access as CUSTOMER or DRIVER → ensure redirect or forbidden.
+
+2. **Products Flow**
+   - Verify `ProductsService.mapToDTO()` returns both `id/storeId` and `product_id/store_id`.
+   - Ensure products query sends `store_id` in URL.
+   - Test all product buttons (Add, Edit, Delete) with valid storeId.
+   - Check pagination/limit (default 200).
+
+3. **Orders Flow**
+   - Verify `/api/orders/my-store` returns 401 without auth, 200 with correct JWT.
+   - Ensure orders display correctly on dashboard.
+   - Test mutation status updates (PATCH /api/suborders/:id/status).
+
+4. **Cache & State**
+   - Validate all cache invalidations after product/order mutations.
+   - Ensure queryClient reflects latest data after mutations.
+
+5. **Forms & UI**
+   - Test forms for Add/Edit Product, Orders filters.
+   - Ensure buttons are enabled only when data ready (`isPending=false`).
+   - Verify toast/feedback messages for success/failure.
+
+6. **Final Reporting**
+   - Output structured JSON with all verifications:
+
+{
+  "routes": {"dashboardRoute": "pass", "redirect": "pass", "roleProtection": "pass"},
+  "products": {"query": "pass", "DTO": "pass", "buttons": ["Add Product","Edit","Delete"], "pagination": "pass"},
+  "orders": {"endpoint": "pass", "display": "pass", "statusUpdate": "pass"},
+  "cache": "pass",
+  "formsUI": "pass",
+  "testsSummary": "All checks passed, STORE_OWNER flow verified"
+}
+
+---
+
+## Rules
+
+- Do NOT modify backend or frontend code in this step, only verify & test.
+- Ensure testing is done with both valid and invalid JWTs for STORE_OWNER, CUSTOMER, and DRIVER.
+- Report any failure with detailed logs including endpoint, queryKey, and UI component.
+- Ensure system stability for all roles; no existing functionality for other roles should break.
+- Output JSON only after all verifications are complete.
