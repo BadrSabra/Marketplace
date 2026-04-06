@@ -5,6 +5,8 @@ import { createServer } from "http";
 import { autoVerifyDatabase } from "./bootstrap/db-auto-verify";
 import { errorHandler, requestIdMiddleware } from "./middleware/error";
 import { securityMiddleware, generalLimiter, payloadSizeLimit } from "./middleware/security";
+import path from "path";
+import fs from "fs";
 
 const app = express();
 const httpServer = createServer(app);
@@ -33,6 +35,13 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
+
+// Serve uploaded product images statically
+const uploadsDir = path.resolve("uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use("/uploads", express.static(uploadsDir));
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {

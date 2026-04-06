@@ -1,6 +1,38 @@
 import { Request, Response } from "express";
 import { productsService } from "./products.service";
 import { createProductSchema, updateProductSchema } from "./products.types";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import crypto from "crypto";
+
+const uploadDir = path.resolve("uploads/products");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${crypto.randomUUID()}${ext}`);
+  },
+});
+
+const fileFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowed = ["image/jpeg", "image/png", "image/webp"];
+  if (allowed.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("INVALID_FILE_TYPE"));
+  }
+};
+
+export const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 export class ProductsController {
   async create(req: Request, res: Response) {
@@ -27,6 +59,7 @@ export class ProductsController {
       });
       res.json(products);
     } catch (err: any) {
+      console.error("[PRODUCTS] getAll error:", err?.message, err?.stack);
       res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -61,6 +94,22 @@ export class ProductsController {
     } catch (err: any) {
       if (err.message === "NOT_FOUND") return res.status(404).json({ error: "Product not found" });
       if (err.message === "UNAUTHORIZED_OWNERSHIP") return res.status(403).json({ error: "Unauthorized store ownership" });
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async uploadImage(req: Request, res: Response) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No image file provided" });
+      }
+      const imageUrl = `/uploads/products/${req.file.filename}`;
+      const product = await productsService.updateProductImage(req.params.id, imageUrl, (req as any).user);
+      res.json({ success: true, imageUrl, product });
+    } catch (err: any) {
+      if (err.message === "NOT_FOUND") return res.status(404).json({ error: "Product not found" });
+      if (err.message === "UNAUTHORIZED_OWNERSHIP") return res.status(403).json({ error: "Unauthorized store ownership" });
+      if (err.message === "INVALID_FILE_TYPE") return res.status(400).json({ error: "Only jpg, png, and webp images are allowed" });
       res.status(500).json({ error: "Internal server error" });
     }
   }

@@ -250,6 +250,7 @@
       "list_description": "عرض {{count}} منتج من متجرك.",
       "table": {
         "name": "اسم المنتج",
+        "image": "الصورة",
         "sku": "الرمز / المعرف",
         "price": "السعر",
         "stock": "المخزون",
@@ -265,6 +266,12 @@
         "stock": "كمية المخزون *",
         "category": "الفئة *",
         "category_placeholder": "مثال: ألبان، مخبوزات",
+        "image": "صورة المنتج",
+        "image_hint": "JPG أو PNG أو WebP، الحد الأقصى 5MB",
+        "image_change": "تغيير الصورة",
+        "image_upload": "رفع صورة",
+        "image_uploading": "جارٍ الرفع...",
+        "no_image": "لا توجد صورة",
         "submit_add": "إضافة المنتج",
         "submit_update": "تحديث المنتج",
         "required_note": "أدخل تفاصيل منتجك. جميع الحقول التي تحمل علامة * مطلوبة."

@@ -15,6 +15,7 @@ export class ProductsService {
       stock: product.stock,
       description: product.description || undefined,
       category: product.category,
+      imageUrl: product.imageUrl || null,
       createdAt: product.createdAt?.toISOString(),
       updatedAt: product.updatedAt?.toISOString(),
       created_at: product.createdAt?.toISOString(),
@@ -59,7 +60,7 @@ export class ProductsService {
     const offset = ((filters.page || 1) - 1) * limit;
     
     const results = await query.limit(limit).offset(offset);
-    return results.map(this.mapToDTO);
+    return results.map((p) => this.mapToDTO(p));
   }
 
   async getProductById(id: string): Promise<ProductDTO> {
@@ -102,6 +103,24 @@ export class ProductsService {
 
     await db.delete(products).where(eq(products.id, id));
     console.log(`[AUDIT-PRODUCT] user=${user.id} action=DELETE product_id=${id} store_id=${product.storeId}`);
+  }
+
+  async updateProductImage(id: string, imageUrl: string, user: any): Promise<ProductDTO> {
+    const [product] = await db.select().from(products).where(eq(products.id, id));
+    if (!product) throw new Error("NOT_FOUND");
+
+    const [store] = await db.select().from(stores).where(eq(stores.id, product.storeId));
+    if (user.role !== "ADMIN" && store.ownerId !== user.id) {
+      throw new Error("UNAUTHORIZED_OWNERSHIP");
+    }
+
+    const [updated] = await db.update(products)
+      .set({ imageUrl, updatedAt: new Date() })
+      .where(eq(products.id, id))
+      .returning();
+
+    console.log(`[AUDIT-PRODUCT] user=${user.id} action=UPDATE_IMAGE product_id=${id} store_id=${product.storeId}`);
+    return this.mapToDTO(updated);
   }
 }
 

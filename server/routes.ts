@@ -11,7 +11,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { eq, sql, and } from "drizzle-orm";
 import { authenticate, authorizeRole } from "./middleware/auth";
-import { productsController } from "./modules/products/products.controller";
+import { productsController, upload } from "./modules/products/products.controller";
 import { subOrderController } from "./modules/orders/suborder.controller";
 import { walletController } from "./modules/wallet/wallet.controller";
 import { orderController } from "./modules/orders/order.controller";
@@ -270,6 +270,26 @@ export async function registerRoutes(
   app.get("/api/products/:id", productsController.getOne);
   app.patch("/api/products/:id", authenticate, productsController.update);
   app.delete("/api/products/:id", authenticate, productsController.delete);
+  app.post(
+    "/api/products/:id/image",
+    authenticate,
+    authorizeRole(["STORE_OWNER", "ADMIN"]),
+    (req, res, next) => {
+      upload.single("image")(req, res, (err) => {
+        if (err) {
+          if (err.message === "INVALID_FILE_TYPE") {
+            return res.status(400).json({ error: "Only jpg, png, and webp images are allowed" });
+          }
+          if (err.code === "LIMIT_FILE_SIZE") {
+            return res.status(400).json({ error: "File size must not exceed 5MB" });
+          }
+          return res.status(400).json({ error: err.message });
+        }
+        next();
+      });
+    },
+    productsController.uploadImage
+  );
 
   // --- SUBORDERS STATUS MANAGEMENT ---
   app.patch("/api/suborders/:id/status", authenticate, authorizeRole(["STORE_OWNER", "DRIVER", "ADMIN"]), subOrderController.updateStatus);

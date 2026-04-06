@@ -190,7 +190,8 @@ export async function autoVerifyDatabase() {
       { table: 'delivery_otps', column: 'attempt_count', type: 'INTEGER DEFAULT 0' },
       { table: 'ledger', column: 'type', type: 'transaction_type NOT NULL' },
       { table: 'ledger', column: 'reference_id', type: 'UUID' },
-      { table: 'users', column: 'drivers_license_url', type: 'TEXT' }
+      { table: 'users', column: 'drivers_license_url', type: 'TEXT' },
+      { table: 'products', column: 'image_url', type: 'TEXT' }
     ];
 
     for (const check of columnChecks) {
