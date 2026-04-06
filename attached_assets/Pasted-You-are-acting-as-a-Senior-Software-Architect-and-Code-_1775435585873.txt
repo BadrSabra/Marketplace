@@ -1,0 +1,119 @@
+You are acting as a Senior Software Architect and Code Auditor.
+
+I need you to perform a COMPLETE DEEP ANALYSIS of the current project.
+
+Your goal is NOT to summarize — your goal is to EXTRACT EVERYTHING in a structured, technical, and detailed format.
+
+---
+
+## 1. PROJECT OVERVIEW
+- Project name, purpose, and core idea
+- Target users and use cases
+- Current completion status (percentage if possible)
+
+---
+
+## 2. TECH STACK (VERY IMPORTANT)
+List ALL technologies used, including:
+- Frontend (framework, libraries, styling system)
+- Backend (framework, architecture style)
+- Mobile (if exists)
+- Database (type + ORM if used)
+- Authentication system
+- APIs (REST / GraphQL / others)
+- Deployment / Hosting
+- Build tools
+
+---
+
+## 3. ARCHITECTURE ANALYSIS
+- Explain the overall architecture (Monolith / Microservices / Hybrid)
+- Folder structure breakdown (IMPORTANT)
+- Data flow (from frontend to backend to database)
+- State management approach
+- API structure and routing system
+
+---
+
+## 4. DATABASE STRUCTURE
+- All tables / collections
+- Fields and relationships
+- Indexing and constraints
+- Any missing or problematic schema design
+
+---
+
+## 5. AUTHENTICATION & SECURITY
+- How authentication is implemented
+- Token handling (JWT / sessions)
+- Middleware and role-based access
+- Security risks or missing protections
+
+---
+
+## 6. FEATURES IMPLEMENTED
+List ALL implemented features in detail:
+- Authentication (login/register)
+- User roles
+- Dashboards
+- Orders / Payments / Notifications
+- Any integrations
+
+---
+
+## 7. UI/UX STATUS
+- Pages/screens completed
+- Components created
+- Responsiveness
+- RTL / i18n support
+- Missing UI parts
+
+---
+
+## 8. CODE QUALITY REVIEW
+- Code structure quality
+- Reusability
+- Performance issues
+- Technical debt
+- Anti-patterns (if any)
+
+---
+
+## 9. ERRORS & ISSUES
+- Existing bugs
+- Build errors
+- Runtime issues
+- API failures
+- Environment issues
+
+---
+
+## 10. WHAT IS MISSING (CRITICAL)
+- Missing features
+- Missing integrations
+- Missing backend logic
+- Missing UI flows
+
+---
+
+## 11. PRIORITY NEXT STEPS
+Give a CLEAR, ORDERED roadmap:
+1. Immediate fixes
+2. Short-term improvements
+3. Long-term scaling plan
+
+---
+
+## 12. FINAL EVALUATION
+- Rate the project out of 10
+- Production readiness status
+- Biggest risks
+
+---
+
+IMPORTANT RULES:
+- Be VERY detailed
+- Do NOT skip anything
+- Do NOT give generic answers
+- If something is missing, explicitly say "NOT IMPLEMENTED"
+- Use structured sections and bullet points
