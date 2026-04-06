@@ -1,0 +1,88 @@
+You are acting as a full-stack assistant for the Mit Gaber Hyperlocal Marketplace project. Your task is to **fix issues for newly registered Store Owners** in a structured, safe, and tested manner. Follow the steps below meticulously.
+
+## Step 1: Extract all required data
+
+Before making any changes, extract and report the following in a structured JSON format:
+
+1. **User & Authentication Data**
+   - User role (check JWT and server records)
+   - User ID and storeId (if already created)
+   - Any active sessions or pending tokens
+
+2. **Store & Dashboard Data**
+   - Existing store record in database (store name, storeId, products)
+   - Existing orders for this store
+   - Any missing or incomplete data fields
+
+3. **Frontend State**
+   - Current state of `queryClient` keys related to store, products, orders
+   - Components that depend on `storeData` or `user.role`
+   - Any buttons/forms that are disabled or broken
+
+4. **Backend Endpoints**
+   - List all relevant endpoints for store owner:
+     - `/api/stores/:storeId`
+     - `/api/store/orders`
+     - `/api/store/products`
+   - Check which endpoints return 404 or errors
+
+> Output format example:
+{
+  "user": { "id": "123", "role": "STORE_OWNER", "storeId": "abc" },
+  "storeData": { "exists": true, "name": "Shop ABC", "products": 10, "orders": 5 },
+  "frontendState": { "queryKeys": ["/api/stores/abc", "/api/store/orders"], "disabledButtons": ["Add Product", "Manage Orders"] },
+  "backendStatus": { "/api/stores/abc": 200, "/api/store/orders": 404 }
+}
+
+---
+
+## Step 2: Execute fixes and test automatically
+
+After extraction, follow these steps:
+
+1. **Fix Role & Redirection**
+   - Ensure the JWT role is `STORE_OWNER`
+   - Redirect user to `/store/dashboard` after registration/login
+   - Protect all store routes using `ProtectedRoute` with role check
+
+2. **Fix Data & API Integration**
+   - Create missing store record if not present in backend
+   - Ensure all API calls use correct `storeId` and URL constants
+   - Update queryKeys in `queryClient` for store, products, orders
+   - Invalidate cache after mutations (create product, update order)
+
+3. **Fix UI & Buttons**
+   - Enable buttons only when data is ready (`storeData` loaded, loading=false)
+   - Add `isPending` and feedback (toast) for mutations
+   - Update forms with validation and controlled inputs
+
+4. **Automated Testing**
+   - Test login/register flow for a new Store Owner
+   - Test dashboard data loading (store info, products, orders)
+   - Test buttons & forms functionality
+   - Test route protection for unauthorized access
+   - Test all relevant API endpoints for 200 status
+
+5. **Reporting**
+   - Output structured report after execution:
+{
+  "roleFix": "ok",
+  "storeCreation": "ok",
+  "queryClientUpdate": "ok",
+  "buttonsFixed": ["Add Product", "Manage Orders"],
+  "tests": {
+    "loginFlow": "pass",
+    "dashboardLoad": "pass",
+    "buttons": "pass",
+    "routes": "pass",
+    "apiStatus": {"store": 200, "orders": 200, "products": 200}
+  }
+}
+
+---
+
+**Important rules:**
+- Do NOT execute any mutations until all required data is verified in Step 1
+- Apply fixes only if issues are confirmed
+- Provide detailed logs of every change
+- Ensure the system remains stable for other roles (CUSTOMER, DRIVER, ADMIN)
