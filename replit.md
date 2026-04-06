@@ -15,7 +15,7 @@ A full-stack hyperlocal marketplace platform built with React (Vite) frontend, N
 | ADMIN | `/admin/dashboard` | `/admin/users`, `/admin/stores`, `/admin/audit` |
 | STORE_OWNER | `/store/dashboard` | `/store/dashboard/orders`, `/store/inventory`, `/store/earnings` |
 | DRIVER | `/driver/tasks` | `/driver/wallet`, `/driver/active-delivery` |
-| CUSTOMER | `/` | `/customer/wallet`, `/customer/order/:id` |
+| CUSTOMER | `/` | `/customer/wallet`, `/customer/transactions`, `/customer/profile`, `/customer/order/:id` |
 
 ## Store Owner Flow
 - On registration: store record is automatically created in the DB (within the same transaction as user creation)
