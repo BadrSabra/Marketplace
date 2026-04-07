@@ -50,7 +50,7 @@ export async function initializeDatabase() {
 
     // 2. Ensure Core Tables Exist
     console.log("[DB] Checking tables...");
-    const tables = ['users', 'wallets', 'stores', 'orders', 'sub_orders', 'delivery_otps', 'ledger'];
+    const tables = ['users', 'wallets', 'stores', 'orders', 'sub_orders', 'delivery_otps', 'ledger', 'withdrawal_requests'];
     for (const table of tables) {
       const tableCheck = await pool.query(`SELECT to_regclass('public.${table}')`);
       if (!tableCheck.rows[0].to_regclass) {
@@ -147,6 +147,20 @@ export async function initializeDatabase() {
               type TEXT NOT NULL,
               created_at TIMESTAMP DEFAULT NOW(),
               updated_at TIMESTAMP DEFAULT NOW()
+            )
+          `);
+        } else if (table === 'withdrawal_requests') {
+          await pool.query(`
+            CREATE TABLE IF NOT EXISTS withdrawal_requests (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              user_id UUID NOT NULL REFERENCES users(id),
+              wallet_id UUID NOT NULL REFERENCES wallets(id),
+              amount DECIMAL(12,2) NOT NULL,
+              status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+              admin_note TEXT,
+              reviewed_by_admin_id UUID REFERENCES users(id),
+              created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+              updated_at TIMESTAMP NOT NULL DEFAULT NOW()
             )
           `);
         }
