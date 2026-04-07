@@ -6,101 +6,54 @@ import { useToast } from "./use-toast";
 export function useDriverTasks() {
   return useQuery({
     queryKey: ["/api/suborders/active"],
-    queryFn: async () => {
-      try {
-        const data = await driverApi.getDriverTasks();
-        console.log("DRIVER_TASKS_FETCH: success, count =", data?.length || 0);
-        return data || [];
-      } catch (error) {
-        console.error("DRIVER_TASKS_FETCH: error", error);
-        throw error;
-      }
-    },
+    queryFn: () => driverApi.getDriverTasks(),
     staleTime: 30_000,
-    gcTime: 5 * 60_000,
     retry: 1,
-    refetchOnWindowFocus: false,
+    refetchInterval: 30_000,
   });
 }
 
 export function useAvailableOffers() {
   return useQuery({
-    queryKey: ["/api/delivery/offers/available"],
-    queryFn: async () => {
-      try {
-        const data = await driverApi.getAvailableOffers();
-        console.log("AVAILABLE_OFFERS_FETCH: success, count =", data?.length || 0);
-        return data || [];
-      } catch (error) {
-        console.error("AVAILABLE_OFFERS_FETCH: error", error);
-        throw error;
-      }
-    },
+    queryKey: ["/api/delivery/available-tasks"],
+    queryFn: () => driverApi.getAvailableOffers(),
     staleTime: 30_000,
-    gcTime: 5 * 60_000,
     retry: 1,
-    refetchOnWindowFocus: false,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useSubmitOffer() {
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: (subOrderId: string) => driverApi.submitOffer(subOrderId),
+    onSuccess: () => {
+      toast({ title: "تم قبول المهمة بنجاح" });
+      queryClient.invalidateQueries({ queryKey: ["/api/delivery/available-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/suborders/active"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "فشل قبول المهمة", description: error.message, variant: "destructive" });
+    },
   });
 }
 
 export function usePlaceOffer() {
-  const { toast } = useToast();
-  return useMutation({
-    mutationFn: driverApi.placeBid,
-    onSuccess: () => {
-      toast({ title: "Bid placed successfully" });
-      queryClient.invalidateQueries({ queryKey: ["/api/delivery/offers/available"] });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Failed to place bid", description: error.message, variant: "destructive" });
-    },
-  });
+  return useSubmitOffer();
 }
 
 export function useVerifyOtp() {
   const { toast } = useToast();
   return useMutation({
-    mutationFn: ({ otpId, otpCode }: { otpId: string; otpCode: string }) => 
-      driverApi.verifyOtp(otpId, otpCode),
+    mutationFn: ({ orderId, subOrderId, otpCode }: { orderId: string; subOrderId: string; otpCode: string }) =>
+      driverApi.verifyOtp(orderId, subOrderId, otpCode),
     onSuccess: () => {
-      toast({ title: "Delivery confirmed" });
+      toast({ title: "تم تأكيد التسليم بنجاح" });
       queryClient.invalidateQueries({ queryKey: ["/api/suborders/active"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/delivery/offers/available"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/delivery/available-tasks"] });
     },
     onError: (error: Error) => {
-      toast({ title: "OTP verification failed", description: error.message, variant: "destructive" });
-    },
-  });
-}
-
-export function useDriverWallet() {
-  return useQuery({
-    queryKey: ["/api/driver/wallet"],
-    queryFn: async () => {
-      try {
-        const data = await driverApi.getDriverWallet();
-        console.log("DRIVER_WALLET_FETCH: success, balance =", data?.balance);
-        return data || { balance: "0.00" };
-      } catch (error) {
-        console.error("DRIVER_WALLET_FETCH: error", error);
-        throw error;
-      }
-    },
-  });
-}
-
-export function useWalletTransactions(page = 1) {
-  return useQuery({
-    queryKey: ["/api/driver/wallet/transactions", page],
-    queryFn: async () => {
-      try {
-        const data = await driverApi.getWalletTransactions(page);
-        console.log("TRANSACTIONS_FETCHED: total =", data?.total || 0);
-        return data || { transactions: [], total: 0 };
-      } catch (error) {
-        console.error("TRANSACTIONS_FETCHED: error", error);
-        throw error;
-      }
+      toast({ title: "فشل التحقق من OTP", description: error.message, variant: "destructive" });
     },
   });
 }
@@ -114,7 +67,21 @@ export function useMarkPickedUp() {
       queryClient.invalidateQueries({ queryKey: ["/api/suborders/active"] });
     },
     onError: (error: Error) => {
-      toast({ title: "Failed to mark as picked up", description: error.message, variant: "destructive" });
+      toast({ title: "فشل تحديث الحالة", description: error.message, variant: "destructive" });
     },
+  });
+}
+
+export function useDriverWallet() {
+  return useQuery({
+    queryKey: ["/api/wallet"],
+    queryFn: () => driverApi.getDriverWallet(),
+  });
+}
+
+export function useWalletTransactions(page = 1) {
+  return useQuery({
+    queryKey: ["/api/ledger/transactions", page],
+    queryFn: () => driverApi.getWalletTransactions(page),
   });
 }
