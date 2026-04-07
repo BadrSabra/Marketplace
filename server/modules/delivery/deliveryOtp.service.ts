@@ -7,7 +7,7 @@ import crypto from "crypto";
 export class DeliveryOtpService {
   async generateOtp(orderId: string, subOrderId?: string): Promise<string> {
     const otpCode = crypto.randomInt(100000, 999999).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
     
     await db.transaction(async (tx) => {
       // Auto-invalidate old PENDING OTPs for this sub_order
@@ -91,24 +91,26 @@ export class DeliveryOtpService {
         await tx.update(subOrders)
           .set({ status: "DELIVERED", updatedAt: new Date() })
           .where(eq(subOrders.id, subOrderId));
-        
-        // Trigger commissions — subOrder is already DELIVERED at this point
-        await ledgerService.processCommissions(subOrderId);
       } else {
         // Mark whole order as delivered if no subOrderId (simple case)
         await tx.update(orders)
           .set({ overallStatus: "DELIVERED", updatedAt: new Date() })
           .where(eq(orders.id, orderId));
       }
-
-      console.log(JSON.stringify({
-        event: "OTP_VERIFICATION_SUCCESS",
-        orderId,
-        subOrderId,
-        timestamp: new Date().toISOString(),
-        success: true
-      }));
     });
+
+    // Trigger commissions OUTSIDE the transaction to avoid nested-transaction deadlock
+    if (subOrderId) {
+      await ledgerService.processCommissions(subOrderId);
+    }
+
+    console.log(JSON.stringify({
+      event: "OTP_VERIFICATION_SUCCESS",
+      orderId,
+      subOrderId,
+      timestamp: new Date().toISOString(),
+      success: true
+    }));
   }
 }
 
