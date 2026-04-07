@@ -14,6 +14,7 @@ import { authenticate, authorizeRole } from "./middleware/auth";
 import { productsController, upload } from "./modules/products/products.controller";
 import { upload as avatarUpload } from "./modules/avatar/avatar.upload";
 import { receiptUpload } from "./modules/receipt/receipt.upload";
+import { storeUpload } from "./modules/store/store.upload";
 import { subOrderController } from "./modules/orders/suborder.controller";
 import { walletController } from "./modules/wallet/wallet.controller";
 import { orderController } from "./modules/orders/order.controller";
@@ -303,6 +304,31 @@ export async function registerRoutes(
       console.error("Delete store error:", err);
       res.status(500).json({ success: false, message: err.message || "Internal server error" });
     }
+  });
+
+  // Store banner image upload
+  app.post("/api/stores/:id/image", authenticate, authorizeRole(["STORE_OWNER", "ADMIN"]), (req, res) => {
+    storeUpload.single("image")(req, res, async (err: any) => {
+      if (err) {
+        return res.status(400).json({ message: err.message || "Upload failed" });
+      }
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      try {
+        const { id } = req.params;
+        const imageUrl = `/uploads/stores/${req.file.filename}`;
+        const [updated] = await db
+          .update(stores)
+          .set({ imageUrl, updatedAt: new Date() })
+          .where(eq(stores.id, id))
+          .returning();
+        if (!updated) return res.status(404).json({ message: "Store not found" });
+        res.json({ imageUrl, store: updated });
+      } catch (e: any) {
+        res.status(500).json({ message: e.message || "Failed to save store image" });
+      }
+    });
   });
 
   // --- PRODUCTS MODULE ---

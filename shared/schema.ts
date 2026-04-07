@@ -70,6 +70,7 @@ export const stores = pgTable("stores", {
   type: text("type"),
   description: text("description"),
   locationText: text("location_text"),
+  imageUrl: text("image_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

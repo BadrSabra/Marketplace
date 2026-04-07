@@ -1,7 +1,8 @@
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Package, Wallet, ShoppingBag, TrendingUp, AlertTriangle, Store } from "lucide-react";
+import { Package, Wallet, ShoppingBag, TrendingUp, AlertTriangle, Store, ImagePlus, Upload } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { StoreLayout } from "@/components/layout/store-layout";
 import { Spinner } from "@/components/ui/spinner";
@@ -9,9 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { t } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useRef, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function StoreDashboard() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
 
   const { data: stores, isLoading: isStoresLoading } = useQuery<any[]>({
     queryKey: ["/api/stores"],
@@ -64,9 +70,94 @@ export default function StoreDashboard() {
   const storeName = myStore?.name || t('store.dashboard.your_store');
   const walletBalance = parseFloat(wallet?.balance || "0").toFixed(2);
 
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !myStore?.id) return;
+
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast({ title: "نوع ملف غير مدعوم", description: "JPG, PNG, WEBP فقط", variant: "destructive" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "الملف كبير جداً", description: "الحد الأقصى 5MB", variant: "destructive" });
+      return;
+    }
+
+    setIsUploadingBanner(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const token = localStorage.getItem("jwt_token");
+      const res = await fetch(`/api/stores/${myStore.id}/image`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "فشل رفع الصورة");
+      }
+      await queryClient.invalidateQueries({ queryKey: ["/api/stores"] });
+      toast({ title: "تم رفع صورة المتجر بنجاح" });
+    } catch (err: any) {
+      toast({ title: "فشل رفع صورة المتجر", description: err.message, variant: "destructive" });
+    } finally {
+      setIsUploadingBanner(false);
+      if (bannerInputRef.current) bannerInputRef.current.value = "";
+    }
+  };
+
   return (
     <StoreLayout>
       <div className="space-y-8 rtl:text-right" dir="auto">
+
+        {/* Store Banner Section */}
+        {myStore && (
+          <div className="relative rounded-2xl overflow-hidden border border-border h-44 md:h-56 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
+            {myStore.imageUrl ? (
+              <img
+                src={myStore.imageUrl}
+                alt={myStore.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                <ImagePlus className="h-10 w-10" />
+                <p className="text-sm font-medium">لا توجد صورة غلاف للمتجر</p>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+            <div className="absolute bottom-3 right-3 left-3 flex items-end justify-between">
+              <p className="text-white font-bold text-lg drop-shadow">{myStore.name}</p>
+              <div>
+                <input
+                  ref={bannerInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleBannerUpload}
+                  data-testid="input-banner-image"
+                />
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="gap-2 bg-white/90 hover:bg-white text-foreground shadow"
+                  onClick={() => bannerInputRef.current?.click()}
+                  disabled={isUploadingBanner}
+                  data-testid="button-upload-banner"
+                >
+                  {isUploadingBanner ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  {myStore.imageUrl ? "تغيير الصورة" : "رفع صورة الغلاف"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <header className="rtl:text-right">
           <h1 className="text-3xl font-bold tracking-tight" data-testid="dashboard-title">
             {t('store.dashboard.overview')}

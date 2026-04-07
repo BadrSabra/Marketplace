@@ -123,7 +123,7 @@ export default function StoreInventory() {
       const formData = new FormData();
       formData.append("image", selectedImageFile);
 
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("jwt_token");
       const res = await fetch(`/api/products/${productId}/image`, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},

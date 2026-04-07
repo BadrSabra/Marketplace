@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Store as StoreIcon, ArrowRight } from "lucide-react";
+import { ShoppingCart, Store as StoreIcon, ImageOff } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -22,7 +22,7 @@ export default function PublicStorePage() {
   });
 
   const { data: products, isLoading: productsLoading } = useQuery({
-    queryKey: [`/api/products`], // In real app, we'd filter by storeId via API or here
+    queryKey: [`/api/products`],
     select: (data: any[]) => data.filter(p => p.storeId === id),
   });
 
@@ -35,7 +35,6 @@ export default function PublicStorePage() {
       setLocation("/login");
       return;
     }
-    // Logic for cart would go here
     toast({
       title: "تمت الإضافة",
       description: "تمت إضافة المنتج إلى السلة بنجاح",
@@ -47,7 +46,7 @@ export default function PublicStorePage() {
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <div className="container py-8 md:py-12 flex-grow space-y-6 md:space-y-8 px-4">
-          <Skeleton className="h-32 md:h-48 w-full rounded-2xl" />
+          <Skeleton className="h-48 md:h-64 w-full rounded-2xl" />
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="h-56 md:h-64 rounded-xl" />
@@ -72,41 +71,61 @@ export default function PublicStorePage() {
     );
   }
 
+  const storeData = store as any;
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
       
       <main className="flex-grow">
-        {/* Store Hero */}
-        <div className="bg-slate-50 dark:bg-slate-900 border-b">
-          <div className="container py-8 md:py-12 px-4">
-            <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-start text-center md:text-right">
-              <div className="h-24 w-24 md:h-32 md:w-32 bg-white dark:bg-slate-800 rounded-2xl shadow-sm flex items-center justify-center border-2 overflow-hidden shrink-0">
-                <StoreIcon className="h-12 w-12 md:h-16 md:w-16 text-slate-300" />
+        {/* Store Banner */}
+        <div className="relative w-full h-48 md:h-72 bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 overflow-hidden">
+          {storeData.imageUrl ? (
+            <img
+              src={storeData.imageUrl}
+              alt={`${storeData.name} banner`}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <StoreIcon className="h-20 w-20 text-slate-400 dark:text-slate-500" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+          <div className="absolute bottom-4 right-4 left-4">
+            <div className="flex items-end gap-3">
+              <div>
+                <h1 className="text-2xl md:text-4xl font-bold text-white drop-shadow">{storeData.name}</h1>
+                {storeData.description && (
+                  <p className="text-sm md:text-base text-white/80 mt-1 max-w-xl line-clamp-2">{storeData.description}</p>
+                )}
               </div>
-              <div className="flex-grow">
-                <div className="flex flex-col md:flex-row items-center md:justify-start gap-2 md:gap-4 mb-2">
-                  <h1 className="text-2xl md:text-4xl font-bold">{store.name}</h1>
-                  <Badge variant="default" className="w-fit">مفتوح</Badge>
-                </div>
-                <p className="text-sm md:text-lg text-muted-foreground mb-4 max-w-2xl mx-auto md:mx-0">{store.description}</p>
-                <div className="flex items-center justify-center md:justify-start gap-2 text-xs md:text-sm text-muted-foreground">
-                  <span className="font-medium">{store.locationText || "ميت جابر"}</span>
-                </div>
-              </div>
+              <Badge className="mb-1 bg-green-500 text-white border-0">مفتوح</Badge>
             </div>
           </div>
         </div>
 
         <div className="container py-8 md:py-12 px-4">
+          {storeData.locationText && (
+            <p className="text-sm text-muted-foreground mb-6">📍 {storeData.locationText}</p>
+          )}
+
           <h2 className="text-xl md:text-2xl font-bold mb-6 md:mb-8">المنتجات</h2>
           
           {products && products.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
               {products.map((product: any) => (
-                <Card key={product.id} className="overflow-hidden group">
-                  <div className="h-40 md:h-48 bg-slate-100 flex items-center justify-center relative">
-                    <span className="text-3xl md:text-4xl">📦</span>
+                <Card key={product.id} className="overflow-hidden group hover:shadow-md transition-shadow">
+                  <div className="h-40 md:h-48 bg-slate-100 dark:bg-slate-800 flex items-center justify-center relative overflow-hidden">
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <ImageOff className="h-12 w-12 text-slate-300 dark:text-slate-600" />
+                    )}
                   </div>
                   <CardContent className="p-4">
                     <h3 className="font-bold text-base md:text-lg mb-1 truncate">{product.name}</h3>
@@ -123,7 +142,7 @@ export default function PublicStorePage() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 md:py-20 bg-slate-50 rounded-2xl px-4">
+            <div className="text-center py-12 md:py-20 bg-slate-50 dark:bg-slate-900 rounded-2xl px-4">
               <p className="text-muted-foreground">لا توجد منتجات متاحة حالياً في هذا المتجر</p>
             </div>
           )}
