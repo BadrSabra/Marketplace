@@ -1,7 +1,8 @@
 import { db } from "../../db";
 import { orders, subOrders, orderItems, products, wallets, walletTransactions, stores, users, deliveryOtps } from "@shared/schema";
-import { eq, and, sql, inArray } from "drizzle-orm";
+import { eq, and, sql, inArray, gt } from "drizzle-orm";
 import { emitNotification } from "../notifications/notification.emitter";
+import { deliveryOtpService } from "../delivery/deliveryOtp.service";
 
 export class OrderService {
   async createMultiStoreOrder(customerId: string, items: { productId: string, quantity: number }[]) {
@@ -149,8 +150,24 @@ export class OrderService {
 
       let otpCode = null;
       if (sub.status === "IN_TRANSIT") {
-        const [otpRow] = await db.select({ otpCode: deliveryOtps.otpCode }).from(deliveryOtps).where(eq(deliveryOtps.subOrderId, sub.id)).limit(1);
-        otpCode = otpRow?.otpCode || null;
+        const now = new Date();
+        // Try to find a valid (non-expired, pending) OTP first
+        const [validOtp] = await db
+          .select({ otpCode: deliveryOtps.otpCode })
+          .from(deliveryOtps)
+          .where(and(
+            eq(deliveryOtps.subOrderId, sub.id),
+            eq(deliveryOtps.status, "PENDING"),
+            gt(deliveryOtps.expiresAt, now)
+          ))
+          .limit(1);
+
+        if (validOtp) {
+          otpCode = validOtp.otpCode;
+        } else {
+          // OTP is expired or missing — auto-regenerate a fresh one
+          otpCode = await deliveryOtpService.generateOtp(sub.orderId, sub.id);
+        }
       }
 
       return { ...sub, store: store || null, driver, otpCode, items };

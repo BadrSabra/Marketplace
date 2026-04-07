@@ -102,12 +102,7 @@ export class SubOrderService {
     const [otpRecord] = await db
       .select()
       .from(deliveryOtps)
-      .where(
-        and(
-          eq(deliveryOtps.subOrderId, activeSubOrder.id),
-          eq(deliveryOtps.status, "PENDING")
-        )
-      )
+      .where(eq(deliveryOtps.subOrderId, activeSubOrder.id))
       .limit(1);
 
     return {
