@@ -135,17 +135,24 @@ export class OrderService {
     const subs = await db.select().from(subOrders).where(eq(subOrders.orderId, orderId));
 
     const subsWithItems = await Promise.all(subs.map(async (sub) => {
-      const items = await db.select({
+      const rawItems = await db.select({
         id: orderItems.id,
         subOrderId: orderItems.subOrderId,
         productId: orderItems.productId,
         quantity: orderItems.quantity,
         priceAtOrder: orderItems.priceAtOrder,
-        product: products,
+        productName: products.name,
+        productImageUrl: products.imageUrl,
       })
         .from(orderItems)
         .leftJoin(products, eq(orderItems.productId, products.id))
         .where(eq(orderItems.subOrderId, sub.id));
+
+      const items = rawItems.map(item => ({
+        ...item,
+        product_name: item.productName,
+        price_at_order: item.priceAtOrder,
+      }));
 
       const [store] = await db.select({ id: stores.id, name: stores.name }).from(stores).where(eq(stores.id, sub.storeId)).limit(1);
 

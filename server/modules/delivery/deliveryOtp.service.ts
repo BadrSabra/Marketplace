@@ -1,6 +1,6 @@
 import { db } from "../../db";
 import { deliveryOtps, subOrders, orders } from "@shared/schema";
-import { eq, and, ne, lt, gt } from "drizzle-orm";
+import { eq, and, ne, lt, gt, inArray } from "drizzle-orm";
 import { ledgerService } from "../ledger/ledger.service";
 import crypto from "crypto";
 
@@ -91,6 +91,24 @@ export class DeliveryOtpService {
         await tx.update(subOrders)
           .set({ status: "DELIVERED", updatedAt: new Date() })
           .where(eq(subOrders.id, subOrderId));
+
+        // Check if ALL sub-orders of this parent order are now done
+        const allSubs = await tx.select({ id: subOrders.id, status: subOrders.status })
+          .from(subOrders)
+          .where(eq(subOrders.orderId, orderId));
+
+        const allDone = allSubs.every(s =>
+          s.id === subOrderId ? true : (s.status === "DELIVERED" || s.status === "CANCELLED")
+        );
+
+        if (allDone) {
+          const anyDelivered = allSubs.some(s =>
+            s.id === subOrderId ? true : s.status === "DELIVERED"
+          );
+          await tx.update(orders)
+            .set({ overallStatus: anyDelivered ? "DELIVERED" : "CANCELLED", updatedAt: new Date() })
+            .where(eq(orders.id, orderId));
+        }
       } else {
         // Mark whole order as delivered if no subOrderId (simple case)
         await tx.update(orders)

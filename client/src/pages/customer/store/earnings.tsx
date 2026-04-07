@@ -1,18 +1,22 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, TrendingUp, Wallet, ArrowUpCircle, ArrowDownCircle, Info, Search, Filter } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, TrendingUp, Wallet, ArrowUpCircle, ArrowDownCircle, Info, Search, ArrowDownToLine } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/use-auth";
 import { LedgerTransaction } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { StoreLayout } from "@/components/layout/store-layout";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
 
 type LedgerResponse = {
   transactions: LedgerTransaction[];
@@ -23,8 +27,26 @@ type LedgerResponse = {
 export default function StoreEarnings() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+
+  const withdrawMutation = useMutation({
+    mutationFn: (amount: string) =>
+      apiRequest("POST", "/api/wallet/withdraw", { amount }),
+    onSuccess: () => {
+      toast({ title: "تم إرسال طلب السحب", description: "سيتم مراجعة طلبك من قبل الإدارة وسيُنفَّذ خلال 24 ساعة." });
+      queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ledger/transactions"] });
+      setWithdrawOpen(false);
+      setWithdrawAmount("");
+    },
+    onError: (err: any) => {
+      toast({ title: "فشل طلب السحب", description: err.message || "يرجى التحقق من الرصيد المتاح", variant: "destructive" });
+    },
+  });
 
   const { data: wallet, isLoading: isWalletLoading } = useQuery<{ balance: string }>({
     queryKey: ["/api/wallet"],
@@ -89,6 +111,16 @@ export default function StoreEarnings() {
                 ${parseFloat(wallet?.balance || "0").toFixed(2)}
               </div>
               <p className="text-xs text-muted-foreground mt-2 font-medium">{t('store.earnings.balance_note')}</p>
+              <Button
+                className="mt-3 w-full gap-2"
+                size="sm"
+                onClick={() => setWithdrawOpen(true)}
+                disabled={parseFloat(wallet?.balance || "0") <= 0}
+                data-testid="button-withdraw"
+              >
+                <ArrowDownToLine className="h-4 w-4" />
+                طلب سحب رصيد
+              </Button>
             </CardContent>
           </Card>
           
@@ -227,6 +259,55 @@ export default function StoreEarnings() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
+        <DialogContent className="rtl:text-right" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 rtl:flex-row-reverse">
+              <ArrowDownToLine className="h-5 w-5 text-primary" />
+              طلب سحب رصيد
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              الرصيد المتاح: <span className="font-bold text-primary">${parseFloat(wallet?.balance || "0").toFixed(2)}</span>
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="withdraw-amount">المبلغ المراد سحبه ($)</Label>
+              <Input
+                id="withdraw-amount"
+                type="number"
+                min="1"
+                step="0.01"
+                max={wallet?.balance || "0"}
+                placeholder="أدخل المبلغ"
+                value={withdrawAmount}
+                onChange={(e) => setWithdrawAmount(e.target.value)}
+                data-testid="input-withdraw-amount"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              سيتم خصم المبلغ من رصيدك فوراً وإرسال طلب السحب إلى الإدارة للمراجعة والموافقة.
+            </p>
+          </div>
+          <DialogFooter className="rtl:flex-row-reverse gap-2">
+            <Button variant="outline" onClick={() => setWithdrawOpen(false)}>إلغاء</Button>
+            <Button
+              onClick={() => withdrawMutation.mutate(withdrawAmount)}
+              disabled={
+                withdrawMutation.isPending ||
+                !withdrawAmount ||
+                parseFloat(withdrawAmount) <= 0 ||
+                parseFloat(withdrawAmount) > parseFloat(wallet?.balance || "0")
+              }
+              data-testid="button-confirm-withdraw"
+            >
+              {withdrawMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : null}
+              تأكيد السحب
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </StoreLayout>
   );
 }
