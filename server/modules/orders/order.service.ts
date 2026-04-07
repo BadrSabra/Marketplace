@@ -1,5 +1,5 @@
 import { db } from "../../db";
-import { orders, subOrders, orderItems, products, wallets, walletTransactions, stores, users } from "@shared/schema";
+import { orders, subOrders, orderItems, products, wallets, walletTransactions, stores, users, deliveryOtps } from "@shared/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { emitNotification } from "../notifications/notification.emitter";
 
@@ -138,7 +138,22 @@ export class OrderService {
         .from(orderItems)
         .leftJoin(products, eq(orderItems.productId, products.id))
         .where(eq(orderItems.subOrderId, sub.id));
-      return { ...sub, items };
+
+      const [store] = await db.select({ id: stores.id, name: stores.name }).from(stores).where(eq(stores.id, sub.storeId)).limit(1);
+
+      let driver = null;
+      if (sub.assignedDriverId) {
+        const [driverUser] = await db.select({ id: users.id, name: users.name, phone: users.phone }).from(users).where(eq(users.id, sub.assignedDriverId)).limit(1);
+        driver = driverUser || null;
+      }
+
+      let otpCode = null;
+      if (sub.status === "IN_TRANSIT") {
+        const [otpRow] = await db.select({ otpCode: deliveryOtps.otpCode }).from(deliveryOtps).where(eq(deliveryOtps.subOrderId, sub.id)).limit(1);
+        otpCode = otpRow?.otpCode || null;
+      }
+
+      return { ...sub, store: store || null, driver, otpCode, items };
     }));
 
     return { ...order, subOrders: subsWithItems };

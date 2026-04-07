@@ -95,16 +95,33 @@ function PromoBanner() {
   );
 }
 
+const subOrderStatusLabels: Record<string, string> = {
+  PENDING: "في انتظار قبول المتجر",
+  ACCEPTED: "قبل المتجر طلبك",
+  READY: "جاهز للتوصيل",
+  IN_TRANSIT: "في الطريق إليك",
+  PICKED_UP: "تم الاستلام",
+  DELIVERED: "تم التوصيل",
+  CANCELLED: "ملغي",
+};
+
+const subOrderStatusColors: Record<string, string> = {
+  PENDING: "text-yellow-700 bg-yellow-50 border-yellow-200",
+  ACCEPTED: "text-blue-700 bg-blue-50 border-blue-200",
+  READY: "text-purple-700 bg-purple-50 border-purple-200",
+  IN_TRANSIT: "text-amber-700 bg-amber-50 border-amber-200",
+};
+
 function ActiveOrdersBanner({ orders }: { orders: any[] }) {
   const { toast } = useToast();
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
   const [otpInputs, setOtpInputs] = useState<Record<string, string>>({});
 
-  const inTransitSubOrders = useMemo(() => {
+  const activeSubOrders = useMemo(() => {
     const result: Array<{ orderId: string; subOrder: any }> = [];
     orders.forEach((order) => {
       order.subOrders?.forEach((sub: any) => {
-        if (sub.status === "IN_TRANSIT") {
+        if (["PENDING", "ACCEPTED", "READY", "IN_TRANSIT"].includes(sub.status)) {
           result.push({ orderId: order.id, subOrder: sub });
         }
       });
@@ -112,7 +129,7 @@ function ActiveOrdersBanner({ orders }: { orders: any[] }) {
     return result;
   }, [orders]);
 
-  if (inTransitSubOrders.length === 0) return null;
+  if (activeSubOrders.length === 0) return null;
 
   const handleVerify = async (orderId: string, subOrderId: string) => {
     const otp = otpInputs[subOrderId] || "";
@@ -130,7 +147,7 @@ function ActiveOrdersBanner({ orders }: { orders: any[] }) {
         subOrderId,
         otpCode: otp,
       });
-      toast({ title: "تم التأكيد", description: "تم تأكيد استلام الطلب بنجاح" });
+      toast({ title: "تم التأكيد", description: "تم تأكيد استلام الطلب بنجاح، سيتم خصم رسوم التوصيل قريباً" });
       setOtpInputs((prev) => ({ ...prev, [subOrderId]: "" }));
       queryClient.invalidateQueries({ queryKey: ["/api/orders/my-orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
@@ -148,51 +165,63 @@ function ActiveOrdersBanner({ orders }: { orders: any[] }) {
 
   return (
     <div
-      className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 md:p-6"
+      className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4 md:p-6"
       data-testid="section-active-orders"
     >
-      <div className="flex items-center gap-2 mb-4">
-        <Bell className="h-5 w-5 text-amber-600 animate-pulse" />
-        <h3 className="font-bold text-amber-800 dark:text-amber-400 text-base md:text-lg">
-          طلبات في الطريق إليك ({inTransitSubOrders.length})
-        </h3>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Bell className="h-5 w-5 text-blue-600 animate-pulse" />
+          <h3 className="font-bold text-blue-800 dark:text-blue-400 text-base md:text-lg">
+            طلباتك الجارية ({activeSubOrders.length})
+          </h3>
+        </div>
+        <Link href="/customer/orders">
+          <Button variant="ghost" size="sm" className="text-blue-700 dark:text-blue-400 font-bold text-xs gap-1">
+            عرض الكل
+            <ChevronLeft className="h-3 w-3" />
+          </Button>
+        </Link>
       </div>
-      <div className="space-y-4">
-        {inTransitSubOrders.map(({ orderId, subOrder }) => (
+      <div className="space-y-3">
+        {activeSubOrders.map(({ orderId, subOrder }) => (
           <div
             key={subOrder.id}
-            className="bg-white dark:bg-slate-800 rounded-xl p-4 border flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between"
+            className={`bg-white dark:bg-slate-800 rounded-xl p-4 border-2 ${subOrderStatusColors[subOrder.status] || "border-slate-200"} flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between`}
             data-testid={`card-active-order-${subOrder.id}`}
           >
-            <div className="text-right">
+            <div className="text-right flex-grow">
               <p className="font-bold text-sm">{subOrder.store?.name || "متجر محلي"}</p>
-              <p className="text-xs text-muted-foreground">أدخل رمز التسليم من السائق</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {subOrderStatusLabels[subOrder.status] || subOrder.status}
+              </p>
             </div>
-            <div className="flex gap-2 w-full sm:w-auto">
-              <Input
-                placeholder="الرمز (6 أرقام)"
-                value={otpInputs[subOrder.id] || ""}
-                onChange={(e) =>
-                  setOtpInputs((prev) => ({ ...prev, [subOrder.id]: e.target.value }))
-                }
-                maxLength={6}
-                className="h-10 text-center font-mono tracking-widest border-2 rounded-xl w-36"
-                data-testid={`input-otp-${subOrder.id}`}
-              />
-              <Button
-                size="sm"
-                onClick={() => handleVerify(orderId, subOrder.id)}
-                disabled={verifyingId === subOrder.id}
-                className="h-10 px-4 rounded-xl font-bold"
-                data-testid={`button-verify-${subOrder.id}`}
-              >
-                {verifyingId === subOrder.id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  "تأكيد"
-                )}
-              </Button>
-            </div>
+            {subOrder.status === "IN_TRANSIT" && (
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Input
+                  placeholder="الرمز (6 أرقام)"
+                  value={otpInputs[subOrder.id] || ""}
+                  onChange={(e) =>
+                    setOtpInputs((prev) => ({ ...prev, [subOrder.id]: e.target.value }))
+                  }
+                  maxLength={6}
+                  className="h-10 text-center font-mono tracking-widest border-2 rounded-xl w-36"
+                  data-testid={`input-otp-${subOrder.id}`}
+                />
+                <Button
+                  size="sm"
+                  onClick={() => handleVerify(orderId, subOrder.id)}
+                  disabled={verifyingId === subOrder.id}
+                  className="h-10 px-4 rounded-xl font-bold"
+                  data-testid={`button-verify-${subOrder.id}`}
+                >
+                  {verifyingId === subOrder.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "تأكيد"
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -382,22 +411,32 @@ export default function CustomerDashboard() {
               <PromoBanner />
 
               {/* ===== Quick Links ===== */}
-              <div className="grid grid-cols-3 gap-3 md:gap-6" data-testid="section-quick-links">
+              <div className="grid grid-cols-4 gap-3 md:gap-4" data-testid="section-quick-links">
                 <Link href="/stores">
                   <Card className="hover:shadow-md transition-all cursor-pointer group border-2 hover:border-primary/30">
-                    <CardContent className="p-4 md:p-6 flex flex-col items-center gap-2 text-center">
-                      <div className="p-3 bg-primary/10 rounded-xl group-hover:bg-primary/20 transition-colors">
-                        <StoreIcon className="h-6 w-6 md:h-8 md:w-8 text-primary" />
+                    <CardContent className="p-3 md:p-5 flex flex-col items-center gap-2 text-center">
+                      <div className="p-2 md:p-3 bg-primary/10 rounded-xl group-hover:bg-primary/20 transition-colors">
+                        <StoreIcon className="h-5 w-5 md:h-7 md:w-7 text-primary" />
                       </div>
                       <span className="text-xs md:text-sm font-bold">المتاجر</span>
                     </CardContent>
                   </Card>
                 </Link>
+                <Link href="/customer/orders">
+                  <Card className="hover:shadow-md transition-all cursor-pointer group border-2 hover:border-primary/30">
+                    <CardContent className="p-3 md:p-5 flex flex-col items-center gap-2 text-center">
+                      <div className="p-2 md:p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl group-hover:bg-orange-200/60 dark:group-hover:bg-orange-800/30 transition-colors">
+                        <Package className="h-5 w-5 md:h-7 md:w-7 text-orange-600" />
+                      </div>
+                      <span className="text-xs md:text-sm font-bold">طلباتي</span>
+                    </CardContent>
+                  </Card>
+                </Link>
                 <Link href="/customer/wallet">
                   <Card className="hover:shadow-md transition-all cursor-pointer group border-2 hover:border-primary/30">
-                    <CardContent className="p-4 md:p-6 flex flex-col items-center gap-2 text-center">
-                      <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl group-hover:bg-green-200/60 dark:group-hover:bg-green-800/30 transition-colors">
-                        <Wallet className="h-6 w-6 md:h-8 md:w-8 text-green-600" />
+                    <CardContent className="p-3 md:p-5 flex flex-col items-center gap-2 text-center">
+                      <div className="p-2 md:p-3 bg-green-100 dark:bg-green-900/30 rounded-xl group-hover:bg-green-200/60 dark:group-hover:bg-green-800/30 transition-colors">
+                        <Wallet className="h-5 w-5 md:h-7 md:w-7 text-green-600" />
                       </div>
                       <span className="text-xs md:text-sm font-bold">محفظتي</span>
                     </CardContent>
@@ -405,9 +444,9 @@ export default function CustomerDashboard() {
                 </Link>
                 <Link href="/customer/transactions">
                   <Card className="hover:shadow-md transition-all cursor-pointer group border-2 hover:border-primary/30">
-                    <CardContent className="p-4 md:p-6 flex flex-col items-center gap-2 text-center">
-                      <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl group-hover:bg-purple-200/60 dark:group-hover:bg-purple-800/30 transition-colors">
-                        <Tag className="h-6 w-6 md:h-8 md:w-8 text-purple-600" />
+                    <CardContent className="p-3 md:p-5 flex flex-col items-center gap-2 text-center">
+                      <div className="p-2 md:p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl group-hover:bg-purple-200/60 dark:group-hover:bg-purple-800/30 transition-colors">
+                        <Tag className="h-5 w-5 md:h-7 md:w-7 text-purple-600" />
                       </div>
                       <span className="text-xs md:text-sm font-bold">معاملاتي</span>
                     </CardContent>
@@ -547,7 +586,7 @@ export default function CustomerDashboard() {
                       <Package className="h-5 w-5 text-primary" />
                       طلباتي الأخيرة
                     </h2>
-                    <Link href="/customer/transactions">
+                    <Link href="/customer/orders">
                       <Button
                         variant="ghost"
                         size="sm"

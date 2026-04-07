@@ -10,6 +10,7 @@ export function useOrders() {
       if (!res.ok) throw new Error("Failed to fetch orders");
       return res.json();
     },
+    refetchInterval: 30000,
   });
 
   return {

@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, LogOut, LayoutDashboard, Menu, X, ShoppingCart } from "lucide-react";
+import { User, LogOut, LayoutDashboard, Menu, X, ShoppingCart, Package } from "lucide-react";
 import { useState } from "react";
 
 export default function Navbar() {
@@ -78,6 +78,14 @@ export default function Navbar() {
                       <span>لوحة التحكم</span>
                     </Link>
                   </DropdownMenuItem>
+                  {(user as any).role === "CUSTOMER" && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/customer/orders" className="flex items-center gap-2 cursor-pointer">
+                        <Package className="h-4 w-4" />
+                        <span>طلباتي</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem asChild>
                     <Link href="/customer/profile" className="flex items-center gap-2 cursor-pointer">
                       <User className="h-4 w-4" />
@@ -142,6 +150,11 @@ export default function Navbar() {
                 <Link href="/">
                   <span className="text-lg font-medium cursor-pointer" onClick={() => setIsMobileMenuOpen(false)}>لوحة التحكم</span>
                 </Link>
+                {(user as any).role === "CUSTOMER" && (
+                  <Link href="/customer/orders">
+                    <span className="text-lg font-medium cursor-pointer" onClick={() => setIsMobileMenuOpen(false)}>طلباتي</span>
+                  </Link>
+                )}
                 <Link href="/customer/profile">
                   <span className="text-lg font-medium cursor-pointer" onClick={() => setIsMobileMenuOpen(false)}>حسابي</span>
                 </Link>

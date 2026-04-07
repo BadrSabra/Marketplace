@@ -29,7 +29,7 @@ import { apiFetch } from "@/lib/api";
 
 type Transaction = {
   id: string;
-  type: "DEPOSIT" | "WITHDRAWAL" | "COMMISSION" | "REFUND" | "PAYMENT";
+  type: "DEPOSIT" | "WITHDRAWAL" | "COMMISSION" | "REFUND";
   amount: string;
   status: "PENDING" | "COMPLETED" | "FAILED";
   referenceId?: string;
@@ -141,7 +141,7 @@ export default function CustomerTransactions() {
                 <SelectContent>
                   <SelectItem value="all">{t('customer.wallet.all_types')}</SelectItem>
                   <SelectItem value="DEPOSIT">{t('customer.wallet.types.DEPOSIT')}</SelectItem>
-                  <SelectItem value="PAYMENT">{t('customer.wallet.types.PAYMENT')}</SelectItem>
+                  <SelectItem value="WITHDRAWAL">{t('customer.wallet.types.WITHDRAWAL') || 'سحب'}</SelectItem>
                   <SelectItem value="COMMISSION">{t('customer.wallet.types.COMMISSION')}</SelectItem>
                   <SelectItem value="REFUND">{t('customer.wallet.types.REFUND')}</SelectItem>
                 </SelectContent>

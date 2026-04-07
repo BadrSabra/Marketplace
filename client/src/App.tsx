@@ -29,6 +29,7 @@ import DriverWallet from "@/pages/driver/wallet";
 import DriverProfile from "@/pages/driver/profile";
 import ActiveDelivery from "@/pages/driver/active-delivery";
 import CustomerOrderDetails from "@/pages/customer/order";
+import CustomerOrders from "@/pages/customer/orders";
 import UsersPage from "@/pages/admin/users";
 import StoresPage from "@/pages/admin/stores";
 import ProductsPage from "@/pages/admin/products";
@@ -145,6 +146,9 @@ function Router() {
       </Route>
       <Route path="/customer/profile">
         {() => <ProtectedRoute component={CustomerProfile} roles={["CUSTOMER"]} />}
+      </Route>
+      <Route path="/customer/orders">
+        {() => <ProtectedRoute component={CustomerOrders} roles={["CUSTOMER"]} />}
       </Route>
       <Route path="/customer/order/:id">
         {() => <ProtectedRoute component={CustomerOrderDetails} roles={["CUSTOMER"]} />}

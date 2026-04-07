@@ -58,7 +58,7 @@ export default function CartPage() {
       clearCart();
       queryClient.invalidateQueries({ queryKey: ["/api/orders/my-orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
-      setLocation("/");
+      setLocation("/customer/orders");
     } catch (error: any) {
       toast({
         title: "فشل تقديم الطلب",
