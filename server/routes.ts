@@ -52,6 +52,7 @@ export async function registerRoutes(
   app.get("/api/delivery/suborders/:id/offers", authenticate, authorizeRole(["CUSTOMER"]), deliveryOfferController.getOffersForSubOrder.bind(deliveryOfferController));
   app.post("/api/delivery/offers/:offerId/accept", authenticate, authorizeRole(["CUSTOMER"]), deliveryOfferController.customerAcceptOffer.bind(deliveryOfferController));
   app.post("/api/delivery/offers/:offerId/reject", authenticate, authorizeRole(["CUSTOMER"]), deliveryOfferController.customerRejectOffer.bind(deliveryOfferController));
+  app.post("/api/delivery/offers/:offerId/counter", authenticate, authorizeRole(["CUSTOMER"]), deliveryOfferController.customerCounterOffer.bind(deliveryOfferController));
   
   // Deposits
   app.use("/api", depositRouter);

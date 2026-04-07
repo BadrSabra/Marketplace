@@ -3,7 +3,7 @@ import { useParams, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Package, Truck, Phone, ChevronRight, ArrowRight, CheckCircle, XCircle, Tag } from "lucide-react";
+import { Loader2, Package, Truck, Phone, ChevronRight, ArrowRight, CheckCircle, XCircle, Tag, ArrowLeftRight, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
@@ -12,6 +12,10 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const statusColors: Record<string, string> = {
   PENDING: "bg-yellow-100 text-yellow-800 border-yellow-200",
@@ -53,6 +57,8 @@ function getEffectiveStatus(order: any): string {
 
 function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; orderId: string }) {
   const { toast } = useToast();
+  const [counterDialog, setCounterDialog] = useState<{ open: boolean; offerId: string; originalFee: number } | null>(null);
+  const [counterFeeInput, setCounterFeeInput] = useState("");
 
   const { data: offers, isLoading } = useQuery<any[]>({
     queryKey: ["/api/delivery/suborders", subOrderId, "offers"],
@@ -88,7 +94,10 @@ function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; or
   const rejectMutation = useMutation({
     mutationFn: async (offerId: string) => {
       const res = await apiRequest("POST", `/api/delivery/offers/${offerId}/reject`);
-      if (!res.ok) throw new Error("حدث خطأ");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "حدث خطأ" }));
+        throw new Error(err.error || "حدث خطأ");
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -100,54 +109,170 @@ function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; or
     },
   });
 
+  const counterMutation = useMutation({
+    mutationFn: async ({ offerId, counterFee }: { offerId: string; counterFee: number }) => {
+      const res = await apiRequest("POST", `/api/delivery/offers/${offerId}/counter`, { counterFee });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "حدث خطأ" }));
+        throw new Error(err.error || "حدث خطأ");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "تم إرسال العرض المضاد", description: "سيرى السائق اقتراحك وقد يقبل السعر الجديد." });
+      setCounterDialog(null);
+      setCounterFeeInput("");
+      queryClient.invalidateQueries({ queryKey: ["/api/delivery/suborders", subOrderId, "offers"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "فشل إرسال العرض المضاد", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleCounterSubmit = () => {
+    if (!counterDialog) return;
+    const fee = parseFloat(counterFeeInput);
+    if (!counterFeeInput || isNaN(fee) || fee <= 0) {
+      toast({ title: "يرجى إدخال سعر صحيح", variant: "destructive" });
+      return;
+    }
+    if (fee >= counterDialog.originalFee) {
+      toast({ title: "يجب أن يكون العرض المضاد أقل من سعر السائق", variant: "destructive" });
+      return;
+    }
+    counterMutation.mutate({ offerId: counterDialog.offerId, counterFee: fee });
+  };
+
   if (isLoading) return null;
   if (!offers || offers.length === 0) return null;
 
+  const isBusy = acceptMutation.isPending || rejectMutation.isPending || counterMutation.isPending;
+
   return (
-    <div className="mt-4 border-t pt-4">
-      <div className="flex items-center gap-2 mb-3 flex-row-reverse">
-        <Tag className="h-4 w-4 text-primary" />
-        <h4 className="text-sm font-bold text-right">عروض التوصيل ({offers.length})</h4>
+    <>
+      <div className="mt-4 border-t pt-4">
+        <div className="flex items-center gap-2 mb-3 flex-row-reverse">
+          <Tag className="h-4 w-4 text-primary" />
+          <h4 className="text-sm font-bold text-right">عروض التوصيل ({offers.length})</h4>
+        </div>
+        <p className="text-xs text-muted-foreground text-right mb-3">
+          اختر أفضل عرض سعر للتوصيل أو قدّم سعراً مضاداً أقل. سيتم خصم رسوم التوصيل من محفظتك عند القبول.
+        </p>
+        <div className="space-y-3">
+          {offers.map((offer: any) => {
+            const isCountered = offer.status === "COUNTERED";
+            return (
+              <div
+                key={offer.id}
+                className={`p-3 border rounded-lg space-y-2 ${isCountered ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800" : "bg-muted/50"}`}
+                data-testid={`offer-row-${offer.id}`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-2 flex-wrap">
+                    {!isCountered && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => rejectMutation.mutate(offer.id)}
+                          disabled={isBusy}
+                          data-testid={`button-reject-offer-${offer.id}`}
+                        >
+                          <XCircle className="h-3 w-3 ml-1" />
+                          رفض
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-amber-400 text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:border-amber-600 dark:hover:bg-amber-950/30"
+                          onClick={() => {
+                            setCounterFeeInput("");
+                            setCounterDialog({ open: true, offerId: offer.id, originalFee: parseFloat(offer.offeredFee) });
+                          }}
+                          disabled={isBusy}
+                          data-testid={`button-counter-offer-${offer.id}`}
+                        >
+                          <ArrowLeftRight className="h-3 w-3 ml-1" />
+                          سعر مضاد
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => acceptMutation.mutate(offer.id)}
+                          disabled={isBusy}
+                          data-testid={`button-accept-offer-${offer.id}`}
+                        >
+                          {acceptMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin ml-1" /> : <CheckCircle className="h-3 w-3 ml-1" />}
+                          قبول
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-primary">{parseFloat(offer.offeredFee).toFixed(2)} جنيه</p>
+                    <p className="text-xs text-muted-foreground">{offer.driverName} • {offer.driverTransportType || "توصيل"}</p>
+                  </div>
+                </div>
+                {isCountered && (
+                  <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                    <Clock className="h-3 w-3 shrink-0" />
+                    <span className="text-xs">
+                      أرسلت عرضاً مضاداً بـ <strong>{parseFloat(offer.counterOfferedFee).toFixed(2)} جنيه</strong> — في انتظار رد السائق
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
-      <p className="text-xs text-muted-foreground text-right mb-3">
-        اختر أفضل عرض سعر للتوصيل. سيتم خصم رسوم التوصيل من محفظتك عند القبول.
-      </p>
-      <div className="space-y-2">
-        {offers.map((offer: any) => (
-          <div
-            key={offer.id}
-            className="flex items-center justify-between p-3 bg-muted/50 border rounded-lg"
-            data-testid={`offer-row-${offer.id}`}
-          >
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => rejectMutation.mutate(offer.id)}
-                disabled={rejectMutation.isPending || acceptMutation.isPending}
-                data-testid={`button-reject-offer-${offer.id}`}
-              >
-                <XCircle className="h-3 w-3 ml-1" />
-                رفض
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => acceptMutation.mutate(offer.id)}
-                disabled={acceptMutation.isPending || rejectMutation.isPending}
-                data-testid={`button-accept-offer-${offer.id}`}
-              >
-                {acceptMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin ml-1" /> : <CheckCircle className="h-3 w-3 ml-1" />}
-                قبول
-              </Button>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-bold text-primary">{parseFloat(offer.offeredFee).toFixed(2)} جنيه</p>
-              <p className="text-xs text-muted-foreground">{offer.driverName} • {offer.driverTransportType || "توصيل"}</p>
+
+      <Dialog
+        open={!!counterDialog?.open}
+        onOpenChange={(open) => { if (!open) { setCounterDialog(null); setCounterFeeInput(""); } }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-right">تقديم سعر مضاد للسائق</DialogTitle>
+            <DialogDescription className="text-right">
+              أدخل سعراً أقل من عرض السائق ({counterDialog?.originalFee?.toFixed(2)} جنيه). سيرى السائق اقتراحك ويمكنه قبوله.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-3 space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="counter-fee-input" className="text-right block">
+                السعر المقترح (جنيه)
+              </Label>
+              <Input
+                id="counter-fee-input"
+                placeholder={`أقل من ${counterDialog?.originalFee?.toFixed(2)} جنيه`}
+                inputMode="decimal"
+                value={counterFeeInput}
+                onChange={(e) => setCounterFeeInput(e.target.value)}
+                data-testid="input-counter-fee"
+              />
             </div>
           </div>
-        ))}
-      </div>
-    </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => { setCounterDialog(null); setCounterFeeInput(""); }}
+              data-testid="button-cancel-counter"
+            >
+              إلغاء
+            </Button>
+            <Button
+              onClick={handleCounterSubmit}
+              disabled={counterMutation.isPending}
+              className="bg-amber-500 hover:bg-amber-600 text-white"
+              data-testid="button-submit-counter"
+            >
+              {counterMutation.isPending && <Loader2 className="h-3 w-3 animate-spin ml-2" />}
+              إرسال العرض المضاد
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

@@ -41,9 +41,11 @@ export class DeliveryOfferService {
   }
 
   /**
-   * Get all pending offers for a sub-order (for customer to view and accept)
+   * Get all actionable offers for a sub-order (for customer to view and act on)
+   * Includes PENDING and COUNTERED offers
    */
   async getOffersForSubOrder(subOrderId: string) {
+    const { sql: sqlExpr } = await import("drizzle-orm");
     const offers = await db
       .select({
         id: deliveryOffers.id,
@@ -51,6 +53,7 @@ export class DeliveryOfferService {
         driverId: deliveryOffers.driverId,
         offeredFee: deliveryOffers.offeredFee,
         status: deliveryOffers.status,
+        counterOfferedFee: deliveryOffers.counterOfferedFee,
         createdAt: deliveryOffers.createdAt,
         driverName: users.name,
         driverPhone: users.phone,
@@ -60,7 +63,7 @@ export class DeliveryOfferService {
       .innerJoin(users, eq(deliveryOffers.driverId, users.id))
       .where(and(
         eq(deliveryOffers.subOrderId, subOrderId),
-        eq(deliveryOffers.status, "PENDING")
+        sqlExpr`${deliveryOffers.status} IN ('PENDING', 'COUNTERED')`
       ));
     return offers;
   }
@@ -173,6 +176,42 @@ export class DeliveryOfferService {
         .where(eq(deliveryOffers.id, offerId));
 
       return { success: true };
+    });
+  }
+
+  /**
+   * Customer sends a counter-offer (lower price) to a driver
+   */
+  async customerCounterOffer(offerId: string, customerId: string, counterFee: number) {
+    return await db.transaction(async (tx) => {
+      const [offer] = await tx.select().from(deliveryOffers).where(eq(deliveryOffers.id, offerId)).for("update");
+      if (!offer || offer.status !== "PENDING") throw new Error("OFFER_NOT_AVAILABLE");
+
+      if (counterFee >= parseFloat(offer.offeredFee)) throw new Error("COUNTER_MUST_BE_LOWER");
+
+      const [subOrder] = await tx.select().from(subOrders).where(eq(subOrders.id, offer.subOrderId));
+      const [parentOrder] = await tx.select().from(orders).where(eq(orders.id, subOrder.orderId));
+      if (!parentOrder || parentOrder.customerId !== customerId) throw new Error("UNAUTHORIZED");
+
+      const [updatedOffer] = await tx.update(deliveryOffers)
+        .set({
+          status: "COUNTERED",
+          counterOfferedFee: counterFee.toFixed(2),
+          updatedAt: new Date()
+        })
+        .where(eq(deliveryOffers.id, offerId))
+        .returning();
+
+      await auditService.logEvent({
+        actionType: "DELIVERY_OFFER_COUNTERED",
+        entityType: "delivery_offer",
+        entityId: offerId,
+        performedByUserId: customerId,
+        performedByRole: "CUSTOMER",
+        newValue: { counterFee, originalFee: offer.offeredFee }
+      });
+
+      return updatedOffer;
     });
   }
 

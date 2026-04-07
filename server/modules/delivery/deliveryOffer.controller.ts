@@ -84,6 +84,31 @@ export class DeliveryOfferController {
     }
   }
 
+  async customerCounterOffer(req: Request, res: Response) {
+    try {
+      const { offerId } = req.params;
+      const customerId = (req as any).user.id;
+      const schema = z.object({ counterFee: z.coerce.number().positive("يجب أن يكون السعر رقماً موجباً") });
+      const { counterFee } = schema.parse(req.body);
+      const result = await deliveryOfferService.customerCounterOffer(offerId, customerId, counterFee);
+      res.json(result);
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ error: err.errors[0].message });
+      }
+      if (err.message === "OFFER_NOT_AVAILABLE") {
+        return res.status(400).json({ error: "هذا العرض لم يعد متاحاً" });
+      }
+      if (err.message === "COUNTER_MUST_BE_LOWER") {
+        return res.status(400).json({ error: "يجب أن يكون العرض المضاد أقل من السعر المقترح من السائق" });
+      }
+      if (err.message === "UNAUTHORIZED") {
+        return res.status(403).json({ error: "غير مصرح" });
+      }
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
   async acceptTask(req: Request, res: Response) {
     try {
       const { id: subOrderId } = req.params;

@@ -137,6 +137,7 @@ function OfferCard({ offer }: { offer: AvailableTask }) {
 
   const alreadyOffered = offer.driver_offer_status === "PENDING";
   const offerRejected = offer.driver_offer_status === "REJECTED";
+  const offerCountered = offer.driver_offer_status === "COUNTERED";
 
   const handleSubmitOffer = () => {
     const fee = parseFloat(feeInput);
@@ -187,6 +188,13 @@ function OfferCard({ offer }: { offer: AvailableTask }) {
               </span>
             </div>
           )}
+          {offerCountered && (
+            <div className="flex flex-col gap-1 mt-2 p-2 bg-amber-50 dark:bg-amber-950/30 rounded-lg text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+              <span className="text-xs font-bold">العميل يقترح سعراً مضاداً:</span>
+              <span className="text-sm font-black">{offer.driver_counter_offered_fee} ج.م</span>
+              <span className="text-xs text-muted-foreground">عرضك الأصلي: {offer.driver_offered_fee} ج.م</span>
+            </div>
+          )}
           {offerRejected && (
             <div className="flex items-center gap-2 mt-2 p-2 bg-red-50 dark:bg-red-950/30 rounded-lg text-red-700 dark:text-red-300">
               <span className="text-xs font-medium">تم رفض عرضك السابق ({offer.driver_offered_fee} ج.م)</span>
@@ -203,6 +211,18 @@ function OfferCard({ offer }: { offer: AvailableTask }) {
             >
               <CheckCircle2 className="w-4 h-4 ml-2 text-blue-500" />
               تم تقديم العرض — في انتظار العميل
+            </Button>
+          ) : offerCountered ? (
+            <Button
+              className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+              onClick={() => {
+                setFeeInput(offer.driver_counter_offered_fee || "");
+                setIsOfferOpen(true);
+              }}
+              data-testid={`button-accept-counter-${offer.sub_order_id}`}
+            >
+              <Tag className="w-4 h-4 ml-2" />
+              قبول اقتراح العميل ({offer.driver_counter_offered_fee} ج.م)
             </Button>
           ) : (
             <Button

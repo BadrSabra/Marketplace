@@ -14,6 +14,7 @@ export type AvailableTask = {
   assigned_driver_id: string | null;
   driver_offer_status?: string | null;
   driver_offered_fee?: string | null;
+  driver_counter_offered_fee?: string | null;
 };
 
 export type ActiveDelivery = {

@@ -195,7 +195,8 @@ export async function autoVerifyDatabase() {
       { table: 'stores', column: 'image_url', type: 'TEXT' },
       { table: 'wallet_transactions', column: 'receipt_url', type: 'TEXT' },
       { table: 'wallet_transactions', column: 'related_order_id', type: 'UUID' },
-      { table: 'wallet_transactions', column: 'notes', type: 'TEXT' }
+      { table: 'wallet_transactions', column: 'notes', type: 'TEXT' },
+      { table: 'delivery_offers', column: 'counter_offered_fee', type: 'DECIMAL(10,2)' }
     ];
 
     for (const check of columnChecks) {

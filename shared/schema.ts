@@ -130,6 +130,7 @@ export const deliveryOffers = pgTable("delivery_offers", {
   driverId: uuid("driver_id").notNull().references(() => users.id),
   offeredFee: numeric("offered_fee", { precision: 10, scale: 2 }).notNull(),
   status: offerStatusEnum("status").notNull().default("PENDING"),
+  counterOfferedFee: numeric("counter_offered_fee", { precision: 10, scale: 2 }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
