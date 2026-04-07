@@ -23,6 +23,7 @@ export type ActiveDelivery = {
   customerPhone: string;
   items: { productName: string; quantity: number }[];
   storeName?: string;
+  otp?: string | null;
 };
 
 export async function getDriverTasks(): Promise<ActiveDelivery[]> {

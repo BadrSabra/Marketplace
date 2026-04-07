@@ -1,19 +1,18 @@
-import { useEffect } from "react";
-import { useDriverTasks, useAvailableOffers, usePlaceOffer, useVerifyOtp, useMarkPickedUp } from "@/hooks/use-driver";
+import { useEffect, useState } from "react";
+import { useDriverTasks, useAvailableOffers, usePlaceOffer, useVerifyOtp } from "@/hooks/use-driver";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Store, MapPin, Package, Clock } from "lucide-react";
-import { useState } from "react";
+import { Loader2, Store, MapPin, Package } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import type { ActiveDelivery, AvailableTask } from "@/lib/api/driver";
 
 export default function DriverTasksPage() {
   const { data: tasks, isLoading: tasksLoading, error: tasksError } = useDriverTasks();
   const { data: offers, isLoading: offersLoading, error: offersError } = useAvailableOffers();
-  const { toast } = useToast();
 
   useEffect(() => {
     console.log("TASKS_PAGE_MOUNTED");
@@ -40,8 +39,8 @@ export default function DriverTasksPage() {
         <div>
           <h1 className="text-3xl font-bold text-right">المهام</h1>
           <div className="flex gap-2 mt-2">
-            <Badge variant="outline">Assigned: {tasks?.filter(t => t.status === 'ASSIGNED').length || 0}</Badge>
-            <Badge variant="outline">In Progress: {tasks?.filter(t => t.status === 'ON_THE_WAY').length || 0}</Badge>
+            <Badge variant="outline">مسندة: {tasks?.filter(t => t.status === 'ACCEPTED').length || 0}</Badge>
+            <Badge variant="outline">قيد التوصيل: {tasks?.filter(t => t.status === 'IN_TRANSIT').length || 0}</Badge>
           </div>
         </div>
       </header>
@@ -49,12 +48,12 @@ export default function DriverTasksPage() {
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-right">المهام المسندة</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {tasks?.length === 0 ? (
+          {!tasks || tasks.length === 0 ? (
             <Card className="col-span-full p-8 text-center text-muted-foreground">
               لا توجد مهام مسندة حالياً
             </Card>
           ) : (
-            tasks?.map(task => <TaskCard key={task.subOrderId} task={task} />)
+            tasks.map(task => <TaskCard key={task.id} task={task} />)
           )}
         </div>
       </section>
@@ -62,13 +61,13 @@ export default function DriverTasksPage() {
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-right">العروض المتاحة</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {offers?.length === 0 ? (
+          {!offers || offers.length === 0 ? (
             <Card className="col-span-full p-8 text-center text-muted-foreground">
               لا توجد عروض متاحة حالياً
               <Button variant="link" onClick={() => window.location.reload()}>التحديث</Button>
             </Card>
           ) : (
-            offers?.map(offer => <OfferCard key={offer.id} offer={offer} />)
+            offers.map(offer => <OfferCard key={offer.sub_order_id} offer={offer} />)
           )}
         </div>
       </section>
@@ -76,130 +75,122 @@ export default function DriverTasksPage() {
   );
 }
 
-function TaskCard({ task }: { task: any }) {
+function TaskCard({ task }: { task: ActiveDelivery }) {
   const [isOtpOpen, setIsOtpOpen] = useState(false);
-  const markPickedUpMutation = useMarkPickedUp();
 
   return (
-    <Card className="flex flex-col h-full" data-testid={`card-task-${task.subOrderId}`}>
+    <Card className="flex flex-col h-full" data-testid={`card-task-${task.id}`}>
       <CardHeader>
         <div className="flex items-center gap-3">
-          {task.store.logoUrl ? (
-            <img src={task.store.logoUrl} alt={task.store.name} className="w-10 h-10 rounded-full" />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Store className="w-6 h-6 text-primary" />
-            </div>
-          )}
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <Store className="w-6 h-6 text-primary" />
+          </div>
           <div>
-            <CardTitle className="text-lg">{task.store.name}</CardTitle>
-            <Badge variant={task.status === 'ON_THE_WAY' ? 'default' : 'secondary'}>
-              {task.status}
+            <CardTitle className="text-lg">{task.storeName || "المتجر"}</CardTitle>
+            <Badge variant={task.status === 'IN_TRANSIT' ? 'default' : 'secondary'}>
+              {task.status === 'ACCEPTED' ? 'مسندة' : task.status === 'IN_TRANSIT' ? 'قيد التوصيل' : task.status}
             </Badge>
           </div>
         </div>
       </CardHeader>
       <CardContent className="flex-1 space-y-3">
         <div className="flex items-start gap-2 text-sm">
-          <MapPin className="w-4 h-4 mt-1 shrink-0 text-muted-foreground" />
-          <span>{task.deliveryAddress}</span>
-        </div>
-        <div className="flex items-start gap-2 text-sm">
           <Package className="w-4 h-4 mt-1 shrink-0 text-muted-foreground" />
-          <span>{task.items.map((i: any) => i.name).join(", ")}</span>
+          <span>{task.items.map((i) => i.productName).join(", ") || "لا توجد منتجات"}</span>
         </div>
-        {task.assignedAt && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Clock className="w-3 h-3" />
-            <span>Assigned: {new Date(task.assignedAt).toLocaleTimeString()}</span>
+        <div className="text-sm font-semibold">
+          الإجمالي: {task.subtotal} ج.م
+        </div>
+        {task.customerName && (
+          <div className="text-xs text-muted-foreground">
+            العميل: {task.customerName}
           </div>
         )}
       </CardContent>
       <CardFooter className="gap-2">
-        {task.otpId && (task.status === 'READY' || task.status === 'ASSIGNED') && (
-          <Button className="w-full" onClick={() => setIsOtpOpen(true)} data-testid={`button-verify-otp-${task.subOrderId}`}>Verify OTP</Button>
-        )}
-        {task.status === 'ASSIGNED' && (
+        {task.otp && (
           <Button
-            variant="outline"
             className="w-full"
-            data-testid={`button-pickup-${task.subOrderId}`}
-            onClick={() => markPickedUpMutation.mutate(task.subOrderId)}
-            disabled={markPickedUpMutation.isPending}
+            onClick={() => setIsOtpOpen(true)}
+            data-testid={`button-verify-otp-${task.id}`}
           >
-            Mark Picked Up
+            تأكيد التسليم (OTP)
           </Button>
         )}
       </CardFooter>
-      <DeliveryOTPModal 
-        isOpen={isOtpOpen} 
-        onClose={() => setIsOtpOpen(false)} 
-        otpId={task.otpId} 
+      <DeliveryOTPModal
+        isOpen={isOtpOpen}
+        onClose={() => setIsOtpOpen(false)}
+        subOrderId={task.id}
+        orderId={task.orderId}
       />
     </Card>
   );
 }
 
-function OfferCard({ offer }: { offer: any }) {
-  const [bidAmount, setBidAmount] = useState("");
+function OfferCard({ offer }: { offer: AvailableTask }) {
   const placeBidMutation = usePlaceOffer();
+  const { toast } = useToast();
 
-  const handlePlaceBid = () => {
-    const amount = parseFloat(bidAmount);
-    if (isNaN(amount) || amount <= 0) {
-      return;
-    }
-    placeBidMutation.mutate({ subOrderId: offer.subOrderId, bidAmount });
+  const handleAccept = () => {
+    placeBidMutation.mutate(offer.sub_order_id, {
+      onError: (error: Error) => {
+        toast({ title: "فشل قبول المهمة", description: error.message, variant: "destructive" });
+      }
+    });
   };
 
   return (
-    <Card className="flex flex-col h-full" data-testid={`card-offer-${offer.id}`}>
+    <Card className="flex flex-col h-full" data-testid={`card-offer-${offer.sub_order_id}`}>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">{offer.store.name}</CardTitle>
-          <span className="font-bold text-primary">{offer.subtotal} EGP</span>
+          <CardTitle className="text-lg">{offer.store_name}</CardTitle>
+          <span className="font-bold text-primary">{offer.subtotal} ج.م</span>
         </div>
       </CardHeader>
       <CardContent className="flex-1 space-y-2 text-sm">
         <div className="flex items-start gap-2">
           <MapPin className="w-4 h-4 mt-1 shrink-0 text-muted-foreground" />
-          <span>Pickup: {offer.pickupAddress || 'Store Location'}</span>
+          <span>{offer.customer_address || "عنوان المتجر"}</span>
         </div>
-        <div className="text-muted-foreground">
-          Posted: {new Date(offer.createdAt).toLocaleString()}
+        <div className="flex items-start gap-2">
+          <Package className="w-4 h-4 mt-1 shrink-0 text-muted-foreground" />
+          <span>{offer.items.map(i => `${i.product_name} (${i.quantity})`).join(", ")}</span>
         </div>
+        {offer.created_at && (
+          <div className="text-muted-foreground text-xs">
+            {new Date(offer.created_at).toLocaleString("ar-EG")}
+          </div>
+        )}
       </CardContent>
-      <CardFooter className="flex-col gap-2">
-        <Input 
-          type="number" 
-          placeholder="Bid Amount" 
-          value={bidAmount}
-          onChange={(e) => setBidAmount(e.target.value)}
+      <CardFooter>
+        <Button
+          className="w-full"
+          onClick={handleAccept}
           disabled={placeBidMutation.isPending}
-          data-testid={`input-bid-${offer.id}`}
-        />
-        <Button 
-          className="w-full" 
-          onClick={handlePlaceBid}
-          disabled={placeBidMutation.isPending}
-          data-testid={`button-bid-${offer.id}`}
+          data-testid={`button-accept-${offer.sub_order_id}`}
         >
-          {placeBidMutation.isPending ? <Loader2 className="animate-spin mr-2" /> : "Place Bid"}
+          {placeBidMutation.isPending ? <Loader2 className="animate-spin ml-2" /> : "قبول المهمة"}
         </Button>
       </CardFooter>
     </Card>
   );
 }
 
-function DeliveryOTPModal({ isOpen, onClose, otpId }: { isOpen: boolean, onClose: () => void, otpId: string }) {
+function DeliveryOTPModal({ isOpen, onClose, subOrderId, orderId }: {
+  isOpen: boolean;
+  onClose: () => void;
+  subOrderId: string;
+  orderId: string;
+}) {
   const [otpCode, setOtpCode] = useState("");
   const verifyOtpMutation = useVerifyOtp();
 
   const handleSubmit = () => {
-    verifyOtpMutation.mutate({ otpId, otpCode }, {
+    verifyOtpMutation.mutate({ orderId, subOrderId, otpCode }, {
       onSuccess: () => {
         onClose();
-        console.log("OTP_TEST: correctOtp -> success");
+        setOtpCode("");
       }
     });
   };
@@ -208,11 +199,11 @@ function DeliveryOTPModal({ isOpen, onClose, otpId }: { isOpen: boolean, onClose
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Verify Delivery OTP</DialogTitle>
+          <DialogTitle>تأكيد التسليم برمز OTP</DialogTitle>
         </DialogHeader>
         <div className="py-4">
-          <Input 
-            placeholder="6-digit OTP" 
+          <Input
+            placeholder="رمز OTP المكون من 6 أرقام"
             value={otpCode}
             onChange={(e) => setOtpCode(e.target.value)}
             maxLength={6}
@@ -220,10 +211,10 @@ function DeliveryOTPModal({ isOpen, onClose, otpId }: { isOpen: boolean, onClose
           />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} data-testid="button-cancel-otp">Cancel</Button>
+          <Button variant="outline" onClick={onClose} data-testid="button-cancel-otp">إلغاء</Button>
           <Button onClick={handleSubmit} disabled={verifyOtpMutation.isPending} data-testid="button-submit-otp">
-            {verifyOtpMutation.isPending && <Loader2 className="animate-spin mr-2" />}
-            Verify
+            {verifyOtpMutation.isPending && <Loader2 className="animate-spin ml-2" />}
+            تأكيد
           </Button>
         </DialogFooter>
       </DialogContent>
