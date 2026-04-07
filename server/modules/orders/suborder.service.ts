@@ -1,6 +1,6 @@
 import { db } from "../../db";
 import { subOrders, stores, orderItems, products, deliveryOffers, users, orders, deliveryOtps } from "@shared/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import type { User, SubOrder } from "@shared/schema";
 import { auditService } from "../../services/auditService";
 import { allowedTransitions } from "./suborder.types";
@@ -83,7 +83,7 @@ export class SubOrderService {
       .where(
         and(
           eq(subOrders.assignedDriverId, driverId),
-          sql`${subOrders.status} IN ('ACCEPTED', 'IN_TRANSIT')`
+          inArray(subOrders.status, ["ACCEPTED", "IN_TRANSIT"])
         )
       )
       .limit(1);
