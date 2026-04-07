@@ -101,14 +101,14 @@ export default function StoreOrders() {
     flattened.sort((a, b) => {
       switch (sortBy) {
         case "date-asc":
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
         case "amount-desc":
           return parseFloat(b.subtotal) - parseFloat(a.subtotal);
         case "amount-asc":
           return parseFloat(a.subtotal) - parseFloat(b.subtotal);
         case "date-desc":
         default:
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
       }
     });
 
@@ -215,7 +215,7 @@ export default function StoreOrders() {
                         <TableCell className="rtl:text-right">
                           <div className="flex flex-col gap-1">
                             <span className="font-mono text-xs font-bold text-primary">#{sub.sub_order_id.split("-")[0]}</span>
-                            <span className="text-[10px] text-muted-foreground">{format(new Date(sub.createdAt), "MMM d, HH:mm")}</span>
+                            <span className="text-[10px] text-muted-foreground">{sub.createdAt ? format(new Date(sub.createdAt), "MMM d, HH:mm") : "-"}</span>
                             <Link href={`/store/order/${sub.parent_id}`}>
                               <Button variant="link" size="sm" className="p-0 h-auto text-[11px] justify-start rtl:justify-end">{t('store.orders.view_details')}</Button>
                             </Link>

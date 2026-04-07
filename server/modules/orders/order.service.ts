@@ -213,6 +213,7 @@ export class OrderService {
         sub_order_id: row.subOrder.id,
         status: row.subOrder.status,
         subtotal: row.subOrder.subtotal,
+        createdAt: row.subOrder.createdAt,
         items,
       });
     }
