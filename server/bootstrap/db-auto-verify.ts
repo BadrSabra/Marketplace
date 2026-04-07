@@ -192,7 +192,10 @@ export async function autoVerifyDatabase() {
       { table: 'ledger', column: 'reference_id', type: 'UUID' },
       { table: 'users', column: 'drivers_license_url', type: 'TEXT' },
       { table: 'products', column: 'image_url', type: 'TEXT' },
-      { table: 'stores', column: 'image_url', type: 'TEXT' }
+      { table: 'stores', column: 'image_url', type: 'TEXT' },
+      { table: 'wallet_transactions', column: 'receipt_url', type: 'TEXT' },
+      { table: 'wallet_transactions', column: 'related_order_id', type: 'UUID' },
+      { table: 'wallet_transactions', column: 'notes', type: 'TEXT' }
     ];
 
     for (const check of columnChecks) {
