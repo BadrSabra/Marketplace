@@ -108,7 +108,7 @@ export default function StoreEarnings() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-black text-primary" data-testid="text-balance">
-                ${parseFloat(wallet?.balance || "0").toFixed(2)}
+                {parseFloat(wallet?.balance || "0").toFixed(2)} جنيه
               </div>
               <p className="text-xs text-muted-foreground mt-2 font-medium">{t('store.earnings.balance_note')}</p>
               <Button
@@ -133,7 +133,7 @@ export default function StoreEarnings() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-black text-green-600" data-testid="text-total-commissions">
-                ${totalCommissions.toFixed(2)}
+                {totalCommissions.toFixed(2)} جنيه
               </div>
               <p className="text-xs text-muted-foreground mt-2 font-medium">{t('store.earnings.commissions_note')}</p>
             </CardContent>
@@ -148,7 +148,7 @@ export default function StoreEarnings() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-black text-yellow-600" data-testid="text-held-funds">
-                ${parseFloat(ledgerData?.heldFunds || "0").toFixed(2)}
+                {parseFloat(ledgerData?.heldFunds || "0").toFixed(2)} جنيه
               </div>
               <p className="text-xs text-muted-foreground mt-2 font-medium">{t('store.earnings.held_note')}</p>
             </CardContent>
@@ -229,7 +229,7 @@ export default function StoreEarnings() {
                           "font-black text-base rtl:text-right",
                           isCredit ? "text-green-600" : "text-red-600"
                         )}>
-                          {isCredit ? "+" : "-"}${parseFloat(tx.amount).toFixed(2)}
+                          {isCredit ? "+" : "-"}{parseFloat(tx.amount).toFixed(2)} جنيه
                         </TableCell>
                         <TableCell className="rtl:text-right">
                           <Badge 
@@ -270,10 +270,10 @@ export default function StoreEarnings() {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <p className="text-sm text-muted-foreground">
-              الرصيد المتاح: <span className="font-bold text-primary">${parseFloat(wallet?.balance || "0").toFixed(2)}</span>
+              الرصيد المتاح: <span className="font-bold text-primary">{parseFloat(wallet?.balance || "0").toFixed(2)} جنيه</span>
             </p>
             <div className="space-y-2">
-              <Label htmlFor="withdraw-amount">المبلغ المراد سحبه ($)</Label>
+              <Label htmlFor="withdraw-amount">المبلغ المراد سحبه (جنيه)</Label>
               <Input
                 id="withdraw-amount"
                 type="number"

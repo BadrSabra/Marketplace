@@ -53,6 +53,22 @@ function OrderSkeleton() {
   );
 }
 
+function getEffectiveOrderStatus(order: any): string {
+  const subs = order.subOrders || order.sub_orders || [];
+  if (subs.length === 0) return order.overallStatus || "PENDING";
+  const allDelivered = subs.every((s: any) => s.status === "DELIVERED");
+  const allCancelled = subs.every((s: any) => s.status === "CANCELLED");
+  const allDone = subs.every((s: any) => s.status === "DELIVERED" || s.status === "CANCELLED");
+  if (allDelivered) return "DELIVERED";
+  if (allCancelled) return "CANCELLED";
+  if (allDone) return "DELIVERED";
+  const hasInTransit = subs.some((s: any) => s.status === "IN_TRANSIT");
+  if (hasInTransit) return "IN_TRANSIT";
+  const hasAccepted = subs.some((s: any) => s.status === "ACCEPTED");
+  if (hasAccepted) return "ACCEPTED";
+  return order.overallStatus || "PENDING";
+}
+
 export default function CustomerOrders() {
   const { data: orders = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/orders/my-orders"],
@@ -93,7 +109,7 @@ export default function CustomerOrders() {
         ) : (
           <div className="space-y-4">
             {orders.map((order: any) => {
-              const overallStatus = order.overallStatus || "PENDING";
+              const overallStatus = getEffectiveOrderStatus(order);
               const Icon = statusIcons[overallStatus] || Package;
               const hasActiveSubOrders = order.subOrders?.some(
                 (s: any) => !["DELIVERED", "CANCELLED"].includes(s.status)

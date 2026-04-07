@@ -188,8 +188,28 @@ export class OrderService {
     }));
 
     const addresses = (customer?.addresses as string[]) || [];
+
+    // Auto-heal: if all sub-orders are done but parent order still shows PENDING, fix it
+    const allDone = subsWithItems.every(s => s.status === "DELIVERED" || s.status === "CANCELLED");
+    const anyDelivered = subsWithItems.some(s => s.status === "DELIVERED");
+    let effectiveStatus = order.overallStatus;
+
+    if (allDone && order.overallStatus === "PENDING") {
+      const healedStatus = anyDelivered ? "DELIVERED" : "CANCELLED";
+      try {
+        await db.update(orders)
+          .set({ overallStatus: healedStatus, updatedAt: new Date() })
+          .where(eq(orders.id, orderId));
+        effectiveStatus = healedStatus;
+      } catch (_) {
+        // If update fails, compute the status in memory
+        effectiveStatus = healedStatus;
+      }
+    }
+
     return {
       ...order,
+      overallStatus: effectiveStatus,
       customerName: customer?.name || null,
       customerEmail: customer?.email || null,
       customerPhone: customer?.phone || null,
@@ -257,7 +277,25 @@ export class OrderService {
       });
     }
 
-    return Array.from(orderMap.values());
+    const result = Array.from(orderMap.values());
+    // Compute effective overall_status from sub-orders for display accuracy
+    return result.map((ord: any) => {
+      const subs = ord.sub_orders || [];
+      const allDone = subs.length > 0 && subs.every((s: any) => s.status === "DELIVERED" || s.status === "CANCELLED");
+      const anyDelivered = subs.some((s: any) => s.status === "DELIVERED");
+      const hasInTransit = subs.some((s: any) => s.status === "IN_TRANSIT");
+      const hasAccepted = subs.some((s: any) => s.status === "ACCEPTED");
+
+      let effectiveStatus = ord.overall_status;
+      if (allDone && ord.overall_status === "PENDING") {
+        effectiveStatus = anyDelivered ? "DELIVERED" : "CANCELLED";
+      } else if (!allDone && hasInTransit) {
+        effectiveStatus = "IN_TRANSIT";
+      } else if (!allDone && hasAccepted) {
+        effectiveStatus = "ACCEPTED";
+      }
+      return { ...ord, overall_status: effectiveStatus };
+    });
   }
 
   async cancelSubOrder(subOrderId: string, userId: string) {

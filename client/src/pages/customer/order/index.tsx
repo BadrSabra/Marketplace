@@ -20,7 +20,23 @@ const statusColors: Record<string, string> = {
   CANCELLED: "bg-red-100 text-red-800 border-red-200",
 };
 
-const progressSteps = ["PENDING", "ACCEPTED", "READY", "PICKED_UP", "DELIVERED"];
+const progressSteps = ["PENDING", "ACCEPTED", "IN_TRANSIT", "DELIVERED"];
+
+function getEffectiveStatus(order: any): string {
+  const subs = order.subOrders || order.sub_orders || [];
+  if (subs.length === 0) return order.overallStatus || "PENDING";
+  const allDelivered = subs.every((s: any) => s.status === "DELIVERED");
+  const allCancelled = subs.every((s: any) => s.status === "CANCELLED");
+  const allDone = subs.every((s: any) => s.status === "DELIVERED" || s.status === "CANCELLED");
+  if (allDelivered) return "DELIVERED";
+  if (allCancelled) return "CANCELLED";
+  if (allDone) return "DELIVERED";
+  const hasInTransit = subs.some((s: any) => s.status === "IN_TRANSIT");
+  if (hasInTransit) return "IN_TRANSIT";
+  const hasAccepted = subs.some((s: any) => s.status === "ACCEPTED");
+  if (hasAccepted) return "ACCEPTED";
+  return order.overallStatus || "PENDING";
+}
 
 export default function CustomerOrderDetails() {
   const { id } = useParams();
@@ -57,8 +73,9 @@ export default function CustomerOrderDetails() {
     );
   }
 
-  const currentStepIndex = progressSteps.indexOf(order.overallStatus);
-  const progressPercentage = ((currentStepIndex + 1) / progressSteps.length) * 100;
+  const effectiveStatus = getEffectiveStatus(order);
+  const currentStepIndex = progressSteps.indexOf(effectiveStatus);
+  const progressPercentage = Math.max(20, ((currentStepIndex + 1) / progressSteps.length) * 100);
 
   const statusLabels: Record<string, string> = {
     PENDING: "في الانتظار",
@@ -95,8 +112,8 @@ export default function CustomerOrderDetails() {
               تم تقديم الطلب في {format(new Date(order.createdAt), "dd/MM/yyyy")}
             </p>
           </div>
-          <Badge className={`${statusColors[order.overallStatus] || "bg-gray-100"} text-sm px-4 py-1`}>
-            {statusLabels[order.overallStatus] || order.overallStatus}
+          <Badge className={`${statusColors[effectiveStatus] || "bg-gray-100"} text-sm px-4 py-1`}>
+            {statusLabels[effectiveStatus] || effectiveStatus}
           </Badge>
         </div>
 
@@ -165,14 +182,18 @@ export default function CustomerOrderDetails() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sub.items?.map((item: any) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium text-right">{item.product?.name || "منتج"}</TableCell>
-                          <TableCell className="text-center">{item.quantity}</TableCell>
-                          <TableCell className="text-left">EGP {parseFloat(item.priceAtOrder).toFixed(2)}</TableCell>
-                          <TableCell className="text-left">EGP {(item.quantity * parseFloat(item.priceAtOrder)).toFixed(2)}</TableCell>
-                        </TableRow>
-                      ))}
+                      {sub.items?.map((item: any) => {
+                        const price = parseFloat(item.price_at_order || item.priceAtOrder || item.price || "0");
+                        const qty = parseInt(item.quantity || "1", 10);
+                        return (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium text-right">{item.product_name || item.productName || item.product?.name || "منتج"}</TableCell>
+                            <TableCell className="text-center">{qty}</TableCell>
+                            <TableCell className="text-left">EGP {isNaN(price) ? "—" : price.toFixed(2)}</TableCell>
+                            <TableCell className="text-left">EGP {isNaN(price) ? "—" : (qty * price).toFixed(2)}</TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                   <div className="mt-4 flex justify-start">

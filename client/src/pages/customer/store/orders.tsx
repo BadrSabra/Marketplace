@@ -243,7 +243,7 @@ export default function StoreOrders() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="font-bold whitespace-nowrap rtl:text-right">${sub.subtotal}</TableCell>
+                        <TableCell className="font-bold whitespace-nowrap rtl:text-right">{parseFloat(sub.subtotal || "0").toFixed(2)} جنيه</TableCell>
                         <TableCell className="rtl:text-right">{getStatusBadge(sub.status)}</TableCell>
                         <TableCell className="text-right rtl:text-left">
                           <div className="flex justify-end gap-2 rtl:flex-row-reverse">
@@ -269,14 +269,10 @@ export default function StoreOrders() {
                               </>
                             )}
                             {sub.status === "ACCEPTED" && (
-                              <Button 
-                                size="sm" 
-                                className="bg-purple-600 hover:bg-purple-700 h-8 text-white"
-                                onClick={() => statusMutation.mutate({ id: sub.sub_order_id, status: "READY" })}
-                                disabled={statusMutation.isPending}
-                              >
-                                <Clock className="h-4 w-4 ml-1 rtl:ml-0 rtl:mr-1" /> {t('store.orders.actions.mark_ready')}
-                              </Button>
+                              <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded px-3 py-1.5 font-medium">
+                                <Clock className="h-3 w-3 shrink-0" />
+                                <span>مقبول - في انتظار السائق</span>
+                              </div>
                             )}
                           </div>
                         </TableCell>
