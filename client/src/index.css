@@ -119,3 +119,10 @@
     --ring: 224.3 76.3% 48%;
   }
 }
+
+#replit-badge,
+.replit-badge,
+[data-replit-badge],
+iframe[src*="replit.com/badge"] {
+  display: none !important;
+}
