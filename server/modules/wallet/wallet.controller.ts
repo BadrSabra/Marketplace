@@ -6,7 +6,7 @@ const depositSchema = z.object({
   amount: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
     message: "Amount must be a positive number",
   }),
-  receiptUrl: z.string().url("Invalid receipt URL"),
+  receiptUrl: z.string().min(1, "Receipt image is required"),
 });
 
 export class WalletController {

@@ -35,6 +35,7 @@ export class WalletService {
       walletId: wallet.id,
       type: "DEPOSIT",
       amount,
+      receiptUrl,
       status: "PENDING",
     } as any).returning();
 

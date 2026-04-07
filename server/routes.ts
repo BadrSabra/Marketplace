@@ -220,6 +220,51 @@ export async function registerRoutes(
   app.patch("/api/customer/profile", authenticate, handleProfileUpdate);
   app.patch("/api/driver/profile", authenticate, authorizeRole(["DRIVER"]), handleProfileUpdate);
 
+  // Receipt upload endpoint for deposits
+  app.post("/api/wallet/deposit/receipt", authenticate, (req, res) => {
+    const multer = require("multer");
+    const path = require("path");
+    const fs = require("fs");
+    const crypto = require("crypto");
+
+    const uploadDir = path.resolve("uploads/receipts");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const receiptStorage = multer.diskStorage({
+      destination: (_req: any, _file: any, cb: any) => cb(null, uploadDir),
+      filename: (_req: any, file: any, cb: any) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        cb(null, `${crypto.randomUUID()}${ext}`);
+      },
+    });
+
+    const receiptUpload = multer({
+      storage: receiptStorage,
+      fileFilter: (_req: any, file: any, cb: any) => {
+        const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+        if (allowed.includes(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(new Error("نوع الملف غير مدعوم. يُسمح بـ JPG, PNG, WEBP فقط"));
+        }
+      },
+      limits: { fileSize: 5 * 1024 * 1024 },
+    });
+
+    receiptUpload.single("receipt")(req, res, async (err: any) => {
+      if (err) {
+        return res.status(400).json({ message: err.message || "Upload failed" });
+      }
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      const receiptUrl = `/uploads/receipts/${req.file.filename}`;
+      res.json({ receiptUrl });
+    });
+  });
+
   // Avatar upload endpoint — shared for customers and drivers
   app.post("/api/profile/avatar", authenticate, (req, res) => {
     avatarUpload.single("avatar")(req, res, async (err: any) => {

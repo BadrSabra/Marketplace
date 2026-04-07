@@ -1,33 +1,54 @@
 import { Router } from "express";
 import { depositService } from "./deposits.service";
 import { authenticate, authorizeRole } from "../../middleware/auth";
+import { walletService } from "../wallet/wallet.service";
+import { db } from "../../db";
+import { walletTransactions, wallets, users } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
 
 const router = Router();
+
+router.get("/admin/deposits/pending", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
+  try {
+    const deposits = await walletService.getPendingDeposits();
+    res.json(deposits);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 router.post("/admin/deposits/:id/approve", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
   try {
     const { id } = req.params;
-    const { force, notes } = req.body;
-    const adminId = (req as any).user.id;
-
-    const result = await depositService.approveDeposit(id, adminId, !!force, notes);
-    res.json(result);
+    const transaction = await walletService.approveDeposit(id);
+    res.json(transaction);
   } catch (error: any) {
-    if (error.message === "DEPOSIT_NOT_FOUND") {
+    if (error.message?.includes("DEPOSIT_NOT_FOUND")) {
       return res.status(404).json({ message: "Deposit not found" });
     }
-    if (error.message === "ALREADY_PROCESSED") {
+    if (error.message?.includes("ALREADY_PROCESSED") || error.message?.includes("already processed")) {
       return res.status(409).json({ message: "Deposit already approved or rejected" });
     }
-    if (error.message === "INVALID_AMOUNT") {
-      return res.status(422).json({ message: "Invalid deposit amount" });
-    }
-    if (error.message === "CUSTOMER_NOT_FOUND" || error.message === "WALLET_NOT_FOUND") {
-      return res.status(404).json({ message: "Customer or wallet not found" });
-    }
-
     console.error(`[DEPOSIT-ERROR] ${error.message}`);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: error.message || "Internal server error" });
+  }
+});
+
+router.post("/admin/deposits/:id/reject", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [updated] = await db
+      .update(walletTransactions)
+      .set({ status: "FAILED" })
+      .where(and(eq(walletTransactions.id, id), eq(walletTransactions.status, "PENDING")))
+      .returning();
+
+    if (!updated) {
+      return res.status(404).json({ message: "Deposit not found or already processed" });
+    }
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 });
 

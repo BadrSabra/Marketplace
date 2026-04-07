@@ -9,10 +9,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Plus, Wallet as WalletIcon, History, Filter, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { Loader2, Plus, Wallet as WalletIcon, History, Filter, ChevronLeft, ChevronRight, Clock, Upload, ImageIcon, X } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { t } from "@/i18n";
@@ -21,7 +21,7 @@ const depositSchema = z.object({
   amount: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
     message: "Amount must be a positive number",
   }),
-  receiptUrl: z.string().url("Invalid receipt URL"),
+  receiptUrl: z.string().min(1, "يجب رفع صورة الإيصال"),
 });
 
 type DepositForm = z.infer<typeof depositSchema>;
@@ -30,13 +30,16 @@ export default function CustomerWallet() {
   const { toast } = useToast();
   const [page, setPage] = useState(0);
   const [type, setType] = useState<string>("ALL");
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const limit = 10;
 
   const form = useForm<DepositForm>({
     resolver: zodResolver(depositSchema),
     defaultValues: {
       amount: "",
-      receiptUrl: "https://example.com/receipt.jpg",
+      receiptUrl: "",
     },
   });
 
@@ -72,6 +75,48 @@ export default function CustomerWallet() {
     }
   });
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingReceipt(true);
+    const localPreview = URL.createObjectURL(file);
+    setReceiptPreview(localPreview);
+
+    try {
+      const formData = new FormData();
+      formData.append("receipt", file);
+
+      const token = localStorage.getItem("jwt_token");
+      const res = await fetch("/api/wallet/deposit/receipt", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "فشل رفع الصورة");
+      }
+
+      const { receiptUrl } = await res.json();
+      form.setValue("receiptUrl", receiptUrl, { shouldValidate: true });
+      toast({ title: "تم رفع الإيصال بنجاح" });
+    } catch (err: any) {
+      toast({ title: "فشل رفع الإيصال", description: err.message, variant: "destructive" });
+      setReceiptPreview(null);
+      form.setValue("receiptUrl", "");
+    } finally {
+      setIsUploadingReceipt(false);
+    }
+  };
+
+  const clearReceipt = () => {
+    setReceiptPreview(null);
+    form.setValue("receiptUrl", "");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const depositMutation = useMutation({
     mutationFn: async (data: DepositForm) => {
       const res = await apiRequest("POST", "/api/wallet/deposit", data);
@@ -83,6 +128,8 @@ export default function CustomerWallet() {
         description: t('customer.wallet.success_deposit_desc') 
       });
       form.reset();
+      setReceiptPreview(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
       queryClient.invalidateQueries({ queryKey: ["/api/wallet/pending"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ledger/transactions"] });
@@ -154,23 +201,72 @@ export default function CustomerWallet() {
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={form.control}
                   name="receiptUrl"
-                  render={({ field }) => (
+                  render={() => (
                     <FormItem className="text-right">
-                      <FormLabel>{t('customer.wallet.receipt_url_label')}</FormLabel>
+                      <FormLabel>صورة إيصال الدفع</FormLabel>
                       <FormControl>
-                        <Input placeholder={t('customer.wallet.receipt_url_placeholder')} {...field} data-testid="input-receipt-url" className="text-right" />
+                        <div>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            className="hidden"
+                            data-testid="input-receipt-file"
+                            onChange={handleFileSelect}
+                          />
+                          {!receiptPreview ? (
+                            <button
+                              type="button"
+                              data-testid="button-upload-receipt"
+                              onClick={() => fileInputRef.current?.click()}
+                              className="w-full border-2 border-dashed border-border rounded-lg p-6 flex flex-col items-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-colors cursor-pointer"
+                            >
+                              {isUploadingReceipt ? (
+                                <Loader2 className="h-8 w-8 animate-spin" />
+                              ) : (
+                                <Upload className="h-8 w-8" />
+                              )}
+                              <span className="text-sm font-medium">
+                                {isUploadingReceipt ? "جاري الرفع..." : "اضغط لرفع صورة الإيصال"}
+                              </span>
+                              <span className="text-xs">JPG, PNG, WEBP — حتى 5MB</span>
+                            </button>
+                          ) : (
+                            <div className="relative rounded-lg overflow-hidden border border-border">
+                              <img
+                                src={receiptPreview}
+                                alt="صورة الإيصال"
+                                className="w-full max-h-48 object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={clearReceipt}
+                                className="absolute top-2 left-2 bg-destructive text-destructive-foreground rounded-full p-1 hover:opacity-90 transition-opacity"
+                                data-testid="button-clear-receipt"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                              <div className="flex items-center gap-1 px-3 py-2 bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 text-xs">
+                                <ImageIcon className="h-3 w-3" />
+                                <span>تم رفع الإيصال بنجاح</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
                 <Button 
                   type="submit" 
                   className="w-full gap-2 flex-row-reverse" 
-                  disabled={depositMutation.isPending}
+                  disabled={depositMutation.isPending || isUploadingReceipt}
                   data-testid="button-submit-deposit"
                 >
                   {depositMutation.isPending && <Loader2 className="h-4 w-4 animate-spin ml-2 mr-0" />}
