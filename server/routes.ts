@@ -13,6 +13,7 @@ import { eq, sql, and } from "drizzle-orm";
 import { authenticate, authorizeRole } from "./middleware/auth";
 import { productsController, upload } from "./modules/products/products.controller";
 import { upload as avatarUpload } from "./modules/avatar/avatar.upload";
+import { receiptUpload } from "./modules/receipt/receipt.upload";
 import { subOrderController } from "./modules/orders/suborder.controller";
 import { walletController } from "./modules/wallet/wallet.controller";
 import { orderController } from "./modules/orders/order.controller";
@@ -222,38 +223,7 @@ export async function registerRoutes(
 
   // Receipt upload endpoint for deposits
   app.post("/api/wallet/deposit/receipt", authenticate, (req, res) => {
-    const multer = require("multer");
-    const path = require("path");
-    const fs = require("fs");
-    const crypto = require("crypto");
-
-    const uploadDir = path.resolve("uploads/receipts");
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    const receiptStorage = multer.diskStorage({
-      destination: (_req: any, _file: any, cb: any) => cb(null, uploadDir),
-      filename: (_req: any, file: any, cb: any) => {
-        const ext = path.extname(file.originalname).toLowerCase();
-        cb(null, `${crypto.randomUUID()}${ext}`);
-      },
-    });
-
-    const receiptUpload = multer({
-      storage: receiptStorage,
-      fileFilter: (_req: any, file: any, cb: any) => {
-        const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-        if (allowed.includes(file.mimetype)) {
-          cb(null, true);
-        } else {
-          cb(new Error("نوع الملف غير مدعوم. يُسمح بـ JPG, PNG, WEBP فقط"));
-        }
-      },
-      limits: { fileSize: 5 * 1024 * 1024 },
-    });
-
-    receiptUpload.single("receipt")(req, res, async (err: any) => {
+    receiptUpload.single("receipt")(req, res, (err: any) => {
       if (err) {
         return res.status(400).json({ message: err.message || "Upload failed" });
       }
