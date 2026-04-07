@@ -83,7 +83,7 @@ export class SubOrderService {
       .where(
         and(
           eq(subOrders.assignedDriverId, driverId),
-          sql`${subOrders.status} IN ('ASSIGNED', 'PICKED_UP')`
+          sql`${subOrders.status} IN ('ACCEPTED', 'IN_TRANSIT')`
         )
       )
       .limit(1);

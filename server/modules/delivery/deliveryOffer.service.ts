@@ -1,13 +1,13 @@
 import { db } from "../../db";
 import { deliveryOffers, subOrders, wallets, users } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 import { auditService } from "../../services/auditService";
 
 export class DeliveryOfferService {
   async createOffer(subOrderId: string, driverId: string, data: { proposedFee: number; notes?: string }) {
     return await db.transaction(async (tx) => {
       const [subOrder] = await tx.select().from(subOrders).where(eq(subOrders.id, subOrderId)).for("update");
-      if (!subOrder || subOrder.status !== "READY") throw new Error("TASK_NOT_AVAILABLE");
+      if (!subOrder || subOrder.status !== "ACCEPTED") throw new Error("TASK_NOT_AVAILABLE");
 
       const [existing] = await tx
         .select()
@@ -45,7 +45,7 @@ export class DeliveryOfferService {
         .update(subOrders)
         .set({ 
           assignedDriverId: driverId, 
-          status: "ASSIGNED",
+          status: "IN_TRANSIT",
           updatedAt: new Date() 
         })
         .where(eq(subOrders.id, subOrderId))
@@ -66,7 +66,7 @@ export class DeliveryOfferService {
         entityId: subOrderId,
         performedByUserId: driverId,
         performedByRole: "DRIVER",
-        newValue: { status: "ASSIGNED", assignedDriverId: driverId }
+        newValue: { status: "IN_TRANSIT", assignedDriverId: driverId }
       });
 
       return updatedSubOrder;

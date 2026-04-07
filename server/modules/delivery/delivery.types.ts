@@ -8,7 +8,7 @@ export interface AvailableTaskDTO {
   items: { product_name: string; quantity: number }[];
   subtotal: number;
   created_at: string;
-  status: 'PENDING' | 'ACCEPTED' | 'READY';
+  status: 'PENDING' | 'ACCEPTED' | 'IN_TRANSIT';
   assigned_driver_id?: string | null;
 }
 
