@@ -1,15 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Package, Truck, User, Phone, ChevronRight, ArrowRight } from "lucide-react";
+import { Loader2, Package, Truck, Phone, ChevronRight, ArrowRight, CheckCircle, XCircle, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 const statusColors: Record<string, string> = {
   PENDING: "bg-yellow-100 text-yellow-800 border-yellow-200",
@@ -18,9 +20,20 @@ const statusColors: Record<string, string> = {
   PICKED_UP: "bg-cyan-100 text-cyan-800 border-cyan-200",
   DELIVERED: "bg-green-100 text-green-800 border-green-200",
   CANCELLED: "bg-red-100 text-red-800 border-red-200",
+  IN_TRANSIT: "bg-indigo-100 text-indigo-800 border-indigo-200",
 };
 
 const progressSteps = ["PENDING", "ACCEPTED", "IN_TRANSIT", "DELIVERED"];
+
+const statusLabels: Record<string, string> = {
+  PENDING: "في الانتظار",
+  ACCEPTED: "تم القبول",
+  READY: "جاهز للتوصيل",
+  PICKED_UP: "تم الاستلام",
+  DELIVERED: "تم التوصيل",
+  CANCELLED: "ملغي",
+  IN_TRANSIT: "في الطريق",
+};
 
 function getEffectiveStatus(order: any): string {
   const subs = order.subOrders || order.sub_orders || [];
@@ -36,6 +49,106 @@ function getEffectiveStatus(order: any): string {
   const hasAccepted = subs.some((s: any) => s.status === "ACCEPTED");
   if (hasAccepted) return "ACCEPTED";
   return order.overallStatus || "PENDING";
+}
+
+function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; orderId: string }) {
+  const { toast } = useToast();
+
+  const { data: offers, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/delivery/suborders", subOrderId, "offers"],
+    queryFn: async () => {
+      const res = await fetch(`/api/delivery/suborders/${subOrderId}/offers`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    refetchInterval: 15000,
+  });
+
+  const acceptMutation = useMutation({
+    mutationFn: async (offerId: string) => {
+      const res = await apiRequest("POST", `/api/delivery/offers/${offerId}/accept`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "حدث خطأ" }));
+        throw new Error(err.error || "حدث خطأ");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "تم قبول عرض السائق", description: "تم خصم رسوم التوصيل من محفظتك. سيبدأ السائق التوصيل قريباً." });
+      queryClient.invalidateQueries({ queryKey: [`/api/orders/${orderId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/delivery/suborders", subOrderId, "offers"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "فشل قبول العرض", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async (offerId: string) => {
+      const res = await apiRequest("POST", `/api/delivery/offers/${offerId}/reject`);
+      if (!res.ok) throw new Error("حدث خطأ");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "تم رفض العرض" });
+      queryClient.invalidateQueries({ queryKey: ["/api/delivery/suborders", subOrderId, "offers"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "فشل رفض العرض", description: error.message, variant: "destructive" });
+    },
+  });
+
+  if (isLoading) return null;
+  if (!offers || offers.length === 0) return null;
+
+  return (
+    <div className="mt-4 border-t pt-4">
+      <div className="flex items-center gap-2 mb-3 flex-row-reverse">
+        <Tag className="h-4 w-4 text-primary" />
+        <h4 className="text-sm font-bold text-right">عروض التوصيل ({offers.length})</h4>
+      </div>
+      <p className="text-xs text-muted-foreground text-right mb-3">
+        اختر أفضل عرض سعر للتوصيل. سيتم خصم رسوم التوصيل من محفظتك عند القبول.
+      </p>
+      <div className="space-y-2">
+        {offers.map((offer: any) => (
+          <div
+            key={offer.id}
+            className="flex items-center justify-between p-3 bg-muted/50 border rounded-lg"
+            data-testid={`offer-row-${offer.id}`}
+          >
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => rejectMutation.mutate(offer.id)}
+                disabled={rejectMutation.isPending || acceptMutation.isPending}
+                data-testid={`button-reject-offer-${offer.id}`}
+              >
+                <XCircle className="h-3 w-3 ml-1" />
+                رفض
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => acceptMutation.mutate(offer.id)}
+                disabled={acceptMutation.isPending || rejectMutation.isPending}
+                data-testid={`button-accept-offer-${offer.id}`}
+              >
+                {acceptMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin ml-1" /> : <CheckCircle className="h-3 w-3 ml-1" />}
+                قبول
+              </Button>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-bold text-primary">{parseFloat(offer.offeredFee).toFixed(2)} جنيه</p>
+              <p className="text-xs text-muted-foreground">{offer.driverName} • {offer.driverTransportType || "توصيل"}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function CustomerOrderDetails() {
@@ -77,15 +190,12 @@ export default function CustomerOrderDetails() {
   const currentStepIndex = progressSteps.indexOf(effectiveStatus);
   const progressPercentage = Math.max(20, ((currentStepIndex + 1) / progressSteps.length) * 100);
 
-  const statusLabels: Record<string, string> = {
-    PENDING: "في الانتظار",
-    ACCEPTED: "تم القبول",
-    READY: "جاهز للتوصيل",
-    PICKED_UP: "تم الاستلام",
-    DELIVERED: "تم التوصيل",
-    CANCELLED: "ملغي",
-    IN_TRANSIT: "في الطريق",
-  };
+  // Compute total delivery fees from subOrders
+  const subOrders = order.subOrders || order.sub_orders || [];
+  const totalDeliveryFees = subOrders.reduce((sum: number, sub: any) => {
+    const fee = parseFloat(sub.expectedDeliveryFee || "0");
+    return sum + (isNaN(fee) ? 0 : fee);
+  }, 0);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950" dir="rtl">
@@ -125,7 +235,7 @@ export default function CustomerOrderDetails() {
           </CardHeader>
           <CardContent className="space-y-4">
             <Progress value={progressPercentage} className="h-2" />
-            <div className="grid grid-cols-5 text-center text-xs font-medium">
+            <div className="grid grid-cols-4 text-center text-xs font-medium">
               {progressSteps.map((step, idx) => (
                 <div key={step} className={idx <= currentStepIndex ? "text-primary font-bold" : "text-muted-foreground"}>
                   {statusLabels[step] || step}
@@ -137,7 +247,7 @@ export default function CustomerOrderDetails() {
 
         <div className="grid md:grid-cols-3 gap-6">
           <div className="md:col-span-2 space-y-6">
-            {order.subOrders?.map((sub: any) => (
+            {subOrders.map((sub: any) => (
               <Card key={sub.id} data-testid={`card-suborder-${sub.id}`}>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div className="flex items-center gap-2 flex-row-reverse">
@@ -162,6 +272,11 @@ export default function CustomerOrderDetails() {
                         <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1 flex-row-reverse">
                           <Phone className="h-3 w-3" /> {sub.driver.phone}
                         </p>
+                        {sub.expectedDeliveryFee && parseFloat(sub.expectedDeliveryFee) > 0 && (
+                          <p className="text-xs text-blue-500 dark:text-blue-400 mt-1">
+                            رسوم التوصيل: {parseFloat(sub.expectedDeliveryFee).toFixed(2)} جنيه
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -189,16 +304,19 @@ export default function CustomerOrderDetails() {
                           <TableRow key={item.id}>
                             <TableCell className="font-medium text-right">{item.product_name || item.productName || item.product?.name || "منتج"}</TableCell>
                             <TableCell className="text-center">{qty}</TableCell>
-                            <TableCell className="text-left">EGP {isNaN(price) ? "—" : price.toFixed(2)}</TableCell>
-                            <TableCell className="text-left">EGP {isNaN(price) ? "—" : (qty * price).toFixed(2)}</TableCell>
+                            <TableCell className="text-left">{isNaN(price) ? "—" : price.toFixed(2)} جنيه</TableCell>
+                            <TableCell className="text-left">{isNaN(price) ? "—" : (qty * price).toFixed(2)} جنيه</TableCell>
                           </TableRow>
                         );
                       })}
                     </TableBody>
                   </Table>
                   <div className="mt-4 flex justify-start">
-                    <p className="text-sm font-bold">الإجمالي الفرعي: EGP {parseFloat(sub.subtotal).toFixed(2)}</p>
+                    <p className="text-sm font-bold">الإجمالي الفرعي: {parseFloat(sub.subtotal).toFixed(2)} جنيه</p>
                   </div>
+                  {sub.status === "ACCEPTED" && !sub.assignedDriverId && (
+                    <DeliveryOffersSection subOrderId={sub.id} orderId={order.id} />
+                  )}
                 </CardContent>
               </Card>
             ))}
@@ -212,16 +330,20 @@ export default function CustomerOrderDetails() {
               <CardContent className="space-y-3">
                 <div className="flex justify-between text-sm flex-row-reverse">
                   <span className="text-muted-foreground">إجمالي الأصناف</span>
-                  <span>EGP {parseFloat(order.totalPrice).toFixed(2)}</span>
+                  <span>{parseFloat(order.totalPrice).toFixed(2)} جنيه</span>
                 </div>
                 <div className="flex justify-between text-sm flex-row-reverse">
                   <span className="text-muted-foreground">رسوم التوصيل</span>
-                  <span>EGP 10.00</span>
+                  <span>
+                    {totalDeliveryFees > 0
+                      ? `${totalDeliveryFees.toFixed(2)} جنيه`
+                      : "في انتظار قبول سائق"}
+                  </span>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-bold text-lg flex-row-reverse">
                   <span>الإجمالي</span>
-                  <span>EGP {(parseFloat(order.totalPrice) + 10).toFixed(2)}</span>
+                  <span>{(parseFloat(order.totalPrice) + totalDeliveryFees).toFixed(2)} جنيه</span>
                 </div>
                 <Badge variant="outline" className="w-full justify-center mt-2 py-1">
                   مدفوع عبر المحفظة

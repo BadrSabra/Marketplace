@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { useDriverTasks, useAvailableOffers, usePlaceOffer, useVerifyOtp } from "@/hooks/use-driver";
+import { useDriverTasks, useAvailableOffers, useSubmitOffer, useVerifyOtp } from "@/hooks/use-driver";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Store, MapPin, Package } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Loader2, Store, MapPin, Package, Tag } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import type { ActiveDelivery, AvailableTask } from "@/lib/api/driver";
 
 export default function DriverTasksPage() {
@@ -59,11 +60,12 @@ export default function DriverTasksPage() {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-right">العروض المتاحة</h2>
+        <h2 className="text-xl font-semibold text-right">الطلبات المتاحة للتوصيل</h2>
+        <p className="text-sm text-muted-foreground text-right">قدّم عرض سعرك لكل طلب وسيختار العميل أفضل عرض</p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {!offers || offers.length === 0 ? (
             <Card className="col-span-full p-8 text-center text-muted-foreground">
-              لا توجد عروض متاحة حالياً
+              لا توجد طلبات متاحة حالياً
               <Button variant="link" onClick={() => window.location.reload()}>التحديث</Button>
             </Card>
           ) : (
@@ -128,51 +130,107 @@ function TaskCard({ task }: { task: ActiveDelivery }) {
 }
 
 function OfferCard({ offer }: { offer: AvailableTask }) {
-  const placeBidMutation = usePlaceOffer();
+  const submitOfferMutation = useSubmitOffer();
   const { toast } = useToast();
+  const [isOfferOpen, setIsOfferOpen] = useState(false);
+  const [feeInput, setFeeInput] = useState("");
 
-  const handleAccept = () => {
-    placeBidMutation.mutate(offer.sub_order_id, {
+  const handleSubmitOffer = () => {
+    const fee = parseFloat(feeInput);
+    if (!feeInput || isNaN(fee) || fee <= 0) {
+      toast({ title: "يرجى إدخال سعر صحيح", variant: "destructive" });
+      return;
+    }
+    submitOfferMutation.mutate({ subOrderId: offer.sub_order_id, proposedFee: fee }, {
+      onSuccess: () => {
+        setIsOfferOpen(false);
+        setFeeInput("");
+      },
       onError: (error: Error) => {
-        toast({ title: "فشل قبول المهمة", description: error.message, variant: "destructive" });
+        toast({ title: "فشل تقديم العرض", description: error.message, variant: "destructive" });
       }
     });
   };
 
   return (
-    <Card className="flex flex-col h-full" data-testid={`card-offer-${offer.sub_order_id}`}>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">{offer.store_name}</CardTitle>
-          <span className="font-bold text-primary">{offer.subtotal} ج.م</span>
-        </div>
-      </CardHeader>
-      <CardContent className="flex-1 space-y-2 text-sm">
-        <div className="flex items-start gap-2">
-          <MapPin className="w-4 h-4 mt-1 shrink-0 text-muted-foreground" />
-          <span>{offer.customer_address || "عنوان المتجر"}</span>
-        </div>
-        <div className="flex items-start gap-2">
-          <Package className="w-4 h-4 mt-1 shrink-0 text-muted-foreground" />
-          <span>{offer.items.map(i => `${i.product_name} (${i.quantity})`).join(", ")}</span>
-        </div>
-        {offer.created_at && (
-          <div className="text-muted-foreground text-xs">
-            {new Date(offer.created_at).toLocaleString("ar-EG")}
+    <>
+      <Card className="flex flex-col h-full" data-testid={`card-offer-${offer.sub_order_id}`}>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">{offer.store_name}</CardTitle>
+            <span className="font-bold text-primary">{offer.subtotal} ج.م</span>
           </div>
-        )}
-      </CardContent>
-      <CardFooter>
-        <Button
-          className="w-full"
-          onClick={handleAccept}
-          disabled={placeBidMutation.isPending}
-          data-testid={`button-accept-${offer.sub_order_id}`}
-        >
-          {placeBidMutation.isPending ? <Loader2 className="animate-spin ml-2" /> : "قبول المهمة"}
-        </Button>
-      </CardFooter>
-    </Card>
+        </CardHeader>
+        <CardContent className="flex-1 space-y-2 text-sm">
+          <div className="flex items-start gap-2">
+            <MapPin className="w-4 h-4 mt-1 shrink-0 text-muted-foreground" />
+            <span>{offer.customer_address || "عنوان المتجر"}</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <Package className="w-4 h-4 mt-1 shrink-0 text-muted-foreground" />
+            <span>{offer.items.map(i => `${i.product_name} (${i.quantity})`).join(", ")}</span>
+          </div>
+          {offer.created_at && (
+            <div className="text-muted-foreground text-xs">
+              {new Date(offer.created_at).toLocaleString("ar-EG")}
+            </div>
+          )}
+        </CardContent>
+        <CardFooter>
+          <Button
+            className="w-full"
+            onClick={() => setIsOfferOpen(true)}
+            data-testid={`button-submit-offer-${offer.sub_order_id}`}
+          >
+            <Tag className="w-4 h-4 ml-2" />
+            تقديم عرض سعر
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <Dialog open={isOfferOpen} onOpenChange={setIsOfferOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-right">تقديم عرض سعر للتوصيل</DialogTitle>
+            <DialogDescription className="text-right">
+              حدد سعر التوصيل الذي تقترحه. سيراجع العميل جميع العروض ويختار الأنسب.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-3 space-y-4">
+            <div className="p-3 bg-muted rounded-lg text-sm text-right space-y-1">
+              <p className="font-medium">{offer.store_name}</p>
+              <p className="text-muted-foreground">إجمالي الطلب: {offer.subtotal} ج.م</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fee-input" className="text-right block">
+                رسوم التوصيل المقترحة (جنيه)
+              </Label>
+              <Input
+                id="fee-input"
+                placeholder="مثال: 25"
+                inputMode="decimal"
+                value={feeInput}
+                onChange={(e) => setFeeInput(e.target.value)}
+                data-testid="input-offer-fee"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsOfferOpen(false)} data-testid="button-cancel-offer">
+              إلغاء
+            </Button>
+            <Button
+              onClick={handleSubmitOffer}
+              disabled={submitOfferMutation.isPending}
+              data-testid="button-confirm-offer"
+            >
+              {submitOfferMutation.isPending && <Loader2 className="animate-spin ml-2" />}
+              تقديم العرض
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

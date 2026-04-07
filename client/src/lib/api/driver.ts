@@ -51,10 +51,10 @@ export async function getAvailableOffers(): Promise<AvailableTask[]> {
   return [];
 }
 
-export async function submitOffer(subOrderId: string) {
-  const res = await apiFetch(`/api/delivery/suborders/${subOrderId}/accept`, {
-    method: "PATCH",
-    body: JSON.stringify({}),
+export async function submitOffer(subOrderId: string, proposedFee: number) {
+  const res = await apiFetch(`/api/delivery/suborders/${subOrderId}/offer`, {
+    method: "POST",
+    body: JSON.stringify({ proposedFee }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));

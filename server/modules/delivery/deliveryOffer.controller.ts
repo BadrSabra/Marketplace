@@ -21,10 +21,64 @@ export class DeliveryOfferController {
         return res.status(400).json({ error: err.errors[0].message });
       }
       if (err.message === "ALREADY_SUBMITTED") {
-        return res.status(409).json({ error: "You have already submitted an offer for this task" });
+        return res.status(409).json({ error: "لقد قدمت عرضاً بالفعل على هذه المهمة" });
       }
       if (err.message === "TASK_NOT_AVAILABLE") {
-        return res.status(400).json({ error: "Task is no longer available" });
+        return res.status(400).json({ error: "هذه المهمة غير متاحة" });
+      }
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async getOffersForSubOrder(req: Request, res: Response) {
+    try {
+      const { id: subOrderId } = req.params;
+      const offers = await deliveryOfferService.getOffersForSubOrder(subOrderId);
+      res.json(offers);
+    } catch (err: any) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async customerAcceptOffer(req: Request, res: Response) {
+    try {
+      const { offerId } = req.params;
+      const customerId = (req as any).user.id;
+      const result = await deliveryOfferService.customerAcceptOffer(offerId, customerId);
+      res.json(result);
+    } catch (err: any) {
+      if (err.message === "OFFER_NOT_AVAILABLE") {
+        return res.status(400).json({ error: "هذا العرض لم يعد متاحاً" });
+      }
+      if (err.message === "SUBORDER_NOT_AVAILABLE") {
+        return res.status(400).json({ error: "الطلب الفرعي لم يعد متاحاً للتوصيل" });
+      }
+      if (err.message === "ALREADY_ASSIGNED") {
+        return res.status(409).json({ error: "تم تعيين سائق لهذا الطلب بالفعل" });
+      }
+      if (err.message === "UNAUTHORIZED") {
+        return res.status(403).json({ error: "غير مصرح" });
+      }
+      if (err.message === "INSUFFICIENT_BALANCE") {
+        return res.status(402).json({ error: "رصيد المحفظة غير كافٍ لرسوم التوصيل. يرجى شحن المحفظة أولاً." });
+      }
+      if (err.message === "WALLET_NOT_FOUND") {
+        return res.status(404).json({ error: "المحفظة غير موجودة" });
+      }
+      console.error("Error accepting offer:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  async customerRejectOffer(req: Request, res: Response) {
+    try {
+      const { offerId } = req.params;
+      const customerId = (req as any).user.id;
+      const result = await deliveryOfferService.customerRejectOffer(offerId, customerId);
+      res.json(result);
+    } catch (err: any) {
+      if (err.message === "UNAUTHORIZED") {
+        return res.status(403).json({ error: "غير مصرح" });
       }
       res.status(500).json({ error: "Internal server error" });
     }

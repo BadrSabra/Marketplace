@@ -26,14 +26,14 @@ export function useAvailableOffers() {
 export function useSubmitOffer() {
   const { toast } = useToast();
   return useMutation({
-    mutationFn: (subOrderId: string) => driverApi.submitOffer(subOrderId),
+    mutationFn: ({ subOrderId, proposedFee }: { subOrderId: string; proposedFee: number }) =>
+      driverApi.submitOffer(subOrderId, proposedFee),
     onSuccess: () => {
-      toast({ title: "تم قبول المهمة بنجاح" });
+      toast({ title: "تم تقديم عرضك بنجاح", description: "سينظر العميل في عرضك وسيتم إخطارك عند القبول." });
       queryClient.invalidateQueries({ queryKey: ["/api/delivery/available-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/suborders/active"] });
     },
     onError: (error: Error) => {
-      toast({ title: "فشل قبول المهمة", description: error.message, variant: "destructive" });
+      toast({ title: "فشل تقديم العرض", description: error.message, variant: "destructive" });
     },
   });
 }
