@@ -13,7 +13,9 @@ export default function DriverProfilePage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isUploadingLicense, setIsUploadingLicense] = useState(false);
+
   const form = useForm({
     defaultValues: {
       name: user?.name || "",
@@ -27,44 +29,83 @@ export default function DriverProfilePage() {
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem("jwt_token");
-      const headers = {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json"
-      };
-      
-      // Use the actual driver profile endpoint if it exists, otherwise fallback
-      await apiRequest("PATCH", "/api/driver/profile", data, { headers }).catch(() => 
-        apiRequest("PATCH", "/api/customer/profile", data, { headers })
-      );
+      const payload: any = {};
+      if (data.phone) payload.phone = data.phone;
+      if (data.transportType) payload.transportType = data.transportType;
+      if (data.name && data.name !== user?.name) payload.name = data.name;
+      if (data.avatarUrl && data.avatarUrl !== user?.avatarUrl) payload.avatarUrl = data.avatarUrl;
+      if (data.driversLicenseUrl && data.driversLicenseUrl !== user?.driversLicenseUrl) payload.driversLicenseUrl = data.driversLicenseUrl;
+
+      await apiRequest("PATCH", "/api/driver/profile", payload);
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast({ title: "تم تحديث الملف الشخصي بنجاح" });
     } catch (error: any) {
-      toast({ 
-        title: "فشل التحديث", 
+      toast({
+        title: "فشل التحديث",
         description: error.message,
-        variant: "destructive" 
+        variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        form.setValue(field as any, reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    setIsUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append("avatar", file);
+      const token = localStorage.getItem("jwt_token");
+      const res = await fetch("/api/profile/avatar", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) throw new Error("فشل رفع الصورة");
+      const data = await res.json();
+      form.setValue("avatarUrl", data.avatarUrl);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      toast({ title: "تم رفع الصورة بنجاح" });
+    } catch (error: any) {
+      toast({ title: "فشل رفع الصورة", description: error.message, variant: "destructive" });
+    } finally {
+      setIsUploadingAvatar(false);
     }
   };
+
+  const handleLicenseUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingLicense(true);
+    try {
+      const formData = new FormData();
+      formData.append("avatar", file);
+      const token = localStorage.getItem("jwt_token");
+      const res = await fetch("/api/profile/avatar", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) throw new Error("فشل رفع الملف");
+      const data = await res.json();
+      form.setValue("driversLicenseUrl", data.avatarUrl);
+      toast({ title: "تم رفع الرخصة بنجاح" });
+    } catch (error: any) {
+      toast({ title: "فشل رفع الرخصة", description: error.message, variant: "destructive" });
+    } finally {
+      setIsUploadingLicense(false);
+    }
+  };
+
+  const avatarUrl = form.watch("avatarUrl");
+  const licenseUrl = form.watch("driversLicenseUrl");
 
   return (
     <div className="container mx-auto p-4 max-w-2xl text-right" dir="rtl">
       <h1 className="text-3xl font-bold mb-6">الملف الشخصي</h1>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>معلومات السائق</CardTitle>
@@ -73,18 +114,21 @@ export default function DriverProfilePage() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="flex flex-col items-center gap-4 mb-6">
               <div className="relative w-32 h-32 rounded-full border-2 border-dashed border-muted-foreground/50 flex items-center justify-center overflow-hidden bg-muted">
-                {form.watch("avatarUrl") ? (
-                  <img src={form.watch("avatarUrl")} alt="Avatar" className="w-full h-full object-cover" />
+                {isUploadingAvatar ? (
+                  <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                ) : avatarUrl ? (
+                  <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
                   <User className="w-12 h-12 text-muted-foreground" />
                 )}
                 <label className="absolute bottom-0 right-0 p-2 bg-primary text-primary-foreground rounded-full cursor-pointer hover:bg-primary/90">
                   <Camera className="w-4 h-4" />
-                  <input 
-                    type="file" 
-                    className="hidden" 
-                    accept="image/*" 
-                    onChange={(e) => handleFileUpload(e, "avatarUrl")}
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    disabled={isUploadingAvatar}
                   />
                 </label>
               </div>
@@ -95,7 +139,7 @@ export default function DriverProfilePage() {
               <Label htmlFor="name">الاسم</Label>
               <div className="relative">
                 <User className="absolute right-3 top-3 w-4 h-4 text-muted-foreground" />
-                <Input id="name" {...form.register("name")} className="pr-10 text-right" />
+                <Input id="name" {...form.register("name")} className="pr-10 text-right" placeholder="أدخل اسمك" />
               </div>
             </div>
 
@@ -103,7 +147,7 @@ export default function DriverProfilePage() {
               <Label htmlFor="phone">رقم الهاتف</Label>
               <div className="relative">
                 <Phone className="absolute right-3 top-3 w-4 h-4 text-muted-foreground" />
-                <Input id="phone" {...form.register("phone")} className="pr-10 text-right" />
+                <Input id="phone" {...form.register("phone")} className="pr-10 text-right" placeholder="01xxxxxxxxx" />
               </div>
             </div>
 
@@ -111,20 +155,22 @@ export default function DriverProfilePage() {
               <Label htmlFor="transportType">نوع الوسيلة</Label>
               <div className="relative">
                 <Truck className="absolute right-3 top-3 w-4 h-4 text-muted-foreground" />
-                <Input id="transportType" {...form.register("transportType")} className="pr-10 text-right" />
+                <Input id="transportType" {...form.register("transportType")} className="pr-10 text-right" placeholder="دراجة / موتوسيكل / سيارة" />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label>رخصة القيادة</Label>
               <div className="relative border-2 border-dashed rounded-lg p-4 flex flex-col items-center gap-2 bg-muted/50">
-                {form.watch("driversLicenseUrl") ? (
+                {isUploadingLicense ? (
+                  <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                ) : licenseUrl ? (
                   <div className="relative w-full aspect-video rounded overflow-hidden">
-                    <img src={form.watch("driversLicenseUrl")} alt="License" className="w-full h-full object-contain" />
-                    <Button 
+                    <img src={licenseUrl} alt="License" className="w-full h-full object-contain" />
+                    <Button
                       type="button"
-                      variant="destructive" 
-                      size="sm" 
+                      variant="destructive"
+                      size="sm"
                       className="absolute top-2 left-2"
                       onClick={() => form.setValue("driversLicenseUrl", "")}
                     >
@@ -137,11 +183,12 @@ export default function DriverProfilePage() {
                     <span className="text-sm text-muted-foreground">اضغط لرفع صورة الرخصة</span>
                   </>
                 )}
-                <input 
-                  type="file" 
-                  className="absolute inset-0 opacity-0 cursor-pointer" 
+                <input
+                  type="file"
+                  className="absolute inset-0 opacity-0 cursor-pointer"
                   accept="image/*"
-                  onChange={(e) => handleFileUpload(e, "driversLicenseUrl")}
+                  onChange={handleLicenseUpload}
+                  disabled={isUploadingLicense}
                 />
               </div>
             </div>

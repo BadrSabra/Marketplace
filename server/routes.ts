@@ -182,7 +182,7 @@ export async function registerRoutes(
       const userId = req.user.id;
       const userRole = req.user.role;
       const updateSchema = z.object({
-        name: z.string().min(1).max(50).regex(/^[a-zA-Z\u0600-\u06FF\s]*$/, "Name can only contain letters").optional(),
+        name: z.string().min(1).max(50).optional(),
         phone: z.string().min(7, "رقم الهاتف قصير جداً").max(20).regex(/^\+?[\d\s\-]+$/, "رقم الهاتف غير صحيح").or(z.literal("")).optional(),
         transportType: z.string().optional(),
         avatarUrl: z.string().optional(),

@@ -52,11 +52,14 @@ export async function getAvailableOffers(): Promise<AvailableTask[]> {
 }
 
 export async function submitOffer(subOrderId: string) {
-  const res = await apiFetch(`/api/delivery/suborders/${subOrderId}/offer`, {
-    method: "POST",
+  const res = await apiFetch(`/api/delivery/suborders/${subOrderId}/accept`, {
+    method: "PATCH",
     body: JSON.stringify({}),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
   return res.json();
 }
 
