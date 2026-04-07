@@ -41,7 +41,7 @@ export class DeliveryService {
       .innerJoin(users, eq(orders.customerId, users.id))
       .where(
         and(
-          eq(subOrders.status, "READY"),
+          eq(subOrders.status, "ACCEPTED"),
           isNull(subOrders.assignedDriverId)
         )
       );
@@ -62,7 +62,7 @@ export class DeliveryService {
       baseQuery = baseQuery.where(sql`${subOrders.id} IN ${subOrdersWithCategory}`);
     }
 
-    const totalResults = await db.select({ count: sql<number>`count(*)` }).from(subOrders).where(eq(subOrders.status, "READY"));
+    const totalResults = await db.select({ count: sql<number>`count(*)` }).from(subOrders).where(and(eq(subOrders.status, "ACCEPTED"), isNull(subOrders.assignedDriverId)));
     const total = Number(totalResults[0].count);
 
     const results = await (baseQuery as any)

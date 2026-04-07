@@ -1,6 +1,6 @@
 import { db } from "../../db";
-import { subOrders, stores, orderItems, products, deliveryOffers, users, orders } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { subOrders, stores, orderItems, products, deliveryOffers, users, orders, deliveryOtps } from "@shared/schema";
+import { eq, and, sql } from "drizzle-orm";
 import type { User, SubOrder } from "@shared/schema";
 import { auditService } from "../../services/auditService";
 import { allowedTransitions } from "./suborder.types";
