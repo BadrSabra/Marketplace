@@ -181,6 +181,19 @@ export const auditLogs = pgTable("audit_logs", {
   };
 });
 
+// SUPPORT CHAT
+export const supportMessages = pgTable("support_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  customerId: uuid("customer_id").notNull().references(() => users.id),
+  senderRole: text("sender_role").notNull(), // "CUSTOMER" | "ADMIN"
+  message: text("message").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type SupportMessage = typeof supportMessages.$inferSelect;
+export const insertSupportMessageSchema = createInsertSchema(supportMessages).omit({ id: true, createdAt: true });
+
 // ZOD SCHEMAS
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertWalletSchema = createInsertSchema(wallets).omit({ id: true, createdAt: true, updatedAt: true });
