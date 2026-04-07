@@ -12,7 +12,7 @@ import { User, LogOut, LayoutDashboard, Menu, X } from "lucide-react";
 import { useState } from "react";
 
 export default function Navbar() {
-  const { user, logoutMutation } = useAuth();
+  const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -71,7 +71,7 @@ export default function Navbar() {
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     className="flex items-center gap-2 cursor-pointer text-destructive"
-                    onClick={() => logoutMutation.mutate()}
+                    onClick={() => logout()}
                   >
                     <LogOut className="h-4 w-4" />
                     <span>تسجيل الخروج</span>
@@ -134,7 +134,7 @@ export default function Navbar() {
                   variant="destructive" 
                   className="w-full justify-start" 
                   onClick={() => {
-                    logoutMutation.mutate();
+                    logout();
                     setIsMobileMenuOpen(false);
                   }}
                 >
