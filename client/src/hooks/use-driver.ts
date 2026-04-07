@@ -24,16 +24,11 @@ export function useAvailableOffers() {
 }
 
 export function useSubmitOffer() {
-  const { toast } = useToast();
   return useMutation({
     mutationFn: ({ subOrderId, proposedFee }: { subOrderId: string; proposedFee: number }) =>
       driverApi.submitOffer(subOrderId, proposedFee),
     onSuccess: () => {
-      toast({ title: "تم تقديم عرضك بنجاح", description: "سينظر العميل في عرضك وسيتم إخطارك عند القبول." });
       queryClient.invalidateQueries({ queryKey: ["/api/delivery/available-tasks"] });
-    },
-    onError: (error: Error) => {
-      toast({ title: "فشل تقديم العرض", description: error.message, variant: "destructive" });
     },
   });
 }

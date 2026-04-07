@@ -10,6 +10,8 @@ export interface AvailableTaskDTO {
   created_at: string;
   status: 'PENDING' | 'ACCEPTED' | 'IN_TRANSIT';
   assigned_driver_id?: string | null;
+  driver_offer_status?: string | null;
+  driver_offered_fee?: string | null;
 }
 
 export interface GetAvailableTasksFilters {

@@ -13,7 +13,11 @@ export class DeliveryOfferService {
       const [existing] = await tx
         .select()
         .from(deliveryOffers)
-        .where(and(eq(deliveryOffers.subOrderId, subOrderId), eq(deliveryOffers.driverId, driverId)));
+        .where(and(
+          eq(deliveryOffers.subOrderId, subOrderId),
+          eq(deliveryOffers.driverId, driverId),
+          eq(deliveryOffers.status, "PENDING")
+        ));
       if (existing) throw new Error("ALREADY_SUBMITTED");
 
       const [offer] = await tx.insert(deliveryOffers).values({

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Store, MapPin, Package, Tag } from "lucide-react";
+import { Loader2, Store, MapPin, Package, Tag, CheckCircle2, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -135,6 +135,9 @@ function OfferCard({ offer }: { offer: AvailableTask }) {
   const [isOfferOpen, setIsOfferOpen] = useState(false);
   const [feeInput, setFeeInput] = useState("");
 
+  const alreadyOffered = offer.driver_offer_status === "PENDING";
+  const offerRejected = offer.driver_offer_status === "REJECTED";
+
   const handleSubmitOffer = () => {
     const fee = parseFloat(feeInput);
     if (!feeInput || isNaN(fee) || fee <= 0) {
@@ -145,6 +148,7 @@ function OfferCard({ offer }: { offer: AvailableTask }) {
       onSuccess: () => {
         setIsOfferOpen(false);
         setFeeInput("");
+        toast({ title: "تم تقديم العرض بنجاح", description: "سيراجع العميل عرضك ويختار الأنسب" });
       },
       onError: (error: Error) => {
         toast({ title: "فشل تقديم العرض", description: error.message, variant: "destructive" });
@@ -175,16 +179,41 @@ function OfferCard({ offer }: { offer: AvailableTask }) {
               {new Date(offer.created_at).toLocaleString("ar-EG")}
             </div>
           )}
+          {alreadyOffered && (
+            <div className="flex items-center gap-2 mt-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-blue-700 dark:text-blue-300">
+              <Clock className="w-4 h-4 shrink-0" />
+              <span className="text-xs font-medium">
+                عرضك: {offer.driver_offered_fee} ج.م — في انتظار موافقة العميل
+              </span>
+            </div>
+          )}
+          {offerRejected && (
+            <div className="flex items-center gap-2 mt-2 p-2 bg-red-50 dark:bg-red-950/30 rounded-lg text-red-700 dark:text-red-300">
+              <span className="text-xs font-medium">تم رفض عرضك السابق ({offer.driver_offered_fee} ج.م)</span>
+            </div>
+          )}
         </CardContent>
         <CardFooter>
-          <Button
-            className="w-full"
-            onClick={() => setIsOfferOpen(true)}
-            data-testid={`button-submit-offer-${offer.sub_order_id}`}
-          >
-            <Tag className="w-4 h-4 ml-2" />
-            تقديم عرض سعر
-          </Button>
+          {alreadyOffered ? (
+            <Button
+              className="w-full"
+              variant="outline"
+              disabled
+              data-testid={`button-offer-pending-${offer.sub_order_id}`}
+            >
+              <CheckCircle2 className="w-4 h-4 ml-2 text-blue-500" />
+              تم تقديم العرض — في انتظار العميل
+            </Button>
+          ) : (
+            <Button
+              className="w-full"
+              onClick={() => setIsOfferOpen(true)}
+              data-testid={`button-submit-offer-${offer.sub_order_id}`}
+            >
+              <Tag className="w-4 h-4 ml-2" />
+              {offerRejected ? "تقديم عرض جديد" : "تقديم عرض سعر"}
+            </Button>
+          )}
         </CardFooter>
       </Card>
 

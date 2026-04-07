@@ -1,6 +1,6 @@
 import { db } from "../../db";
-import { subOrders, orders, stores, users, orderItems, products } from "@shared/schema";
-import { eq, and, isNull, sql, asc } from "drizzle-orm";
+import { subOrders, orders, stores, users, orderItems, products, deliveryOffers } from "@shared/schema";
+import { eq, and, isNull, sql, asc, inArray } from "drizzle-orm";
 import { AvailableTaskDTO, GetAvailableTasksFilters } from "./delivery.types";
 
 export class DeliveryService {
@@ -14,14 +14,6 @@ export class DeliveryService {
     const limit = Math.max(1, filters.limit || 20);
     const offset = (page - 1) * limit;
 
-    // 2. Query sub-orders: status = READY AND assigned_driver_id IS NULL
-    // Note: Based on schema, sub_orders don't have assigned_driver_id directly, 
-    // it's usually in delivery_offers or a field we might need to assume exists or join.
-    // Looking at schema.ts, sub_orders doesn't have assigned_driver_id. 
-    // However, the prompt says "assigned_driver_id IS NULL". 
-    // I will check if I need to add assignedDriverId to sub_orders or if it's managed via delivery_offers.
-    // Given Prompt 4 instructions, I'll assume it should be on sub_orders for this logic.
-    
     let baseQuery = db
       .select({
         sub_order_id: subOrders.id,
@@ -29,7 +21,7 @@ export class DeliveryService {
         store_id: subOrders.storeId,
         store_name: stores.name,
         customer_name: users.name,
-        customer_address: sql<string>`'Address placeholder'`, // orders table doesn't have address, assuming placeholder or join
+        customer_address: sql<string>`'Address placeholder'`,
         subtotal: subOrders.subtotal,
         created_at: subOrders.createdAt,
         status: subOrders.status,
@@ -46,13 +38,11 @@ export class DeliveryService {
         )
       );
 
-    // Apply filters
     if (filters.store_id) {
       baseQuery = baseQuery.where(eq(subOrders.storeId, filters.store_id));
     }
 
     if (filters.category) {
-      // Filter by product category in items
       const subOrdersWithCategory = db
         .select({ id: orderItems.subOrderId })
         .from(orderItems)
@@ -70,6 +60,30 @@ export class DeliveryService {
       .limit(limit)
       .offset(offset);
 
+    // Fetch driver's existing offers for these sub-orders
+    const subOrderIds = results.map((r: any) => r.sub_order_id);
+    let driverOffersMap: Record<string, { status: string; offeredFee: string }> = {};
+
+    if (subOrderIds.length > 0) {
+      const driverExistingOffers = await db
+        .select({
+          subOrderId: deliveryOffers.subOrderId,
+          status: deliveryOffers.status,
+          offeredFee: deliveryOffers.offeredFee,
+        })
+        .from(deliveryOffers)
+        .where(
+          and(
+            eq(deliveryOffers.driverId, driverId),
+            inArray(deliveryOffers.subOrderId, subOrderIds)
+          )
+        );
+
+      for (const o of driverExistingOffers) {
+        driverOffersMap[o.subOrderId] = { status: o.status, offeredFee: o.offeredFee };
+      }
+    }
+
     const tasks: AvailableTaskDTO[] = await Promise.all(results.map(async (res: any) => {
       const items = await db
         .select({
@@ -79,6 +93,8 @@ export class DeliveryService {
         .from(orderItems)
         .innerJoin(products, eq(orderItems.productId, products.id))
         .where(eq(orderItems.subOrderId, res.sub_order_id));
+
+      const existingOffer = driverOffersMap[res.sub_order_id] || null;
 
       return {
         sub_order_id: res.sub_order_id,
@@ -91,7 +107,9 @@ export class DeliveryService {
         subtotal: Number(res.subtotal),
         created_at: res.created_at.toISOString(),
         status: res.status as any,
-        assigned_driver_id: res.assigned_driver_id
+        assigned_driver_id: res.assigned_driver_id,
+        driver_offer_status: existingOffer?.status ?? null,
+        driver_offered_fee: existingOffer?.offeredFee ?? null,
       };
     }));
 
