@@ -556,6 +556,7 @@ export async function registerRoutes(
   app.patch("/api/admin/wallets/:walletId/override", authenticate, authorizeRole(["ADMIN"]), walletController.adminOverride);
 
   app.post("/api/wallet/deposit", authenticate, depositLimiter, walletController.deposit);
+  app.post("/api/wallet/withdraw", authenticate, authorizeRole(["DRIVER", "STORE_OWNER"]), walletController.withdraw.bind(walletController));
 
   // --- ORDERS MODULE ---
   app.get("/api/orders", authenticate, orderController.getMyOrders);

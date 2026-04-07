@@ -202,6 +202,50 @@ export class WalletService {
     });
   }
 
+  async withdraw(userId: string, amount: string): Promise<void> {
+    const withdrawAmount = parseFloat(amount);
+    if (isNaN(withdrawAmount) || withdrawAmount <= 0) {
+      throw new Error("BUSINESS_RULE_VIOLATION: Amount must be a positive number");
+    }
+
+    await db.transaction(async (tx) => {
+      const wallet = await this.getOrCreateWallet(userId);
+      const [lockedWallet] = await tx.select().from(wallets).where(eq(wallets.id, wallet.id)).for("update");
+
+      if (!lockedWallet) throw new Error("NOT_FOUND: Wallet not found");
+
+      const currentBalance = parseFloat(lockedWallet.balance);
+      if (currentBalance < withdrawAmount) {
+        throw new Error("BUSINESS_RULE_VIOLATION: Insufficient wallet balance");
+      }
+
+      const newBalance = (currentBalance - withdrawAmount).toFixed(2);
+
+      await tx.update(wallets)
+        .set({ balance: newBalance, updatedAt: new Date() })
+        .where(eq(wallets.id, lockedWallet.id));
+
+      await tx.insert(ledger).values({
+        referenceId: null,
+        debitUserId: userId,
+        creditUserId: null,
+        amount: withdrawAmount.toFixed(2),
+        type: "WITHDRAWAL",
+      });
+
+      await auditService.logEvent({
+        actionType: "WALLET_WITHDRAWAL",
+        entityType: "wallet",
+        entityId: lockedWallet.id,
+        performedByUserId: userId,
+        performedByRole: "DRIVER",
+        oldValue: { balance: lockedWallet.balance },
+        newValue: { balance: newBalance },
+        metadata: { amount }
+      });
+    });
+  }
+
   async deductBalance(userId: string, amount: string, referenceId?: string): Promise<void> {
     const deductAmount = parseFloat(amount);
     if (deductAmount < 0) {

@@ -9,6 +9,12 @@ const depositSchema = z.object({
   receiptUrl: z.string().min(1, "Receipt image is required"),
 });
 
+const withdrawSchema = z.object({
+  amount: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+    message: "Amount must be a positive number",
+  }),
+});
+
 export class WalletController {
   async getBalance(req: Request, res: Response) {
     try {
@@ -56,6 +62,22 @@ export class WalletController {
       res.json(transaction);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  }
+
+  async withdraw(req: Request, res: Response) {
+    try {
+      const userId = (req.user as any).id;
+      const validated = withdrawSchema.parse(req.body);
+      await walletService.withdraw(userId, validated.amount);
+      res.json({ message: "Withdrawal successful" });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      const msg = error.message || "";
+      if (msg.includes("Insufficient")) return res.status(400).json({ message: "الرصيد غير كافٍ" });
+      res.status(500).json({ message: msg });
     }
   }
 
