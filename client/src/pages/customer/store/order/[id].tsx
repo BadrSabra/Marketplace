@@ -109,12 +109,12 @@ export default function StoreOrderDetails() {
               <p className="text-muted-foreground flex items-center gap-2 rtl:flex-row-reverse">
                 {t('store.order_details.order_number')} <span className="font-mono text-primary font-bold">#{id.split("-")[0]}</span>
                 <span className="text-xs">•</span>
-                <span>{format(new Date(order.created_at || Date.now()), "MMM dd, yyyy HH:mm")}</span>
+                <span>{format(new Date(order.createdAt || order.created_at || Date.now()), "MMM dd, yyyy HH:mm")}</span>
               </p>
             </div>
           </div>
           <div className="flex gap-2">
-            <Badge variant="secondary" className="px-4 py-1 text-sm">{t(`store.orders.statuses.${order.overall_status}`)}</Badge>
+            <Badge variant="secondary" className="px-4 py-1 text-sm">{t(`store.orders.statuses.${order.overallStatus || order.overall_status}`)}</Badge>
           </div>
         </div>
 
@@ -129,7 +129,7 @@ export default function StoreOrderDetails() {
                 <CardDescription>{t('store.order_details.items_subtitle')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {order.sub_orders?.map((sub: any) => (
+                {(order.subOrders || order.sub_orders)?.map((sub: any) => (
                   <div key={sub.sub_order_id} className="border rounded-xl p-5 space-y-5 bg-card shadow-sm rtl:text-right">
                     <div className="flex justify-between items-start rtl:flex-row-reverse">
                       <div className="space-y-1 rtl:text-right">
@@ -219,7 +219,7 @@ export default function StoreOrderDetails() {
                   </div>
                   <div>
                     <p className="text-[10px] uppercase font-bold text-muted-foreground">{t('store.order_details.name')}</p>
-                    <p className="font-semibold text-lg">{order.customer_name}</p>
+                    <p className="font-semibold text-lg">{order.customerName || order.customer_name || "—"}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 rtl:flex-row-reverse">
@@ -228,7 +228,7 @@ export default function StoreOrderDetails() {
                   </div>
                   <div className="overflow-hidden">
                     <p className="text-[10px] uppercase font-bold text-muted-foreground">{t('store.order_details.email')}</p>
-                    <p className="text-sm truncate">{order.customer_email || "Not available"}</p>
+                    <p className="text-sm truncate">{order.customerEmail || order.customer_email || "غير متاح"}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 rtl:flex-row-reverse">
@@ -237,7 +237,7 @@ export default function StoreOrderDetails() {
                   </div>
                   <div>
                     <p className="text-[10px] uppercase font-bold text-muted-foreground">{t('store.order_details.phone')}</p>
-                    <p className="text-sm">{order.customer_phone || "Not available"}</p>
+                    <p className="text-sm">{order.customerPhone || order.customer_phone || "غير متاح"}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 pt-2 border-t rtl:flex-row-reverse">
@@ -246,7 +246,7 @@ export default function StoreOrderDetails() {
                   </div>
                   <div>
                     <p className="text-[10px] uppercase font-bold text-muted-foreground">{t('store.order_details.address')}</p>
-                    <p className="text-sm leading-relaxed">{order.delivery_address || "Pick up required"}</p>
+                    <p className="text-sm leading-relaxed">{order.deliveryAddress || order.delivery_address || "لا يوجد عنوان توصيل"}</p>
                   </div>
                 </div>
               </CardContent>
@@ -262,11 +262,11 @@ export default function StoreOrderDetails() {
               <CardContent className="space-y-4 rtl:text-right">
                 <div className="flex justify-between items-center text-sm rtl:flex-row-reverse">
                   <span className="text-muted-foreground">{t('store.order_details.payment_status')}</span>
-                  <Badge variant="outline" className="bg-white">{t(`store.orders.statuses.${order.payment_status}`)}</Badge>
+                  <Badge variant="outline" className="bg-white">{t(`store.orders.statuses.${order.paymentStatus || order.payment_status}`)}</Badge>
                 </div>
                 <div className="flex justify-between items-center text-sm rtl:flex-row-reverse">
                   <span className="text-muted-foreground">{t('store.order_details.total_price')}</span>
-                  <span className="font-bold text-lg">${order.total_price}</span>
+                  <span className="font-bold text-lg">${order.totalPrice || order.total_price}</span>
                 </div>
                 <div className="pt-4 border-t flex justify-between items-center rtl:flex-row-reverse">
                   <div className="flex items-center gap-2 rtl:flex-row-reverse">

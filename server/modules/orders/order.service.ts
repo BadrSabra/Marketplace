@@ -125,6 +125,13 @@ export class OrderService {
     const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
     if (!order) throw new Error("Order not found");
 
+    // Fetch customer info
+    const [customer] = await db
+      .select({ name: users.name, email: users.email, phone: users.phone, addresses: users.addresses })
+      .from(users)
+      .where(eq(users.id, order.customerId))
+      .limit(1);
+
     const subs = await db.select().from(subOrders).where(eq(subOrders.orderId, orderId));
 
     const subsWithItems = await Promise.all(subs.map(async (sub) => {
@@ -170,10 +177,18 @@ export class OrderService {
         }
       }
 
-      return { ...sub, store: store || null, driver, otpCode, items };
+      return { ...sub, sub_order_id: sub.id, store_id: sub.storeId, store: store || null, driver, otpCode, items };
     }));
 
-    return { ...order, subOrders: subsWithItems };
+    const addresses = (customer?.addresses as string[]) || [];
+    return {
+      ...order,
+      customerName: customer?.name || null,
+      customerEmail: customer?.email || null,
+      customerPhone: customer?.phone || null,
+      deliveryAddress: addresses.length > 0 ? addresses[0] : null,
+      subOrders: subsWithItems,
+    };
   }
 
   async getCustomerOrders(customerId: string) {
