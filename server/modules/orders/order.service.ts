@@ -1,32 +1,100 @@
 import { db } from "../../db";
 import { orders, subOrders, orderItems, products, wallets, walletTransactions, stores, users } from "@shared/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { emitNotification } from "../notifications/notification.emitter";
 
 export class OrderService {
   async createMultiStoreOrder(customerId: string, items: { productId: string, quantity: number }[]) {
     return await db.transaction(async (tx) => {
-      // ... (existing code)
+      // 1. Fetch all products in one query
+      const productIds = items.map(i => i.productId);
+      const fetchedProducts = await tx
+        .select()
+        .from(products)
+        .where(inArray(products.id, productIds));
+
+      if (fetchedProducts.length !== productIds.length) {
+        throw new Error("One or more products not found");
+      }
+
+      // 2. Group items by storeId and calculate prices
+      const storeGroups: Record<string, { product: typeof fetchedProducts[0]; quantity: number }[]> = {};
+      let totalPrice = 0;
+
+      for (const item of items) {
+        const product = fetchedProducts.find(p => p.id === item.productId);
+        if (!product) throw new Error(`Product ${item.productId} not found`);
+        if (product.stock !== null && product.stock < item.quantity) {
+          throw new Error(`Not enough stock for product: ${product.name}`);
+        }
+        const storeId = product.storeId;
+        if (!storeGroups[storeId]) storeGroups[storeId] = [];
+        storeGroups[storeId].push({ product, quantity: item.quantity });
+        totalPrice += parseFloat(product.price) * item.quantity;
+      }
+
+      // 3. Deduct from customer wallet
+      const [wallet] = await tx.select().from(wallets).where(eq(wallets.userId, customerId)).limit(1);
+      if (!wallet) throw new Error("Customer wallet not found");
+      const balance = parseFloat(wallet.balance);
+      if (balance < totalPrice) throw new Error("Insufficient wallet balance");
+
+      await tx.update(wallets)
+        .set({ balance: (balance - totalPrice).toFixed(2) })
+        .where(eq(wallets.id, wallet.id));
+
+      await tx.insert(walletTransactions).values({
+        walletId: wallet.id,
+        type: "PAYMENT",
+        amount: totalPrice.toFixed(2),
+        status: "COMPLETED",
+      });
+
+      // 4. Create parent order
       const [order] = await tx.insert(orders).values({
         customerId,
         totalPrice: totalPrice.toFixed(2),
         overallStatus: "PENDING",
-        paymentStatus: "PENDING"
+        paymentStatus: "PAID",
       }).returning();
 
       const [customer] = await tx.select().from(users).where(eq(users.id, customerId)).limit(1);
 
-      // 3. Create sub-orders and items
+      // 5. Create sub-orders and order items per store
       for (const [storeId, storeItems] of Object.entries(storeGroups)) {
-        // ... (existing code)
+        const subtotal = storeItems.reduce(
+          (sum, { product, quantity }) => sum + parseFloat(product.price) * quantity,
+          0
+        );
+
         const [subOrder] = await tx.insert(subOrders).values({
           orderId: order.id,
           storeId,
           subtotal: subtotal.toFixed(2),
           status: "PENDING",
-          expectedDeliveryFee: "10.00" // Placeholder base fee
+          expectedDeliveryFee: "10.00",
         }).returning();
 
+        // Insert order items for this sub-order
+        await tx.insert(orderItems).values(
+          storeItems.map(({ product, quantity }) => ({
+            subOrderId: subOrder.id,
+            productId: product.id,
+            quantity,
+            priceAtOrder: product.price,
+          }))
+        );
+
+        // Deduct stock for each product
+        for (const { product, quantity } of storeItems) {
+          if (product.stock !== null) {
+            await tx.update(products)
+              .set({ stock: product.stock - quantity })
+              .where(eq(products.id, product.id));
+          }
+        }
+
+        // Notify store owner
         const [store] = await tx.select().from(stores).where(eq(stores.id, storeId)).limit(1);
         if (store) {
           const [owner] = await tx.select().from(users).where(eq(users.id, store.ownerId)).limit(1);
@@ -34,17 +102,17 @@ export class OrderService {
             emitNotification("ORDER_STATUS_UPDATE", owner.id, owner.role, {
               orderId: order.id,
               subOrderId: subOrder.id,
-              status: "PENDING"
+              status: "PENDING",
             });
           }
         }
-        // ... (existing code)
       }
 
+      // 6. Notify customer
       if (customer) {
         emitNotification("ORDER_STATUS_UPDATE", customer.id, customer.role, {
           orderId: order.id,
-          status: "PENDING"
+          status: "PENDING",
         });
       }
 
@@ -57,7 +125,7 @@ export class OrderService {
     if (!order) throw new Error("Order not found");
 
     const subs = await db.select().from(subOrders).where(eq(subOrders.orderId, orderId));
-    
+
     const subsWithItems = await Promise.all(subs.map(async (sub) => {
       const items = await db.select({
         id: orderItems.id,
@@ -65,11 +133,11 @@ export class OrderService {
         productId: orderItems.productId,
         quantity: orderItems.quantity,
         priceAtOrder: orderItems.priceAtOrder,
-        product: products
+        product: products,
       })
-      .from(orderItems)
-      .leftJoin(products, eq(orderItems.productId, products.id))
-      .where(eq(orderItems.subOrderId, sub.id));
+        .from(orderItems)
+        .leftJoin(products, eq(orderItems.productId, products.id))
+        .where(eq(orderItems.subOrderId, sub.id));
       return { ...sub, items };
     }));
 
@@ -77,32 +145,33 @@ export class OrderService {
   }
 
   async getCustomerOrders(customerId: string) {
-    const customerOrders = await db.select().from(orders).where(eq(orders.customerId, customerId));
-    
+    const customerOrders = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.customerId, customerId))
+      .orderBy(sql`${orders.createdAt} DESC`);
+
     return await Promise.all(customerOrders.map(async (order) => {
       return await this.getOrderWithSubOrders(order.id);
     }));
   }
 
   async getStoreOwnerOrders(ownerId: string) {
-    // 1. Get all stores owned by this user
     const ownerStores = await db.select().from(stores).where(eq(stores.ownerId, ownerId));
     if (ownerStores.length === 0) return [];
 
     const storeIds = ownerStores.map(s => s.id);
 
-    // 2. Get all sub-orders for these stores
     const ownerSubOrders = await db.select({
       subOrder: subOrders,
       parentOrder: orders,
       customer: users,
     })
-    .from(subOrders)
-    .innerJoin(orders, eq(subOrders.orderId, orders.id))
-    .innerJoin(users, eq(orders.customerId, users.id))
-    .where(sql`${subOrders.storeId} IN ${storeIds}`);
+      .from(subOrders)
+      .innerJoin(orders, eq(subOrders.orderId, orders.id))
+      .innerJoin(users, eq(orders.customerId, users.id))
+      .where(inArray(subOrders.storeId, storeIds));
 
-    // 3. Group sub-orders by parent order for the requested format
     const orderMap = new Map();
 
     for (const row of ownerSubOrders) {
@@ -112,25 +181,24 @@ export class OrderService {
           order_id: orderId,
           customer_name: row.customer.name,
           overall_status: row.parentOrder.overallStatus,
-          sub_orders: []
+          sub_orders: [],
         });
       }
 
-      // Get items for this sub-order
       const items = await db.select({
         product_name: products.name,
         price: orderItems.priceAtOrder,
-        quantity: orderItems.quantity
+        quantity: orderItems.quantity,
       })
-      .from(orderItems)
-      .innerJoin(products, eq(orderItems.productId, products.id))
-      .where(eq(orderItems.subOrderId, row.subOrder.id));
+        .from(orderItems)
+        .innerJoin(products, eq(orderItems.productId, products.id))
+        .where(eq(orderItems.subOrderId, row.subOrder.id));
 
       orderMap.get(orderId).sub_orders.push({
         sub_order_id: row.subOrder.id,
         status: row.subOrder.status,
         subtotal: row.subOrder.subtotal,
-        items
+        items,
       });
     }
 
@@ -148,20 +216,19 @@ export class OrderService {
 
       await tx.update(subOrders).set({ status: "CANCELLED" }).where(eq(subOrders.id, subOrderId));
 
-      // Refund logic if paid
       if (order.paymentStatus === "PAID") {
         const [wallet] = await tx.select().from(wallets).where(eq(wallets.userId, userId));
         if (wallet) {
           await tx.update(wallets)
             .set({ balance: (parseFloat(wallet.balance) + parseFloat(subOrder.subtotal)).toFixed(2) })
             .where(eq(wallets.id, wallet.id));
-          
+
           await tx.insert(walletTransactions).values({
             walletId: wallet.id,
             type: "REFUND",
             amount: subOrder.subtotal,
             relatedOrderId: order.id,
-            status: "COMPLETED"
+            status: "COMPLETED",
           });
         }
       }

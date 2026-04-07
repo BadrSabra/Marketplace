@@ -1,5 +1,5 @@
 import { db } from "../../db";
-import { ledger, subOrders, wallets, stores, users } from "@shared/schema";
+import { ledger, subOrders, wallets, walletTransactions, stores, users } from "@shared/schema";
 import { eq, and, sql, gte, lte, desc } from "drizzle-orm";
 import { auditService } from "../../services/auditService";
 
