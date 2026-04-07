@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { useCart } from "@/hooks/use-cart";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -8,11 +9,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, LogOut, LayoutDashboard, Menu, X } from "lucide-react";
+import { User, LogOut, LayoutDashboard, Menu, X, ShoppingCart } from "lucide-react";
 import { useState } from "react";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
+  const { totalItems } = useCart();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -45,6 +47,19 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
+          {/* Cart Icon - visible when customer is logged in */}
+          {user && (user as any).role === "CUSTOMER" && (
+            <Link href="/customer/cart">
+              <Button variant="ghost" size="icon" className="relative" data-testid="button-cart">
+                <ShoppingCart className="h-5 w-5" />
+                {totalItems > 0 && (
+                  <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                    {totalItems > 9 ? "9+" : totalItems}
+                  </span>
+                )}
+              </Button>
+            </Link>
+          )}
           <div className="hidden md:flex items-center gap-4">
             {user ? (
               <DropdownMenu>

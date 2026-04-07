@@ -1,8 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Store as StoreIcon } from "lucide-react";
-import { Link } from "wouter";
+import { ShoppingCart, Store as StoreIcon, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useCart } from "@/hooks/use-cart";
+import { useState } from "react";
 
 interface ProductCardProps {
   product: {
@@ -16,12 +17,28 @@ interface ProductCardProps {
     storeId?: string;
     storeName?: string;
   };
-  onAddToCart?: (product: any) => void;
 }
 
-export default function ProductCard({ product, onAddToCart }: ProductCardProps) {
+export default function ProductCard({ product }: ProductCardProps) {
+  const { addItem } = useCart();
+  const [added, setAdded] = useState(false);
+
   const isInStock = product.stock === undefined || product.stock > 0;
   const priceNum = typeof product.price === "string" ? parseFloat(product.price) : product.price;
+
+  const handleAdd = () => {
+    if (!isInStock) return;
+    addItem({
+      productId: product.id,
+      name: product.name,
+      price: isNaN(priceNum) ? 0 : priceNum,
+      storeId: product.storeId || "",
+      storeName: product.storeName,
+      imageUrl: product.imageUrl,
+    });
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+  };
 
   return (
     <Card
@@ -82,14 +99,23 @@ export default function ProductCard({ product, onAddToCart }: ProductCardProps) 
         <div className="mt-auto flex items-center justify-between pt-2 border-t">
           <Button
             size="sm"
-            variant={isInStock ? "default" : "outline"}
+            variant={added ? "outline" : isInStock ? "default" : "outline"}
             disabled={!isInStock}
-            className="h-8 text-xs px-3"
-            onClick={() => onAddToCart?.(product)}
+            className={`h-8 text-xs px-3 transition-all ${added ? "border-green-500 text-green-600" : ""}`}
+            onClick={handleAdd}
             data-testid={`button-add-cart-${product.id}`}
           >
-            <ShoppingCart className="h-3 w-3 ml-1" />
-            {isInStock ? "أضف" : "غير متاح"}
+            {added ? (
+              <>
+                <Check className="h-3 w-3 ml-1 text-green-600" />
+                تمت الإضافة
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="h-3 w-3 ml-1" />
+                {isInStock ? "أضف للسلة" : "غير متاح"}
+              </>
+            )}
           </Button>
           <span
             className="text-base font-extrabold text-primary"

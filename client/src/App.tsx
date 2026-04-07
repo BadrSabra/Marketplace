@@ -7,6 +7,7 @@ import { Suspense } from "react";
 import NotFound from "@/pages/not-found";
 import { useAuth } from "@/hooks/use-auth";
 import { Spinner } from "@/components/ui/spinner";
+import { CartContext, useCartState } from "@/hooks/use-cart";
 
 // Pages
 import LoginPage from "@/pages/auth/login";
@@ -34,6 +35,7 @@ import ProductsPage from "@/pages/admin/products";
 import OrdersPage from "@/pages/admin/orders";
 import AdminAudit from "@/pages/admin/audit";
 import DriverNavbar from "@/components/driver/DriverNavbar";
+import CartPage from "@/pages/customer/cart";
 
 function DriverLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -131,6 +133,9 @@ function Router() {
       <Route path="/stores" component={PublicStoresPage} />
       
       {/* Customer Routes */}
+      <Route path="/customer/cart">
+        {() => <ProtectedRoute component={CartPage} roles={["CUSTOMER"]} />}
+      </Route>
       <Route path="/customer/wallet">
         {() => <ProtectedRoute component={CustomerWallet} roles={["CUSTOMER"]} />}
       </Route>
@@ -186,14 +191,25 @@ function Router() {
   );
 }
 
+function CartWrapper({ children }: { children: React.ReactNode }) {
+  const cartState = useCartState();
+  return (
+    <CartContext.Provider value={cartState}>
+      {children}
+    </CartContext.Provider>
+  );
+}
+
 function App() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Spinner size="xl" /></div>}>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <CartWrapper>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </CartWrapper>
       </QueryClientProvider>
     </Suspense>
   );

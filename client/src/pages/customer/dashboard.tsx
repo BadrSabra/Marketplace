@@ -281,17 +281,6 @@ export default function CustomerDashboard() {
 
   const isSearching = searchTerm.trim().length > 0;
 
-  const handleAddToCart = () => {
-    if (!user) {
-      setLocation("/login");
-      return;
-    }
-    toast({
-      title: "تمت الإضافة",
-      description: "تمت إضافة المنتج إلى طلبك",
-    });
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950" dir="rtl">
       <Navbar />
@@ -349,7 +338,6 @@ export default function CustomerDashboard() {
                         <ProductCard
                           key={product.id}
                           product={product}
-                          onAddToCart={handleAddToCart}
                         />
                       ))}
                     </div>
@@ -482,7 +470,7 @@ export default function CustomerDashboard() {
                     <p className="text-muted-foreground font-medium">لا توجد منتجات متاحة في هذا التصنيف حالياً</p>
                     {activeCategory !== "الكل" && (
                       <Button
-                        variant="link"
+                        variant="ghost"
                         className="text-primary mt-2"
                         onClick={() => setActiveCategory("الكل")}
                       >
@@ -496,7 +484,6 @@ export default function CustomerDashboard() {
                       <ProductCard
                         key={product.id}
                         product={product}
-                        onAddToCart={handleAddToCart}
                       />
                     ))}
                   </div>

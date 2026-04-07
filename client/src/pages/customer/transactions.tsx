@@ -24,6 +24,8 @@ import { format } from "date-fns";
 import { Search, Filter, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { t } from "@/i18n";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 type Transaction = {
   id: string;
@@ -63,8 +65,7 @@ export default function CustomerTransactions() {
       params.append("limit", limit.toString());
       params.append("offset", ((page - 1) * limit).toString());
 
-      const res = await fetch(`/api/ledger/transactions?${params.toString()}`);
-      if (!res.ok) throw new Error("Failed to fetch transactions");
+      const res = await apiFetch(`/api/ledger/transactions?${params.toString()}`);
       return res.json();
     },
   });
