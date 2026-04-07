@@ -12,6 +12,7 @@ import jwt from "jsonwebtoken";
 import { eq, sql, and } from "drizzle-orm";
 import { authenticate, authorizeRole } from "./middleware/auth";
 import { productsController, upload } from "./modules/products/products.controller";
+import { upload as avatarUpload } from "./modules/avatar/avatar.upload";
 import { subOrderController } from "./modules/orders/suborder.controller";
 import { walletController } from "./modules/wallet/wallet.controller";
 import { orderController } from "./modules/orders/order.controller";
@@ -180,7 +181,7 @@ export async function registerRoutes(
       const userRole = req.user.role;
       const updateSchema = z.object({
         name: z.string().min(1).max(50).regex(/^[a-zA-Z\u0600-\u06FF\s]*$/, "Name can only contain letters").optional(),
-        phone: z.string().min(10).max(15).regex(/^\d+$/, "Phone must be numeric").optional(),
+        phone: z.string().min(7, "رقم الهاتف قصير جداً").max(20).regex(/^\+?[\d\s\-]+$/, "رقم الهاتف غير صحيح").or(z.literal("")).optional(),
         transportType: z.string().optional(),
         avatarUrl: z.string().optional(),
         driversLicenseUrl: z.string().optional(),
@@ -221,7 +222,6 @@ export async function registerRoutes(
 
   // Avatar upload endpoint — shared for customers and drivers
   app.post("/api/profile/avatar", authenticate, (req, res) => {
-    const { upload: avatarUpload } = require("./modules/avatar/avatar.upload");
     avatarUpload.single("avatar")(req, res, async (err: any) => {
       if (err) {
         return res.status(400).json({ message: err.message || "Upload failed" });
