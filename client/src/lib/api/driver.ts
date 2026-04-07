@@ -23,7 +23,7 @@ export type ActiveDelivery = {
   customerPhone: string;
   items: { productName: string; quantity: number }[];
   storeName?: string;
-  otp?: string | null;
+  hasOtp?: boolean;
 };
 
 export async function getDriverTasks(): Promise<ActiveDelivery[]> {
@@ -72,12 +72,15 @@ export async function acceptTask(subOrderId: string) {
   return res.json();
 }
 
-export async function verifyOtp(orderId: string, subOrderId: string, otpCode: string) {
-  const res = await apiFetch(`/api/delivery/otp/verify/${orderId}`, {
+export async function verifyOtp(subOrderId: string, otpCode: string) {
+  const res = await apiFetch(`/api/delivery/otp/verify/${subOrderId}`, {
     method: "POST",
-    body: JSON.stringify({ subOrderId, otpCode }),
+    body: JSON.stringify({ otpCode }),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
+    throw new Error(err.message || `HTTP ${res.status}`);
+  }
   return res.json();
 }
 

@@ -11,8 +11,6 @@ const generateSchema = z.object({
 });
 
 const verifySchema = z.object({
-  orderId: z.string().uuid(),
-  subOrderId: z.string().uuid().optional(),
   otpCode: z.string().length(6).regex(/^\d+$/),
 });
 
@@ -42,8 +40,13 @@ export class DeliveryOtpController {
 
   async verify(req: Request, res: Response) {
     try {
-      const { orderId, subOrderId, otpCode } = verifySchema.parse(req.body);
-      await deliveryOtpService.verifyOtp(orderId, otpCode, subOrderId);
+      const subOrderId = req.params.id;
+      const { otpCode } = verifySchema.parse(req.body);
+
+      const [subOrder] = await db.select().from(subOrders).where(eq(subOrders.id, subOrderId));
+      if (!subOrder) return res.status(404).json({ error: "Sub-order not found" });
+
+      await deliveryOtpService.verifyOtp(subOrder.orderId, otpCode, subOrderId);
       res.json({ message: "Delivery verified successfully" });
     } catch (error: any) {
       res.status(400).json({ message: error.message });

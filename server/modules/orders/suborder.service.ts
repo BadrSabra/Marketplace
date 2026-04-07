@@ -113,7 +113,7 @@ export class SubOrderService {
     return {
       ...activeSubOrder,
       items,
-      otp: otpRecord?.otpCode,
+      hasOtp: !!otpRecord,
     };
   }
 }

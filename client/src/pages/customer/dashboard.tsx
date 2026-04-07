@@ -4,7 +4,6 @@ import { Link, useLocation } from "wouter";
 import { useOrders } from "@/hooks/use-orders";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import StoreCard from "@/components/home/StoreCard";
@@ -24,7 +23,6 @@ import {
   ShoppingBag,
   Tag,
   Star,
-  Loader2,
   X,
   CheckCircle2,
 } from "lucide-react";
@@ -113,9 +111,6 @@ const subOrderStatusColors: Record<string, string> = {
 };
 
 function ActiveOrdersBanner({ orders }: { orders: any[] }) {
-  const { toast } = useToast();
-  const [verifyingId, setVerifyingId] = useState<string | null>(null);
-  const [otpInputs, setOtpInputs] = useState<Record<string, string>>({});
 
   const activeSubOrders = useMemo(() => {
     const result: Array<{ orderId: string; subOrder: any }> = [];
@@ -130,38 +125,6 @@ function ActiveOrdersBanner({ orders }: { orders: any[] }) {
   }, [orders]);
 
   if (activeSubOrders.length === 0) return null;
-
-  const handleVerify = async (orderId: string, subOrderId: string) => {
-    const otp = otpInputs[subOrderId] || "";
-    if (otp.length !== 6 || !/^\d+$/.test(otp)) {
-      toast({
-        title: "رمز التحقق غير صحيح",
-        description: "يجب أن يكون الرمز مكوناً من 6 أرقام",
-        variant: "destructive",
-      });
-      return;
-    }
-    try {
-      setVerifyingId(subOrderId);
-      await apiRequest("POST", `/api/delivery/otp/verify/${orderId}`, {
-        subOrderId,
-        otpCode: otp,
-      });
-      toast({ title: "تم التأكيد", description: "تم تأكيد استلام الطلب بنجاح، سيتم خصم رسوم التوصيل قريباً" });
-      setOtpInputs((prev) => ({ ...prev, [subOrderId]: "" }));
-      queryClient.invalidateQueries({ queryKey: ["/api/orders/my-orders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/ledger/transactions"] });
-    } catch (error: any) {
-      toast({
-        title: "فشل التأكيد",
-        description: error.message || "حدث خطأ أثناء التحقق",
-        variant: "destructive",
-      });
-    } finally {
-      setVerifyingId(null);
-    }
-  };
 
   return (
     <div
@@ -195,31 +158,11 @@ function ActiveOrdersBanner({ orders }: { orders: any[] }) {
                 {subOrderStatusLabels[subOrder.status] || subOrder.status}
               </p>
             </div>
-            {subOrder.status === "IN_TRANSIT" && (
-              <div className="flex gap-2 w-full sm:w-auto">
-                <Input
-                  placeholder="الرمز (6 أرقام)"
-                  value={otpInputs[subOrder.id] || ""}
-                  onChange={(e) =>
-                    setOtpInputs((prev) => ({ ...prev, [subOrder.id]: e.target.value }))
-                  }
-                  maxLength={6}
-                  className="h-10 text-center font-mono tracking-widest border-2 rounded-xl w-36"
-                  data-testid={`input-otp-${subOrder.id}`}
-                />
-                <Button
-                  size="sm"
-                  onClick={() => handleVerify(orderId, subOrder.id)}
-                  disabled={verifyingId === subOrder.id}
-                  className="h-10 px-4 rounded-xl font-bold"
-                  data-testid={`button-verify-${subOrder.id}`}
-                >
-                  {verifyingId === subOrder.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "تأكيد"
-                  )}
-                </Button>
+            {subOrder.status === "IN_TRANSIT" && subOrder.otpCode && (
+              <div className="flex flex-col items-center gap-1 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-2 min-w-[120px]" data-testid={`otp-display-${subOrder.id}`}>
+                <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">رمز التسليم</p>
+                <p className="text-2xl font-mono font-black tracking-[0.3em] text-amber-800 dark:text-amber-300">{subOrder.otpCode}</p>
+                <p className="text-[10px] text-muted-foreground">أعطِه للسائق</p>
               </div>
             )}
           </div>

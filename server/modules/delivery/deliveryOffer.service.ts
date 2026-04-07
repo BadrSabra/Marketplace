@@ -2,6 +2,7 @@ import { db } from "../../db";
 import { deliveryOffers, subOrders, wallets, users } from "@shared/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { auditService } from "../../services/auditService";
+import { deliveryOtpService } from "./deliveryOtp.service";
 
 export class DeliveryOfferService {
   async createOffer(subOrderId: string, driverId: string, data: { proposedFee: number; notes?: string }) {
@@ -69,6 +70,9 @@ export class DeliveryOfferService {
         newValue: { status: "IN_TRANSIT", assignedDriverId: driverId }
       });
 
+      return updatedSubOrder;
+    }).then(async (updatedSubOrder) => {
+      await deliveryOtpService.generateOtp(updatedSubOrder.orderId, subOrderId);
       return updatedSubOrder;
     });
   }

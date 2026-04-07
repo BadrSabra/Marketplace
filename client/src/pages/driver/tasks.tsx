@@ -108,13 +108,13 @@ function TaskCard({ task }: { task: ActiveDelivery }) {
         )}
       </CardContent>
       <CardFooter className="gap-2">
-        {task.otp && (
+        {task.status === "IN_TRANSIT" && task.hasOtp && (
           <Button
             className="w-full"
             onClick={() => setIsOtpOpen(true)}
             data-testid={`button-verify-otp-${task.id}`}
           >
-            تأكيد التسليم (OTP)
+            تأكيد التسليم برمز العميل
           </Button>
         )}
       </CardFooter>
@@ -122,7 +122,6 @@ function TaskCard({ task }: { task: ActiveDelivery }) {
         isOpen={isOtpOpen}
         onClose={() => setIsOtpOpen(false)}
         subOrderId={task.id}
-        orderId={task.orderId}
       />
     </Card>
   );
@@ -177,17 +176,16 @@ function OfferCard({ offer }: { offer: AvailableTask }) {
   );
 }
 
-function DeliveryOTPModal({ isOpen, onClose, subOrderId, orderId }: {
+function DeliveryOTPModal({ isOpen, onClose, subOrderId }: {
   isOpen: boolean;
   onClose: () => void;
   subOrderId: string;
-  orderId: string;
 }) {
   const [otpCode, setOtpCode] = useState("");
   const verifyOtpMutation = useVerifyOtp();
 
   const handleSubmit = () => {
-    verifyOtpMutation.mutate({ orderId, subOrderId, otpCode }, {
+    verifyOtpMutation.mutate({ subOrderId, otpCode }, {
       onSuccess: () => {
         onClose();
         setOtpCode("");
@@ -199,11 +197,13 @@ function DeliveryOTPModal({ isOpen, onClose, subOrderId, orderId }: {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>تأكيد التسليم برمز OTP</DialogTitle>
+          <DialogTitle>تأكيد التسليم</DialogTitle>
         </DialogHeader>
-        <div className="py-4">
+        <p className="text-sm text-muted-foreground px-1">اطلب من العميل رمز التأكيد المكون من 6 أرقام وأدخله أدناه.</p>
+        <div className="py-2">
           <Input
-            placeholder="رمز OTP المكون من 6 أرقام"
+            placeholder="رمز التأكيد (6 أرقام)"
+            inputMode="numeric"
             value={otpCode}
             onChange={(e) => setOtpCode(e.target.value)}
             maxLength={6}

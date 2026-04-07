@@ -2,7 +2,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Package, MapPin, Phone, Clock, Key, CheckCircle, Truck } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, Package, MapPin, Phone, Clock, CheckCircle, Truck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useState, useEffect } from "react";
@@ -17,12 +18,13 @@ interface ActiveTask {
   customerName: string;
   customerPhone: string;
   items: { productName: string; quantity: number }[];
-  otp?: string;
+  hasOtp?: boolean;
 }
 
 export default function ActiveDelivery() {
   const { toast } = useToast();
-  const [timeLeft, setTimeLeft] = useState(1800); // 30 mins default
+  const [timeLeft, setTimeLeft] = useState(1800);
+  const [otpInput, setOtpInput] = useState("");
 
   const { data: task, isLoading, error } = useQuery<ActiveTask>({
     queryKey: ["/api/suborders/active"],
@@ -37,14 +39,18 @@ export default function ActiveDelivery() {
     return () => clearInterval(interval);
   }, [task]);
 
-  const otpMutation = useMutation({
-    mutationFn: async (subOrderId: string) => {
-      const res = await apiRequest("POST", `/api/delivery/otp/generate/${subOrderId}`);
+  const verifyOtpMutation = useMutation({
+    mutationFn: async ({ subOrderId, otpCode }: { subOrderId: string; otpCode: string }) => {
+      const res = await apiRequest("POST", `/api/delivery/otp/verify/${subOrderId}`, { otpCode });
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: t('driver.active_delivery.toasts.otp_success_title'), description: t('driver.active_delivery.toasts.otp_success_desc') });
+      toast({ title: "تم تأكيد التسليم", description: "تم التحقق من الرمز وتأكيد توصيل الطلب بنجاح." });
+      setOtpInput("");
       queryClient.invalidateQueries({ queryKey: ["/api/suborders/active"] });
+    },
+    onError: (err: any) => {
+      toast({ title: "رمز غير صحيح", description: err.message || "الرمز الذي أدخلته غير صحيح أو منتهي الصلاحية.", variant: "destructive" });
     },
   });
 
@@ -100,6 +106,7 @@ export default function ActiveDelivery() {
         <Badge className={cn(
           "px-3 py-1 text-xs font-bold",
           task.status === "ASSIGNED" && "bg-blue-100 text-blue-700",
+          task.status === "IN_TRANSIT" && "bg-purple-100 text-purple-700",
           task.status === "PICKED_UP" && "bg-purple-100 text-purple-700",
           task.status === "DELIVERED" && "bg-green-100 text-green-700"
         )}>
@@ -121,21 +128,13 @@ export default function ActiveDelivery() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 gap-4 flex-row-reverse">
+          <div className="flex justify-end">
             <div className="space-y-1 text-right">
               <div className="text-xs font-medium text-muted-foreground flex items-center gap-1 flex-row-reverse">
                 <Clock className="h-3 w-3" /> {t('driver.active_delivery.remaining_time')}
               </div>
               <div className={cn("text-xl font-bold", timeLeft < 300 ? "text-red-500 animate-pulse" : "text-foreground")}>
                 {formatTime(timeLeft)}
-              </div>
-            </div>
-            <div className="space-y-1 text-right">
-              <div className="text-xs font-medium text-muted-foreground flex items-center gap-1 flex-row-reverse">
-                <Key className="h-3 w-3" /> {t('driver.active_delivery.delivery_otp')}
-              </div>
-              <div className="text-xl font-mono font-bold tracking-widest text-primary">
-                {task.otp || "••••"}
               </div>
             </div>
           </div>
@@ -164,33 +163,44 @@ export default function ActiveDelivery() {
             </div>
           </div>
 
+          {task.status === "IN_TRANSIT" && task.hasOtp && (
+            <div className="border-2 border-primary/20 rounded-xl p-4 space-y-3 bg-primary/5">
+              <div className="text-sm font-bold text-right">تأكيد التسليم</div>
+              <p className="text-xs text-muted-foreground text-right">
+                اطلب من العميل رمز التأكيد المكون من 6 أرقام وأدخله أدناه لتأكيد التسليم
+              </p>
+              <div className="flex gap-2 flex-row-reverse">
+                <Input
+                  data-testid="input-otp-verify"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="_ _ _ _ _ _"
+                  value={otpInput}
+                  onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className="text-center font-mono text-xl tracking-widest"
+                />
+                <Button
+                  data-testid="button-confirm-delivery"
+                  className="gap-2 bg-green-600 hover:bg-green-700 shrink-0"
+                  onClick={() => verifyOtpMutation.mutate({ subOrderId: task.id, otpCode: otpInput })}
+                  disabled={otpInput.length !== 6 || verifyOtpMutation.isPending}
+                >
+                  {verifyOtpMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                  تأكيد
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 flex-row-reverse">
-            {!task.otp && (
-              <Button 
-                variant="outline" 
-                className="w-full gap-2 flex-row-reverse"
-                onClick={() => otpMutation.mutate(task.id)}
-                disabled={otpMutation.isPending}
-              >
-                <Key className="h-4 w-4" /> {t('driver.active_delivery.actions.generate_otp')}
-              </Button>
-            )}
             {task.status === "ASSIGNED" && (
-              <Button 
+              <Button
                 className="w-full gap-2 flex-row-reverse"
                 onClick={() => statusMutation.mutate("PICKED_UP")}
                 disabled={statusMutation.isPending}
               >
                 <Truck className="h-4 w-4" /> {t('driver.active_delivery.actions.mark_picked_up')}
-              </Button>
-            )}
-            {task.status === "PICKED_UP" && (
-              <Button 
-                className="w-full gap-2 bg-green-600 hover:bg-green-700 flex-row-reverse"
-                onClick={() => statusMutation.mutate("DELIVERED")}
-                disabled={statusMutation.isPending}
-              >
-                <CheckCircle className="h-4 w-4" /> {t('driver.active_delivery.actions.confirm_delivery')}
               </Button>
             )}
             <Button variant="secondary" className="w-full gap-2 flex-row-reverse" asChild>

@@ -45,8 +45,8 @@ export function usePlaceOffer() {
 export function useVerifyOtp() {
   const { toast } = useToast();
   return useMutation({
-    mutationFn: ({ orderId, subOrderId, otpCode }: { orderId: string; subOrderId: string; otpCode: string }) =>
-      driverApi.verifyOtp(orderId, subOrderId, otpCode),
+    mutationFn: ({ subOrderId, otpCode }: { subOrderId: string; otpCode: string }) =>
+      driverApi.verifyOtp(subOrderId, otpCode),
     onSuccess: () => {
       toast({ title: "تم تأكيد التسليم بنجاح" });
       queryClient.invalidateQueries({ queryKey: ["/api/suborders/active"] });
