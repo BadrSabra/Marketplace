@@ -10,7 +10,8 @@ import {
   LogOut,
   Menu,
   ShieldAlert,
-  Wallet
+  Wallet,
+  ArrowDownLeft
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -25,6 +26,7 @@ function cn(...inputs: ClassValue[]) {
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/deposits", label: "طلبات الإيداع", icon: Wallet },
+  { href: "/admin/withdrawals", label: "طلبات السحب", icon: ArrowDownLeft },
   { href: "/admin/audit", label: "Audit Logs", icon: ShieldAlert },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/stores", label: "Stores", icon: StoreIcon },

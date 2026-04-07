@@ -1,7 +1,7 @@
 import { db } from "../../db";
-import { walletTransactions, users, wallets, ledger } from "@shared/schema";
+import { walletTransactions, users, wallets, ledger, withdrawalRequests } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
-import type { Wallet, InsertWallet, WalletTransaction, InsertWalletTransaction } from "@shared/schema";
+import type { Wallet, InsertWallet, WalletTransaction, InsertWalletTransaction, WithdrawalRequest } from "@shared/schema";
 import { notificationService } from "../notifications/notification.service";
 import { ledgerService } from "../ledger/ledger.service";
 import { auditService } from "../../services/auditService";
@@ -202,13 +202,13 @@ export class WalletService {
     });
   }
 
-  async withdraw(userId: string, amount: string): Promise<void> {
+  async withdraw(userId: string, amount: string): Promise<WithdrawalRequest> {
     const withdrawAmount = parseFloat(amount);
     if (isNaN(withdrawAmount) || withdrawAmount <= 0) {
       throw new Error("BUSINESS_RULE_VIOLATION: Amount must be a positive number");
     }
 
-    await db.transaction(async (tx) => {
+    return await db.transaction(async (tx) => {
       const wallet = await this.getOrCreateWallet(userId);
       const [lockedWallet] = await tx.select().from(wallets).where(eq(wallets.id, wallet.id)).for("update");
 
@@ -219,30 +219,134 @@ export class WalletService {
         throw new Error("BUSINESS_RULE_VIOLATION: Insufficient wallet balance");
       }
 
-      const newBalance = (currentBalance - withdrawAmount).toFixed(2);
+      // Check if there's already a pending withdrawal request
+      const [existingPending] = await tx.select()
+        .from(withdrawalRequests)
+        .where(and(eq(withdrawalRequests.userId, userId), eq(withdrawalRequests.status, "PENDING")));
+      if (existingPending) {
+        throw new Error("BUSINESS_RULE_VIOLATION: لديك طلب سحب معلق بالفعل، يرجى انتظار موافقة المشرف");
+      }
 
+      // Reserve funds immediately (deduct from wallet)
+      const newBalance = (currentBalance - withdrawAmount).toFixed(2);
       await tx.update(wallets)
         .set({ balance: newBalance, updatedAt: new Date() })
         .where(eq(wallets.id, lockedWallet.id));
 
-      await tx.insert(ledger).values({
-        referenceId: null,
-        debitUserId: userId,
-        creditUserId: null,
+      // Create a pending withdrawal request
+      const [request] = await tx.insert(withdrawalRequests).values({
+        userId,
+        walletId: lockedWallet.id,
         amount: withdrawAmount.toFixed(2),
-        type: "WITHDRAWAL",
-      });
+        status: "PENDING",
+      }).returning();
 
       await auditService.logEvent({
-        actionType: "WALLET_WITHDRAWAL",
-        entityType: "wallet",
-        entityId: lockedWallet.id,
+        actionType: "WITHDRAWAL_REQUEST_CREATED",
+        entityType: "withdrawal_request",
+        entityId: request.id,
         performedByUserId: userId,
         performedByRole: "DRIVER",
         oldValue: { balance: lockedWallet.balance },
         newValue: { balance: newBalance },
         metadata: { amount }
       });
+
+      return request;
+    });
+  }
+
+  async getPendingWithdrawals(): Promise<any[]> {
+    return await db.select({
+      request: withdrawalRequests,
+      user: users,
+    })
+    .from(withdrawalRequests)
+    .innerJoin(users, eq(withdrawalRequests.userId, users.id))
+    .where(eq(withdrawalRequests.status, "PENDING"));
+  }
+
+  async approveWithdrawal(requestId: string, adminId: string): Promise<WithdrawalRequest> {
+    return await db.transaction(async (tx) => {
+      const [request] = await tx.select()
+        .from(withdrawalRequests)
+        .where(eq(withdrawalRequests.id, requestId))
+        .for("update");
+
+      if (!request || request.status !== "PENDING") {
+        throw new Error("INVALID: طلب السحب غير موجود أو تمت معالجته مسبقاً");
+      }
+
+      // Record in ledger (funds were already deducted from wallet on request creation)
+      await tx.insert(ledger).values({
+        referenceId: request.id,
+        debitUserId: request.userId,
+        creditUserId: null,
+        amount: request.amount,
+        type: "WITHDRAWAL",
+      });
+
+      const [updatedRequest] = await tx.update(withdrawalRequests)
+        .set({ status: "APPROVED", reviewedByAdminId: adminId, updatedAt: new Date() })
+        .where(eq(withdrawalRequests.id, requestId))
+        .returning();
+
+      await auditService.logEvent({
+        actionType: "WITHDRAWAL_APPROVED",
+        entityType: "withdrawal_request",
+        entityId: requestId,
+        performedByUserId: adminId,
+        performedByRole: "ADMIN",
+        oldValue: { status: "PENDING" },
+        newValue: { status: "APPROVED" },
+        metadata: { amount: request.amount, userId: request.userId }
+      });
+
+      return updatedRequest;
+    });
+  }
+
+  async rejectWithdrawal(requestId: string, adminId: string, note?: string): Promise<WithdrawalRequest> {
+    return await db.transaction(async (tx) => {
+      const [request] = await tx.select()
+        .from(withdrawalRequests)
+        .where(eq(withdrawalRequests.id, requestId))
+        .for("update");
+
+      if (!request || request.status !== "PENDING") {
+        throw new Error("INVALID: طلب السحب غير موجود أو تمت معالجته مسبقاً");
+      }
+
+      // Refund the reserved amount back to the wallet
+      const [wallet] = await tx.select()
+        .from(wallets)
+        .where(eq(wallets.id, request.walletId))
+        .for("update");
+
+      if (wallet) {
+        const refundedBalance = (parseFloat(wallet.balance) + parseFloat(request.amount)).toFixed(2);
+        await tx.update(wallets)
+          .set({ balance: refundedBalance, updatedAt: new Date() })
+          .where(eq(wallets.id, wallet.id));
+      }
+
+      const [updatedRequest] = await tx.update(withdrawalRequests)
+        .set({ status: "REJECTED", reviewedByAdminId: adminId, adminNote: note || null, updatedAt: new Date() })
+        .where(eq(withdrawalRequests.id, requestId))
+        .returning();
+
+      await auditService.logEvent({
+        actionType: "WITHDRAWAL_REJECTED",
+        entityType: "withdrawal_request",
+        entityId: requestId,
+        performedByUserId: adminId,
+        performedByRole: "ADMIN",
+        oldValue: { status: "PENDING" },
+        newValue: { status: "REJECTED" },
+        metadata: { amount: request.amount, userId: request.userId, note }
+      });
+
+      return updatedRequest;
     });
   }
 

@@ -558,6 +558,11 @@ export async function registerRoutes(
   app.post("/api/wallet/deposit", authenticate, depositLimiter, walletController.deposit);
   app.post("/api/wallet/withdraw", authenticate, authorizeRole(["DRIVER", "STORE_OWNER"]), walletController.withdraw.bind(walletController));
 
+  // Admin withdrawal requests
+  app.get("/api/admin/withdrawals/pending", authenticate, authorizeRole(["ADMIN"]), walletController.getPendingWithdrawals.bind(walletController));
+  app.post("/api/admin/withdrawals/:id/approve", authenticate, authorizeRole(["ADMIN"]), walletController.approveWithdrawal.bind(walletController));
+  app.post("/api/admin/withdrawals/:id/reject", authenticate, authorizeRole(["ADMIN"]), walletController.rejectWithdrawal.bind(walletController));
+
   // --- ORDERS MODULE ---
   app.get("/api/orders", authenticate, orderController.getMyOrders);
   // Alias used by the frontend hook — must be registered BEFORE /api/orders/:id

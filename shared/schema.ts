@@ -162,6 +162,23 @@ export const deliveryOtps = pgTable("delivery_otps", {
   };
 });
 
+// WITHDRAWAL REQUESTS
+export const withdrawalRequests = pgTable("withdrawal_requests", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  walletId: uuid("wallet_id").notNull().references(() => wallets.id),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  status: text("status", { enum: ["PENDING", "APPROVED", "REJECTED"] }).notNull().default("PENDING"),
+  adminNote: text("admin_note"),
+  reviewedByAdminId: uuid("reviewed_by_admin_id").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertWithdrawalRequestSchema = createInsertSchema(withdrawalRequests).omit({ id: true, createdAt: true, updatedAt: true });
+export type WithdrawalRequest = typeof withdrawalRequests.$inferSelect;
+export type InsertWithdrawalRequest = z.infer<typeof insertWithdrawalRequestSchema>;
+
 // AUDIT LOGS
 export const auditLogs = pgTable("audit_logs", {
   id: uuid("id").primaryKey().defaultRandom(),

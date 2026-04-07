@@ -69,15 +69,48 @@ export class WalletController {
     try {
       const userId = (req.user as any).id;
       const validated = withdrawSchema.parse(req.body);
-      await walletService.withdraw(userId, validated.amount);
-      res.json({ message: "Withdrawal successful" });
+      const request = await walletService.withdraw(userId, validated.amount);
+      res.json({ message: "تم إرسال طلب السحب بنجاح وهو قيد المراجعة من المشرف", request });
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
       }
       const msg = error.message || "";
-      if (msg.includes("Insufficient")) return res.status(400).json({ message: "الرصيد غير كافٍ" });
+      if (msg.includes("Insufficient") || msg.includes("غير كافٍ")) return res.status(400).json({ message: "الرصيد غير كافٍ" });
+      if (msg.includes("BUSINESS_RULE_VIOLATION:")) return res.status(400).json({ message: msg.replace("BUSINESS_RULE_VIOLATION: ", "") });
       res.status(500).json({ message: msg });
+    }
+  }
+
+  async getPendingWithdrawals(req: Request, res: Response) {
+    try {
+      const withdrawals = await walletService.getPendingWithdrawals();
+      res.json(withdrawals);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  async approveWithdrawal(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const adminId = (req.user as any).id;
+      const request = await walletService.approveWithdrawal(id, adminId);
+      res.json(request);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async rejectWithdrawal(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const adminId = (req.user as any).id;
+      const { note } = req.body;
+      const request = await walletService.rejectWithdrawal(id, adminId, note);
+      res.json(request);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
     }
   }
 

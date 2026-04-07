@@ -36,6 +36,7 @@ import ProductsPage from "@/pages/admin/products";
 import OrdersPage from "@/pages/admin/orders";
 import AdminAudit from "@/pages/admin/audit";
 import AdminDeposits from "@/pages/admin/deposits";
+import AdminWithdrawals from "@/pages/admin/withdrawals";
 import DriverNavbar from "@/components/driver/DriverNavbar";
 import CartPage from "@/pages/customer/cart";
 
@@ -177,6 +178,9 @@ function Router() {
       </Route>
       <Route path="/admin/deposits">
         {() => <ProtectedRoute component={AdminDeposits} roles={["ADMIN"]} />}
+      </Route>
+      <Route path="/admin/withdrawals">
+        {() => <ProtectedRoute component={AdminWithdrawals} roles={["ADMIN"]} />}
       </Route>
       <Route path="/admin/audit">
         {() => <ProtectedRoute component={AdminAudit} roles={["ADMIN"]} />}

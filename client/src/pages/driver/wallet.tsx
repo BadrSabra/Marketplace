@@ -40,7 +40,10 @@ export default function DriverWalletPage() {
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "تم السحب بنجاح", description: `تم سحب ${withdrawAmount} جنية من محفظتك` });
+      toast({ 
+        title: "تم إرسال طلب السحب", 
+        description: `تم إرسال طلب سحب ${withdrawAmount} جنيه وهو قيد مراجعة المشرف. سيتم إشعارك عند الموافقة.` 
+      });
       setIsWithdrawOpen(false);
       setWithdrawAmount("");
       queryClient.invalidateQueries({ queryKey: ["/api/wallet"] });
@@ -138,7 +141,7 @@ export default function DriverWalletPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-right">
               <ArrowRightLeft className="w-5 h-5" />
-              سحب الرصيد
+              طلب سحب الرصيد
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -163,6 +166,9 @@ export default function DriverWalletPage() {
               <p className="text-xs text-muted-foreground text-center">
                 الحد الأقصى: {wallet?.balance} EGP
               </p>
+              <p className="text-xs text-amber-600 text-center mt-2 bg-amber-50 rounded-lg p-2">
+                ⏳ سيتم مراجعة طلبك من المشرف قبل إتمام عملية السحب
+              </p>
             </div>
           </div>
           <DialogFooter className="gap-2">
@@ -176,7 +182,7 @@ export default function DriverWalletPage() {
               data-testid="button-confirm-withdraw"
             >
               {withdrawMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowDownLeft className="w-4 h-4" />}
-              تأكيد السحب
+              إرسال طلب السحب
             </Button>
           </DialogFooter>
         </DialogContent>
