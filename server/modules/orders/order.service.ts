@@ -45,7 +45,7 @@ export class OrderService {
 
       await tx.insert(walletTransactions).values({
         walletId: wallet.id,
-        type: "PAYMENT",
+        type: "WITHDRAWAL",
         amount: totalPrice.toFixed(2),
         status: "COMPLETED",
       });

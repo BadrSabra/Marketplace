@@ -8,7 +8,7 @@ const router = Router();
 
 const querySchema = z.object({
   user_id: z.string().uuid().optional(),
-  type: z.enum(["DEPOSIT", "WITHDRAWAL", "COMMISSION", "REFUND", "PAYMENT"]).optional(),
+  type: z.enum(["DEPOSIT", "WITHDRAWAL", "COMMISSION", "REFUND"]).optional(),
   status: z.enum(["PENDING", "COMPLETED", "FAILED"]).optional(),
   date_from: z.string().optional(),
   date_to: z.string().optional(),
