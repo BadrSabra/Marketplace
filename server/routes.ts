@@ -219,6 +219,32 @@ export async function registerRoutes(
   app.patch("/api/customer/profile", authenticate, handleProfileUpdate);
   app.patch("/api/driver/profile", authenticate, authorizeRole(["DRIVER"]), handleProfileUpdate);
 
+  // Avatar upload endpoint — shared for customers and drivers
+  app.post("/api/profile/avatar", authenticate, (req, res) => {
+    const { upload: avatarUpload } = require("./modules/avatar/avatar.upload");
+    avatarUpload.single("avatar")(req, res, async (err: any) => {
+      if (err) {
+        return res.status(400).json({ message: err.message || "Upload failed" });
+      }
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      try {
+        const userId = (req as any).user.id;
+        const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+        const [updatedUser] = await db
+          .update(users)
+          .set({ avatarUrl, updatedAt: new Date() })
+          .where(eq(users.id, userId))
+          .returning();
+        const { password, ...cleanUser } = updatedUser;
+        res.json({ avatarUrl, user: cleanUser });
+      } catch (e: any) {
+        res.status(500).json({ message: e.message || "Failed to save avatar" });
+      }
+    });
+  });
+
   app.get(api.users.list.path, authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
     const users = await storage.getUsers();
     const cleanUsers = users.map(u => {
