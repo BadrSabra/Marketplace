@@ -1,5 +1,5 @@
 import { db } from "../../db";
-import { deliveryOffers, subOrders, wallets, walletTransactions, orders, users } from "@shared/schema";
+import { deliveryOffers, subOrders, wallets, walletTransactions, orders, users, ledger } from "@shared/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { auditService } from "../../services/auditService";
 import { deliveryOtpService } from "./deliveryOtp.service";
@@ -123,13 +123,24 @@ export class DeliveryOfferService {
         .set({ balance: newBalance, updatedAt: new Date() })
         .where(eq(wallets.id, customerWallet.id));
 
-      // Log the delivery fee deduction as a PENDING wallet transaction (held until delivery)
+      // Log the delivery fee deduction as a wallet transaction
       await tx.insert(walletTransactions).values({
         walletId: customerWallet.id,
         type: "WITHDRAWAL",
         amount: deliveryFee.toFixed(2),
         relatedOrderId: parentOrder.id,
         status: "COMPLETED",
+        notes: `رسوم توصيل - عرض السائق #${offerId.slice(0, 8)}`,
+      });
+
+      // BUG-FIX-12: Missing ledger entry when customer accepts delivery offer.
+      // Delivery fee is a real financial movement and must be recorded in the ledger.
+      await tx.insert(ledger).values({
+        referenceId: parentOrder.id,
+        debitUserId: customerId,
+        creditUserId: null,
+        amount: deliveryFee.toFixed(2),
+        type: "WITHDRAWAL",
       });
 
       // Update sub-order: assign driver, update expectedDeliveryFee, set IN_TRANSIT

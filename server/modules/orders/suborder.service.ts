@@ -1,5 +1,5 @@
 import { db } from "../../db";
-import { subOrders, stores, orderItems, products, deliveryOffers, users, orders, deliveryOtps, wallets, walletTransactions } from "@shared/schema";
+import { subOrders, stores, orderItems, products, deliveryOffers, users, orders, deliveryOtps, wallets, walletTransactions, ledger } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import type { User } from "@shared/schema";
 import { auditService } from "../../services/auditService";
@@ -82,6 +82,16 @@ export class SubOrderService {
             relatedOrderId: parentOrder.id,
             status: "COMPLETED",
             notes: `استرداد تلقائي - إلغاء طلب فرعي #${subOrderId.slice(0, 8)} من المتجر`,
+          });
+
+          // BUG-FIX-11: Missing ledger entry for sub-order cancellation refund.
+          // Every wallet credit must have a matching ledger entry for accounting integrity.
+          await tx.insert(ledger).values({
+            referenceId: subOrder.orderId,
+            debitUserId: null,
+            creditUserId: parentOrder.customerId,
+            amount: totalRefund.toFixed(2),
+            type: "WITHDRAWAL",
           });
 
           console.log(`[SubOrderService] Refunded ${totalRefund} to customer wallet for cancelled sub-order ${subOrderId}`);

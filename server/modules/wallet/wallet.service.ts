@@ -1,6 +1,6 @@
 import { db } from "../../db";
 import { walletTransactions, users, wallets, ledger, withdrawalRequests } from "@shared/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { Wallet, InsertWallet, WalletTransaction, InsertWalletTransaction, WithdrawalRequest } from "@shared/schema";
 import { notificationService } from "../notifications/notification.service";
 import { notifyUser, notifyAdmins } from "../notifications/push.service";
@@ -115,6 +115,16 @@ export class WalletService {
         .where(eq(walletTransactions.id, transactionId))
         .returning();
 
+      // BUG-FIX-7: Missing ledger entry for approved deposit — broke double-entry accounting.
+      // A deposit credits the customer wallet and must be recorded in the ledger.
+      await tx.insert(ledger).values({
+        referenceId: transactionId,
+        debitUserId: null,
+        creditUserId: wallet.userId,
+        amount: transaction.amount,
+        type: "DEPOSIT",
+      });
+
       // Log audit for deposit approval
       await auditService.logEvent({
         actionType: "DEPOSIT_APPROVED",
@@ -166,45 +176,32 @@ export class WalletService {
         .set({ balance: newBalance, updatedAt: new Date() })
         .where(eq(wallets.id, walletId));
 
-      // Update Ledger (only if table exists)
-      try {
-        const tableCheck = await tx.execute(sql`SELECT 1 FROM information_schema.tables WHERE table_name = 'ledger'`);
-        if (tableCheck.rowCount > 0) {
-          await tx.insert(ledger).values({
-            referenceId: null,
-            creditUserId: amountNum > 0 ? wallet.userId : null,
-            debitUserId: amountNum < 0 ? wallet.userId : null,
-            amount: Math.abs(amountNum).toFixed(2),
-            type: amountNum > 0 ? "DEPOSIT" : "WITHDRAWAL",
-          });
-        }
-      } catch (e) {
-        console.warn("Ledger table check or update failed");
-      }
+      // BUG-FIX-13: Removed unnecessary information_schema table-existence checks.
+      // These tables are guaranteed to exist (auto-created on startup).
+      // The try/catch was silently swallowing real errors, hiding actual failures.
+      await tx.insert(ledger).values({
+        referenceId: null,
+        creditUserId: amountNum > 0 ? wallet.userId : null,
+        debitUserId: amountNum < 0 ? wallet.userId : null,
+        amount: Math.abs(amountNum).toFixed(2),
+        type: amountNum > 0 ? "DEPOSIT" : "WITHDRAWAL",
+      });
 
-      // Log Audit
-      try {
-        const tableCheck = await tx.execute(sql`SELECT 1 FROM information_schema.tables WHERE table_name = 'audit_logs'`);
-        if (tableCheck.rowCount > 0) {
-          await auditService.logEvent({
-            actionType: "ADMIN_OVERRIDE",
-            entityType: "wallet",
-            entityId: walletId,
-            performedByUserId: actorId,
-            performedByRole: "ADMIN",
-            oldValue: { balance: wallet.balance },
-            newValue: { balance: newBalance },
-            metadata: { 
-              amount, 
-              reason,
-              amountChanged: amount,
-              targetWalletId: walletId
-            }
-          });
+      await auditService.logEvent({
+        actionType: "ADMIN_OVERRIDE",
+        entityType: "wallet",
+        entityId: walletId,
+        performedByUserId: actorId,
+        performedByRole: "ADMIN",
+        oldValue: { balance: wallet.balance },
+        newValue: { balance: newBalance },
+        metadata: {
+          amount,
+          reason,
+          amountChanged: amount,
+          targetWalletId: walletId
         }
-      } catch (e) {
-        console.warn("Audit logs table check or update failed");
-      }
+      });
 
       return newBalance;
     });
@@ -217,10 +214,16 @@ export class WalletService {
     }
 
     return await db.transaction(async (tx) => {
-      const wallet = await this.getOrCreateWallet(userId);
-      const [lockedWallet] = await tx.select().from(wallets).where(eq(wallets.id, wallet.id)).for("update");
-
+      // BUG-FIX-9: Was calling this.getOrCreateWallet() which uses the global `db`,
+      // not the transaction `tx`. Wallet creation would NOT roll back if the tx failed.
+      // Now locked wallet lookup is done directly inside the transaction.
+      const [lockedWallet] = await tx.select().from(wallets).where(eq(wallets.userId, userId)).for("update");
       if (!lockedWallet) throw new Error("NOT_FOUND: Wallet not found");
+
+      // BUG-FIX-8: Was hardcoding performedByRole: "DRIVER" even though STORE_OWNER
+      // can also withdraw. Fetch the actual user role from DB.
+      const [actorUser] = await tx.select({ role: users.role }).from(users).where(eq(users.id, userId));
+      const actorRole = actorUser?.role ?? "DRIVER";
 
       const currentBalance = parseFloat(lockedWallet.balance);
       if (currentBalance < withdrawAmount) {
@@ -241,6 +244,16 @@ export class WalletService {
         .set({ balance: newBalance, updatedAt: new Date() })
         .where(eq(wallets.id, lockedWallet.id));
 
+      // BUG-FIX-10: No walletTransactions record was created on withdrawal request.
+      // Funds are deducted immediately so a PENDING WITHDRAWAL transaction must be recorded.
+      await tx.insert(walletTransactions).values({
+        walletId: lockedWallet.id,
+        type: "WITHDRAWAL",
+        amount: withdrawAmount.toFixed(2),
+        status: "PENDING",
+        notes: "طلب سحب بانتظار موافقة المشرف",
+      });
+
       // Create a pending withdrawal request
       const [request] = await tx.insert(withdrawalRequests).values({
         userId,
@@ -254,7 +267,7 @@ export class WalletService {
         entityType: "withdrawal_request",
         entityId: request.id,
         performedByUserId: userId,
-        performedByRole: "DRIVER",
+        performedByRole: actorRole,
         oldValue: { balance: lockedWallet.balance },
         newValue: { balance: newBalance },
         metadata: { amount }

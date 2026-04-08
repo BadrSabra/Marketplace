@@ -183,3 +183,21 @@ Clicking a notification navigates to the relevant page based on type and user ro
 5. **🔴 Delivery Service: Total count ignores active filters** — `server/modules/delivery/delivery.service.ts`: The `total` count query used a separate, unfiltered `db.select().from(subOrders)` that did not apply `store_id` or `category` filters. The count misled pagination. **Fixed: count query now uses the same `combinedWhere` conditions as the data query.**
 
 6. **🔴 Admin Order Cancellation: Missing ledger entry for refund** — `server/routes.ts` `PATCH /api/admin/orders/:id/status`: When an admin cancelled a paid order, the customer wallet was correctly credited and a `wallet_transactions` row was inserted, but no corresponding `ledger` entry was created. This broke the double-entry accounting integrity. **Fixed: a `WITHDRAWAL` ledger entry is now inserted within the same transaction.**
+
+## Financial System Deep Audit (April 2026 - Round 3)
+
+### Bugs Fixed
+
+7. **🔴 `approveDeposit` missing ledger entry** — `wallet.service.ts`: When a deposit was approved, the wallet balance increased and the `wallet_transactions` status became COMPLETED, but NO `ledger` row was ever inserted. This silently broke double-entry accounting for every deposit. **Fixed: a DEPOSIT ledger entry is now inserted inside the same DB transaction.**
+
+8. **🟠 `withdraw()` hardcoded `performedByRole: "DRIVER"`** — `wallet.service.ts`: The withdrawal audit log always recorded "DRIVER" as the actor role even though `STORE_OWNER` users can also withdraw (the route explicitly allows both roles). **Fixed: actor role is now fetched from the DB within the transaction and used dynamically.**
+
+9. **🔴 `withdraw()` Race Condition — `getOrCreateWallet` outside transaction** — `wallet.service.ts`: `this.getOrCreateWallet(userId)` was called at the top of the `db.transaction()` callback, but the method uses the global `db` connection — NOT the transaction `tx`. If a wallet needed to be created and the transaction later rolled back, the wallet creation would NOT roll back, leaving the DB inconsistent. **Fixed: wallet is now looked up directly inside the transaction using `tx.select()`.**
+
+10. **🟠 `withdraw()` no `walletTransactions` record created** — `wallet.service.ts`: When a withdrawal request was submitted, funds were immediately deducted from the wallet, but no `wallet_transactions` row was inserted to track this deduction. The only record created was a `withdrawal_requests` row. **Fixed: a PENDING WITHDRAWAL `walletTransactions` entry is now inserted inside the transaction.**
+
+11. **🔴 Sub-order cancellation refund missing ledger entry** — `suborder.service.ts`: When a store owner or admin cancelled a sub-order, the customer's wallet was refunded but no `ledger` entry was created. **Fixed: a WITHDRAWAL ledger entry is now inserted alongside the wallet credit.**
+
+12. **🔴 `customerAcceptOffer` delivery fee missing ledger entry** — `deliveryOffer.service.ts`: When a customer accepted a driver's delivery offer, the fee was deducted from the customer's wallet and a `wallet_transactions` row was inserted, but no `ledger` entry was created. **Fixed: a WITHDRAWAL ledger entry is now inserted inside the transaction.**
+
+13. **🟠 `adminOverride` hid real errors behind silent `try/catch`** — `wallet.service.ts`: The ledger and audit log inserts inside `adminOverride` were wrapped in redundant `information_schema.tables` checks and broad `try/catch` blocks. This silently swallowed any real DB errors (e.g., constraint violations), making failures invisible. The tables are guaranteed to exist on startup. **Fixed: removed unnecessary existence checks and broad catches; operations now fail loudly if something goes wrong.**
