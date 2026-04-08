@@ -124,6 +124,15 @@ export async function registerRoutes(
       const { password, ...userWithoutPassword } = user;
 
       if (!isApproved) {
+        const { notifyAdmins } = await import("./modules/notifications/push.service");
+        const roleLabel = user.role === "DRIVER" ? "سائق جديد" : "صاحب متجر جديد";
+        notifyAdmins(
+          "SYSTEM_ALERT",
+          `طلب موافقة: ${roleLabel}`,
+          `${user.name} سجّل كـ${roleLabel} ويحتاج لموافقتك`,
+          { userId: user.id, role: user.role, userName: user.name }
+        ).catch(console.error);
+
         return res.status(201).json({
           pendingApproval: true,
           message: "تم تسجيل حسابك بنجاح. سيتم مراجعته من قِبل الإدارة وإعلامك عند الموافقة.",

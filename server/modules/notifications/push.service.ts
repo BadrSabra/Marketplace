@@ -1,6 +1,6 @@
 import webpush from "web-push";
 import { db } from "../../db";
-import { notifications, pushSubscriptions } from "@shared/schema";
+import { notifications, pushSubscriptions, users } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import type { InsertNotification } from "@shared/schema";
 import { io } from "../chat/chat.socket";
@@ -30,7 +30,7 @@ export class PushService {
         });
       }
 
-      await this.sendWebPush(data.userId, data.title, data.body, data.data || {});
+      await this.sendWebPush(data.userId, data.title, data.body, { ...(data.data || {}), type: data.type });
     } catch (err) {
       console.error("[PushService] Failed to create notification:", err);
     }
@@ -115,6 +115,22 @@ export class PushService {
       .delete(pushSubscriptions)
       .where(and(eq(pushSubscriptions.userId, userId), eq(pushSubscriptions.endpoint, endpoint)));
   }
+
+  async getAdminUserIds(): Promise<string[]> {
+    const admins = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.role, "ADMIN"));
+    return admins.map((a) => a.id);
+  }
+
+  async getApprovedDriverIds(): Promise<string[]> {
+    const drivers = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.role, "DRIVER"), eq(users.isApproved, true)));
+    return drivers.map((d) => d.id);
+  }
 }
 
 export const pushService = new PushService();
@@ -127,4 +143,32 @@ export async function notifyUser(
   data: Record<string, any> = {}
 ): Promise<void> {
   await pushService.createNotification({ userId, type, title, body, data, isRead: false });
+}
+
+export async function notifyAdmins(
+  type: InsertNotification["type"],
+  title: string,
+  body: string,
+  data: Record<string, any> = {}
+): Promise<void> {
+  const adminIds = await pushService.getAdminUserIds();
+  await Promise.allSettled(
+    adminIds.map((adminId) =>
+      pushService.createNotification({ userId: adminId, type, title, body, data, isRead: false })
+    )
+  );
+}
+
+export async function notifyAllDrivers(
+  type: InsertNotification["type"],
+  title: string,
+  body: string,
+  data: Record<string, any> = {}
+): Promise<void> {
+  const driverIds = await pushService.getApprovedDriverIds();
+  await Promise.allSettled(
+    driverIds.map((driverId) =>
+      pushService.createNotification({ userId: driverId, type, title, body, data, isRead: false })
+    )
+  );
 }

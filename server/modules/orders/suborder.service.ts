@@ -5,7 +5,7 @@ import type { User, SubOrder } from "@shared/schema";
 import { auditService } from "../../services/auditService";
 import { allowedTransitions } from "./suborder.types";
 import { emitNotification } from "../notifications/notification.emitter";
-import { notifyUser } from "../notifications/push.service";
+import { notifyUser, notifyAllDrivers } from "../notifications/push.service";
 
 export class SubOrderService {
   // ... (existing code)
@@ -26,7 +26,7 @@ export class SubOrderService {
   }
 
   async updateSubOrderStatus(subOrderId: string, newStatus: any, actorUser: User): Promise<any> {
-    return await db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
       const [subOrder] = await tx
         .select()
         .from(subOrders)
@@ -126,6 +126,17 @@ export class SubOrderService {
         // ... (existing code)
       };
     });
+
+    if (newStatus === "ACCEPTED") {
+      notifyAllDrivers(
+        "NEW_ORDER",
+        "مهمة توصيل جديدة متاحة",
+        "طلب جديد متاح للتوصيل، قدّم عرضك الآن",
+        { subOrderId }
+      ).catch(console.error);
+    }
+
+    return result;
   }
 
   async getActiveDeliveryForDriver(driverId: string) {

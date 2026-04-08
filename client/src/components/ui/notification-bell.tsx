@@ -11,6 +11,7 @@ import { useNotifications } from "@/hooks/use-notifications";
 import { useAuth } from "@/hooks/use-auth";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { useLocation } from "wouter";
 
 const typeIcons: Record<string, string> = {
   NEW_ORDER: "🛒",
@@ -28,6 +29,39 @@ const typeIcons: Record<string, string> = {
   SYSTEM_ALERT: "ℹ️",
 };
 
+function getNotificationRoute(type: string, role: string): string {
+  switch (type) {
+    case "NEW_ORDER":
+      if (role === "STORE_OWNER") return "/customer/store/orders";
+      if (role === "DRIVER") return "/driver/tasks";
+      return "/customer/orders";
+    case "ORDER_STATUS_UPDATE":
+      if (role === "STORE_OWNER") return "/customer/store/orders";
+      if (role === "DRIVER") return "/driver/active-delivery";
+      return "/customer/orders";
+    case "NEW_OFFER":
+      return "/customer/orders";
+    case "OFFER_ACCEPTED":
+    case "OFFER_REJECTED":
+    case "OFFER_COUNTERED":
+      return "/driver/tasks";
+    case "ACCOUNT_APPROVED":
+      return "/";
+    case "DEPOSIT_APPROVED":
+    case "DEPOSIT_REJECTED":
+    case "WALLET_UPDATE":
+    case "WITHDRAWAL_APPROVED":
+    case "WITHDRAWAL_REJECTED":
+      if (role === "ADMIN") return "/admin/finance";
+      return "/customer/wallet";
+    case "SYSTEM_ALERT":
+      if (role === "ADMIN") return "/admin/approvals";
+      return "/";
+    default:
+      return "/";
+  }
+}
+
 function timeAgo(dateStr: string): string {
   const date = new Date(dateStr);
   const now = new Date();
@@ -41,6 +75,7 @@ function timeAgo(dateStr: string): string {
 export function NotificationBell() {
   const { user } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(user?.id);
+  const [, navigate] = useLocation();
 
   if (!user) return null;
 
@@ -91,6 +126,8 @@ export function NotificationBell() {
                 }`}
                 onClick={() => {
                   if (!n.isRead) markAsRead(n.id);
+                  const route = getNotificationRoute(n.type, user.role);
+                  navigate(route);
                 }}
                 data-testid={`notification-item-${n.id}`}
               >

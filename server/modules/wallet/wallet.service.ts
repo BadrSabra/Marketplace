@@ -3,7 +3,7 @@ import { walletTransactions, users, wallets, ledger, withdrawalRequests } from "
 import { eq, and } from "drizzle-orm";
 import type { Wallet, InsertWallet, WalletTransaction, InsertWalletTransaction, WithdrawalRequest } from "@shared/schema";
 import { notificationService } from "../notifications/notification.service";
-import { notifyUser } from "../notifications/push.service";
+import { notifyUser, notifyAdmins } from "../notifications/push.service";
 import { ledgerService } from "../ledger/ledger.service";
 import { auditService } from "../../services/auditService";
 
@@ -43,7 +43,14 @@ export class WalletService {
     if (user) {
       await notificationService.notifyDepositSubmitted(user.email, amount);
     }
-    
+
+    notifyAdmins(
+      "SYSTEM_ALERT",
+      "طلب إيداع جديد",
+      `مستخدم قدّم طلب إيداع بمبلغ ${amount} جنيه، يحتاج لمراجعتك`,
+      { transactionId: transaction.id, userId, amount }
+    ).catch(console.error);
+
     return transaction;
   }
 
@@ -253,6 +260,14 @@ export class WalletService {
         metadata: { amount }
       });
 
+      return request;
+    }).then((request) => {
+      notifyAdmins(
+        "SYSTEM_ALERT",
+        "طلب سحب جديد",
+        `مستخدم قدّم طلب سحب بمبلغ ${withdrawAmount.toFixed(2)} جنيه، يحتاج لمراجعتك`,
+        { requestId: request.id, userId, amount: withdrawAmount.toFixed(2) }
+      ).catch(console.error);
       return request;
     });
   }

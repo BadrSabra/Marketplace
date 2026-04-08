@@ -25,7 +25,8 @@ export async function autoVerifyDatabase() {
       { name: 'order_status', values: ['PENDING', 'ACCEPTED', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'] },
       { name: 'delivery_status', values: ['PENDING', 'ASSIGNED', 'PICKED_UP', 'DELIVERED'] },
       { name: 'payment_status', values: ['PENDING', 'PAID', 'REFUNDED', 'FAILED'] },
-      { name: 'offer_status', values: ['PENDING', 'ACCEPTED', 'REJECTED', 'COUNTERED'] }
+      { name: 'offer_status', values: ['PENDING', 'ACCEPTED', 'REJECTED', 'COUNTERED'] },
+      { name: 'notification_type', values: ['NEW_ORDER', 'ORDER_STATUS_UPDATE', 'NEW_OFFER', 'OFFER_ACCEPTED', 'OFFER_REJECTED', 'OFFER_COUNTERED', 'ACCOUNT_APPROVED', 'DEPOSIT_APPROVED', 'DEPOSIT_REJECTED', 'WITHDRAWAL_APPROVED', 'WITHDRAWAL_REJECTED', 'WALLET_UPDATE', 'SYSTEM_ALERT'] }
     ];
 
     for (const e of enums) {
@@ -193,6 +194,35 @@ export async function autoVerifyDatabase() {
         content TEXT NOT NULL,
         type TEXT NOT NULL DEFAULT 'TEXT' CHECK (type IN ('TEXT','SYSTEM')),
         created_at TIMESTAMP DEFAULT NOW()
+      )`,
+      notifications: `CREATE TABLE notifications (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type notification_type NOT NULL,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL,
+        data JSONB DEFAULT '{}',
+        is_read BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )`,
+      push_subscriptions: `CREATE TABLE push_subscriptions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        endpoint TEXT NOT NULL UNIQUE,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )`,
+      withdrawal_requests: `CREATE TABLE withdrawal_requests (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id),
+        wallet_id UUID NOT NULL REFERENCES wallets(id),
+        amount NUMERIC(12,2) NOT NULL,
+        status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','APPROVED','REJECTED')),
+        admin_note TEXT,
+        reviewed_by_admin_id UUID REFERENCES users(id),
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
       )`
     };
 
@@ -242,6 +272,14 @@ export async function autoVerifyDatabase() {
       report[`Index:sub_order_pending_idx`] = "Created ⚠️";
     } else {
       report[`Index:sub_order_pending_idx`] = "Exists ✅";
+    }
+
+    const notifIndexCheck = await pool.query(`SELECT 1 FROM pg_indexes WHERE indexname = 'notifications_user_idx'`);
+    if (notifIndexCheck.rowCount === 0) {
+      await pool.query(`CREATE INDEX IF NOT EXISTS notifications_user_idx ON notifications (user_id, is_read)`);
+      report[`Index:notifications_user_idx`] = "Created ⚠️";
+    } else {
+      report[`Index:notifications_user_idx`] = "Exists ✅";
     }
 
     // 4. Verify Default Data (Atomic Transaction)

@@ -104,3 +104,46 @@ A full-stack hyperlocal marketplace platform built with React (Vite) frontend, N
 - `client/src/pages/chat/index.tsx` — chat list page
 - `client/src/pages/chat/room.tsx` — chat room page
 - `client/src/hooks/use-chat-socket.ts` — Socket.IO hook
+
+## Push Notification System (April 2026)
+
+### Architecture
+- **Web Push (Browser)**: Uses `web-push` library with VAPID keys stored as `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_EMAIL` env vars
+- **Real-time (Socket.IO)**: Online users receive notifications instantly via Socket.IO room `user:<userId>`
+- **In-App Bell**: `NotificationBell` component shows history, unread count, and navigates on click
+- **Service Worker**: `client/public/sw.js` handles background push events and click navigation
+
+### Database Tables (auto-created on startup)
+- `notifications` — stores all notification history per user
+- `push_subscriptions` — stores browser push subscription endpoints per user
+- `withdrawal_requests` — stores pending withdrawal requests from drivers
+- `notification_type` enum — 13 types covering all platform events
+
+### Notification Triggers Per Role
+| Role | Event | Trigger |
+|------|-------|---------|
+| **Admin** | New driver/store registers | On registration of DRIVER or STORE_OWNER |
+| **Admin** | New deposit submitted | On `POST /api/wallet/deposit` |
+| **Admin** | New withdrawal requested | On `POST /api/wallet/withdraw` |
+| **Store Owner** | New order received | On order creation |
+| **Driver** | New delivery task available | When store ACCEPTS a sub-order (broadcast to ALL approved drivers) |
+| **Driver** | Offer accepted/rejected/countered | When customer acts on delivery offer |
+| **Customer** | Driver submitted offer | On `POST /api/delivery/suborders/:id/offer` |
+| **Customer** | Order status changed | When store changes sub-order status |
+| **Customer/Driver** | Account approved | When admin approves account |
+| **Customer** | Deposit approved/rejected | When admin processes deposit |
+
+### Notification Bell Navigation
+Clicking a notification navigates to the relevant page based on type and user role:
+- `NEW_ORDER` → Store orders page / Driver tasks page
+- `NEW_OFFER` → Customer orders page
+- `OFFER_ACCEPTED/REJECTED/COUNTERED` → Driver tasks
+- `SYSTEM_ALERT` (admin) → Admin approvals page
+- `WALLET_UPDATE/DEPOSIT/WITHDRAWAL` → Wallet page
+
+### Key Files
+- `server/modules/notifications/push.service.ts` — `PushService`, `notifyUser()`, `notifyAdmins()`, `notifyAllDrivers()`
+- `server/modules/notifications/notification.routes.ts` — REST API for notifications and push subscriptions
+- `client/src/hooks/use-notifications.ts` — frontend hook (push permission, subscription, real-time)
+- `client/public/sw.js` — service worker (push events, click navigation)
+- `client/src/components/ui/notification-bell.tsx` — UI component with role-based navigation
