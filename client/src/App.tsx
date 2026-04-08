@@ -3,11 +3,51 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Suspense } from "react";
+import { Suspense, Component, type ReactNode } from "react";
 import NotFound from "@/pages/not-found";
 import { useAuth } from "@/hooks/use-auth";
 import { Spinner } from "@/components/ui/spinner";
 import { CartContext, useCartState } from "@/hooks/use-cart";
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: any) {
+    console.error("[ErrorBoundary] Caught error:", error.message, info?.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background p-6" dir="rtl">
+          <div className="text-center max-w-md">
+            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-foreground mb-2">حدث خطأ غير متوقع</h2>
+            <p className="text-muted-foreground text-sm mb-6">حدث خطأ أثناء تحميل هذه الصفحة. يرجى المحاولة مرة أخرى.</p>
+            <button
+              onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
+              className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-all"
+            >
+              إعادة تحميل الصفحة
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // Pages
 import LoginPage from "@/pages/auth/login";
@@ -224,16 +264,20 @@ function CartWrapper({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Spinner size="xl" /></div>}>
-      <QueryClientProvider client={queryClient}>
-        <CartWrapper>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </CartWrapper>
-      </QueryClientProvider>
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Spinner size="xl" /></div>}>
+        <QueryClientProvider client={queryClient}>
+          <CartWrapper>
+            <TooltipProvider>
+              <Toaster />
+              <ErrorBoundary>
+                <Router />
+              </ErrorBoundary>
+            </TooltipProvider>
+          </CartWrapper>
+        </QueryClientProvider>
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 
