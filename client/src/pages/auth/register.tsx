@@ -20,7 +20,7 @@ const t = (key: string) => {
     "auth.register.name_label": "الاسم الكامل",
     "auth.register.name_placeholder": "عبدالرحمن",
     "auth.register.email_label": "البريد الإلكتروني",
-    "auth.register.email_placeholder": "01000000000",
+    "auth.register.email_placeholder": "example@email.com",
     "auth.register.password_label": "كلمة المرور",
     "auth.register.password_placeholder": "••••••••",
     "auth.register.role_label": "أنا...",
