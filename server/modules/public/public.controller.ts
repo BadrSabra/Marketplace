@@ -25,8 +25,8 @@ export const publicStoresController = {
         id: s.id,
         name: s.name,
         description: s.description,
-        logoUrl: null, // Schema doesn't have logoUrl yet, we'll use fallback in frontend
-        isOpen: true,  // Placeholder as schema doesn't have isOpen
+        logoUrl: s.imageUrl || null,
+        isOpen: true,
         createdAt: s.createdAt
       }));
 
