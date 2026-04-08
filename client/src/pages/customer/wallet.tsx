@@ -41,7 +41,7 @@ function WalletGuide() {
           </li>
           <li className="flex items-start gap-2">
             <span className="w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">٣</span>
-            انتظر موافقة الإدارة (خلال ساعات)
+            انتظر موافقة الإدارة (خلال دقائق إلى ربع ساعة)
           </li>
         </ol>
       </div>
@@ -96,7 +96,7 @@ function WithdrawDialog({ open, onClose, balance }: { open: boolean; onClose: ()
               {[
                 { icon: MessageCircle, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30", text: "تواصل مع الدعم الفني عبر واتساب" },
                 { icon: Banknote, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30", text: "أخبره بالمبلغ المطلوب وبيانات حسابك" },
-                { icon: CheckCircle2, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-950/30", text: "سيتم تحويل المبلغ خلال 24 ساعة عمل" },
+                { icon: CheckCircle2, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-950/30", text: "سيتم تحويل المبلغ خلال دقائق إلى ربع ساعة" },
               ].map((step, i) => (
                 <div key={i} className={`flex items-center gap-3 p-3 rounded-lg ${step.bg}`}>
                   <step.icon className={`h-5 w-5 shrink-0 ${step.color}`} />
