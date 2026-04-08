@@ -1,77 +1,45 @@
-# النشر الذاتي التلقائي - منصة مع جابر
+# النشر التلقائي - منصة مع جابر
 
-## كيف يعمل النظام
-
-```
-git push → GitHub → يُرسل إشارة لـ /api/deploy/webhook → التطبيق يحدث نفسه بنفسه
-```
-
-لا تحتاج لأي منصة نشر خارجية. التطبيق يحتوي على آلية النشر بداخله.
+## طريقتان فقط بعد رفع الكود
 
 ---
 
-## الإعداد (مرة واحدة فقط)
-
-### الخطوة 1: رفع الكود على GitHub
+## الطريقة 1: أمر واحد على أي خادم
 
 ```bash
-git init
-git add .
-git commit -m "first commit"
-git branch -M main
-git remote add origin https://github.com/اسمك/mit-gaber.git
-git push -u origin main
+sudo bash <(curl -sSL https://raw.githubusercontent.com/YOUR_USER/YOUR_REPO/main/install.sh)
 ```
 
-### الخطوة 2: تشغيل التطبيق على أي خادم
+هذا الأمر يقوم تلقائياً بـ:
+- ✅ تثبيت Node.js و PostgreSQL و NGINX
+- ✅ نسخ المشروع وبنائه
+- ✅ إعداد قاعدة البيانات
+- ✅ تشغيل التطبيق مع PM2
+- ✅ إعداد جدار الحماية
+- ✅ طباعة كود الـ Webhook جاهزاً للنسخ
+
+**بعدها:** أضف الـ Webhook في GitHub (خطوة واحدة) وكل `git push` = تحديث تلقائي!
+
+---
+
+## الطريقة 2: Docker (لمن يفضّل الحاويات)
 
 ```bash
-git clone https://github.com/اسمك/mit-gaber.git
-cd mit-gaber
+# 1. انسخ ملف البيئة
 cp .env.example .env
-# عدّل ملف .env بمتغيراتك الحقيقية
-npm install
-npm run build
-npm start
+# عدّل .env بكلمة سر قاعدة البيانات
+
+# 2. شغّل كل شيء بأمر واحد
+DB_PASS=كلمة_السر docker-compose up -d
 ```
 
-### الخطوة 3: ربط GitHub بالتطبيق
-
-1. اذهب للمستودع على GitHub → **Settings** → **Webhooks** → **Add webhook**
-2. أدخل البيانات التالية:
-   - **Payload URL:** `https://نطاقك.com/api/deploy/webhook`
-   - **Content type:** `application/json`
-   - **Secret:** نفس قيمة `GITHUB_WEBHOOK_SECRET` في ملف `.env`
-   - **Events:** اختر `Just the push event`
-3. اضغط **Add webhook**
+GitHub Actions يبني صورة Docker تلقائياً عند كل push ويرفعها مجاناً على GitHub Container Registry.
 
 ---
 
-## كيف يعمل بعد الإعداد
-
-```bash
-git add .
-git commit -m "تحديث جديد"
-git push
-```
-
-1. GitHub يُرسل إشارة فورية للتطبيق
-2. التطبيق يسحب آخر الكود تلقائياً
-3. يُعيد بناء نفسه
-4. يُعيد تشغيل نفسه
-
----
-
-## مراقبة حالة النشر
+## مراقبة النشر
 
 ```
-GET /api/deploy/status
+GET /api/deploy/status   ← آخر 10 عمليات نشر
+GET /api/health          ← حالة التطبيق
 ```
-
-يُظهر آخر 10 عمليات نشر مع حالة كل منها.
-
----
-
-## المتغيرات المطلوبة
-
-انظر ملف `.env.example` للاطلاع على جميع المتغيرات.
