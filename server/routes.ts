@@ -1,3 +1,4 @@
+import express from "express";
 import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
@@ -30,6 +31,7 @@ import { deliveryOtpController } from "./modules/delivery/deliveryOtp.controller
 
 import { loginLimiter, orderLimiter, depositLimiter } from "./middleware/security";
 import { chatController } from "./modules/chat/chat.controller";
+import { deployController } from "./modules/deploy/deploy.controller";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -43,6 +45,16 @@ export async function registerRoutes(
     app.get("/api/health", (_req, res) => {
       res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
     });
+
+    // Self-deployment webhook - GitHub يُرسل هنا عند كل push
+    app.post(
+      "/api/deploy/webhook",
+      express.raw({ type: "application/json" }),
+      deployController.webhook
+    );
+
+    // Deploy status - لمراقبة حالة آخر عمليات النشر
+    app.get("/api/deploy/status", deployController.status);
 
     // Ledger
     app.use("/api", ledgerRouter);

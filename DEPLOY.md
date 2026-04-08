@@ -1,14 +1,18 @@
-# دليل النشر التلقائي - منصة مع جابر
+# النشر الذاتي التلقائي - منصة مع جابر
 
 ## كيف يعمل النظام
 
 ```
-أنت تكتب كوداً → git push → GitHub → ينشر تلقائياً على Render
+git push → GitHub → يُرسل إشارة لـ /api/deploy/webhook → التطبيق يحدث نفسه بنفسه
 ```
+
+لا تحتاج لأي منصة نشر خارجية. التطبيق يحتوي على آلية النشر بداخله.
 
 ---
 
-## الخطوة 1: رفع الكود على GitHub
+## الإعداد (مرة واحدة فقط)
+
+### الخطوة 1: رفع الكود على GitHub
 
 ```bash
 git init
@@ -19,32 +23,31 @@ git remote add origin https://github.com/اسمك/mit-gaber.git
 git push -u origin main
 ```
 
+### الخطوة 2: تشغيل التطبيق على أي خادم
+
+```bash
+git clone https://github.com/اسمك/mit-gaber.git
+cd mit-gaber
+cp .env.example .env
+# عدّل ملف .env بمتغيراتك الحقيقية
+npm install
+npm run build
+npm start
+```
+
+### الخطوة 3: ربط GitHub بالتطبيق
+
+1. اذهب للمستودع على GitHub → **Settings** → **Webhooks** → **Add webhook**
+2. أدخل البيانات التالية:
+   - **Payload URL:** `https://نطاقك.com/api/deploy/webhook`
+   - **Content type:** `application/json`
+   - **Secret:** نفس قيمة `GITHUB_WEBHOOK_SECRET` في ملف `.env`
+   - **Events:** اختر `Just the push event`
+3. اضغط **Add webhook**
+
 ---
 
-## الخطوة 2: إعداد Render (مرة واحدة فقط)
-
-1. افتح [render.com](https://render.com) وأنشئ حساباً مجانياً
-2. اضغط **New** → **Blueprint**
-3. اربط حساب GitHub واختر مستودع المشروع
-4. Render سيقرأ ملف `render.yaml` ويُعد كل شيء تلقائياً:
-   - ✅ خادم Node.js
-   - ✅ قاعدة بيانات PostgreSQL
-   - ✅ متغيرات البيئة
-
----
-
-## الخطوة 3: ربط GitHub Actions بـ Render
-
-1. في Render: اذهب للخدمة → **Settings** → **Deploy Hook** → انسخ الرابط
-2. في GitHub: اذهب للمستودع → **Settings** → **Secrets** → **New secret**
-   - الاسم: `RENDER_DEPLOY_HOOK`
-   - القيمة: الرابط المنسوخ
-
----
-
-## النتيجة النهائية
-
-بعد الإعداد مرة واحدة، كل ما تحتاجه هو:
+## كيف يعمل بعد الإعداد
 
 ```bash
 git add .
@@ -52,10 +55,23 @@ git commit -m "تحديث جديد"
 git push
 ```
 
-GitHub Actions سيتحقق من الكود ثم ينشره تلقائياً على Render!
+1. GitHub يُرسل إشارة فورية للتطبيق
+2. التطبيق يسحب آخر الكود تلقائياً
+3. يُعيد بناء نفسه
+4. يُعيد تشغيل نفسه
 
 ---
 
-## متغيرات البيئة المطلوبة
+## مراقبة حالة النشر
 
-انظر ملف `.env.example` للاطلاع على جميع المتغيرات المطلوبة.
+```
+GET /api/deploy/status
+```
+
+يُظهر آخر 10 عمليات نشر مع حالة كل منها.
+
+---
+
+## المتغيرات المطلوبة
+
+انظر ملف `.env.example` للاطلاع على جميع المتغيرات.
