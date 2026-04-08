@@ -45,9 +45,9 @@ export default function AboutPage() {
               <Code2 className="h-10 w-10 text-primary" />
             </div>
             <div className="text-center sm:text-right flex-1">
-              <h3 className="text-xl font-bold mb-1">بدر الدين صبرة</h3>
+              <h3 className="text-xl font-bold mb-1">Badr Aldien Sabra</h3>
               <p className="text-muted-foreground text-sm mb-4 leading-relaxed">
-                مطوّر الواجهات الأمامية والخلفية، مسؤول عن تصميم وبناء منصة سوق ميت جابر بالكامل من الصفر، بما يشمل نظام الطلبات، المحافظ الإلكترونية، نظام التوصيل، ولوحات التحكم المختلفة.
+                Full-Stack Developer responsible for designing and building the Mit Gaber Marketplace platform from scratch, including the orders system, digital wallets, delivery management, and all role-based dashboards.
               </p>
               <a
                 href="https://www.linkedin.com/in/badr-aldien-sabra"
