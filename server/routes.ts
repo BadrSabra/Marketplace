@@ -84,10 +84,26 @@ export async function registerRoutes(
   app.post(api.auth.register.path, async (req, res, next) => {
     try {
       const input = api.auth.register.input.parse(req.body);
-      
-      const existingUser = await storage.getUserByEmail(input.email);
-      if (existingUser) {
-        return res.status(400).json({ message: "Email already registered" });
+
+      // Determine the internal email: use provided email, or generate one from phone
+      const internalEmail = input.email
+        ? input.email
+        : `${input.phone}@phone.mitgaber.local`;
+
+      // Check for duplicate email
+      if (input.email) {
+        const existingByEmail = await storage.getUserByEmail(input.email);
+        if (existingByEmail) {
+          return res.status(400).json({ message: "البريد الإلكتروني مسجّل بالفعل" });
+        }
+      }
+
+      // Check for duplicate phone
+      if (input.phone) {
+        const existingByPhone = await storage.getUserByPhone(input.phone);
+        if (existingByPhone) {
+          return res.status(400).json({ message: "رقم الهاتف مسجّل بالفعل" });
+        }
       }
 
       const hashedPassword = await bcrypt.hash(input.password, 10);
@@ -98,7 +114,8 @@ export async function registerRoutes(
       const { user, wallet } = await db.transaction(async (tx) => {
         const [user] = await tx.insert(users).values({
           name: input.name,
-          email: input.email,
+          email: internalEmail,
+          phone: input.phone,
           password: hashedPassword,
           role: input.role,
           transportType: input.extra?.transportType,
@@ -160,13 +177,29 @@ export async function registerRoutes(
   app.post(api.auth.login.path, loginLimiter, async (req, res, next) => {
     try {
       const input = api.auth.login.input.parse(req.body);
-      const email = input.email;
-      const normalizedEmail = email.toLowerCase();
-      
-      const user = await storage.getUserByEmail(normalizedEmail);
+      const identifier = input.email.trim();
+
+      // Detect whether identifier is an email or a phone number
+      const isEmail = identifier.includes("@");
+
+      let user;
+      if (isEmail) {
+        user = await storage.getUserByEmail(identifier.toLowerCase());
+        // Also check if this is a phone-generated internal email
+        if (!user) {
+          user = await storage.getUserByEmail(identifier.toLowerCase());
+        }
+      } else {
+        // Treat as phone number — look up by phone field
+        user = await storage.getUserByPhone(identifier);
+        // Fallback: try looking up by phone-generated internal email
+        if (!user) {
+          user = await storage.getUserByEmail(`${identifier}@phone.mitgaber.local`);
+        }
+      }
 
       if (!user) {
-        return res.status(401).json({ message: "Invalid credentials" });
+        return res.status(401).json({ message: "بيانات الدخول غير صحيحة" });
       }
 
       const isMatch = await bcrypt.compare(input.password, user.password);

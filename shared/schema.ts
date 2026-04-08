@@ -275,8 +275,9 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ id: tru
 
 // AUTH SCHEMAS
 export const registerSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  email: z.string().email("Invalid email"),
+  name: z.string().min(1, "الاسم مطلوب"),
+  email: z.string().email("بريد إلكتروني غير صحيح").optional(),
+  phone: z.string().min(7, "رقم الهاتف قصير جداً").max(20).optional(),
   password: z.string()
     .min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
   role: z.enum(["CUSTOMER", "STORE_OWNER", "DRIVER"]),
@@ -285,6 +286,11 @@ export const registerSchema = z.object({
     storeType: z.string().optional(),
     transportType: z.string().optional(),
   }).optional(),
+}).refine((data) => {
+  return !!(data.email || data.phone);
+}, {
+  message: "يجب إدخال البريد الإلكتروني أو رقم الهاتف",
+  path: ["email"],
 }).refine((data) => {
   if (data.role === "STORE_OWNER") {
     return !!(data.extra?.storeName && data.extra?.storeType);
@@ -299,7 +305,8 @@ export const registerSchema = z.object({
 });
 
 export const loginSchema = z.object({
-  email: z.string().email(),
+  // accepts email address OR phone number
+  email: z.string().min(1, "يرجى إدخال البريد الإلكتروني أو رقم الهاتف"),
   password: z.string().min(6),
 });
 
