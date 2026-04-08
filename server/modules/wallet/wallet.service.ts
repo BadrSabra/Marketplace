@@ -3,6 +3,7 @@ import { walletTransactions, users, wallets, ledger, withdrawalRequests } from "
 import { eq, and } from "drizzle-orm";
 import type { Wallet, InsertWallet, WalletTransaction, InsertWalletTransaction, WithdrawalRequest } from "@shared/schema";
 import { notificationService } from "../notifications/notification.service";
+import { notifyUser } from "../notifications/push.service";
 import { ledgerService } from "../ledger/ledger.service";
 import { auditService } from "../../services/auditService";
 
@@ -302,6 +303,15 @@ export class WalletService {
         metadata: { amount: request.amount, userId: request.userId }
       });
 
+      // Notify user
+      notifyUser(
+        request.userId,
+        "WITHDRAWAL_APPROVED",
+        "تم قبول طلب السحب",
+        `تمت الموافقة على سحب ${request.amount} جنيه من محفظتك`,
+        { amount: request.amount }
+      ).catch(console.error);
+
       return updatedRequest;
     });
   }
@@ -345,6 +355,15 @@ export class WalletService {
         newValue: { status: "REJECTED" },
         metadata: { amount: request.amount, userId: request.userId, note }
       });
+
+      // Notify user
+      notifyUser(
+        request.userId,
+        "WITHDRAWAL_REJECTED",
+        "تم رفض طلب السحب",
+        `تم رفض طلب سحب ${request.amount} جنيه وتم إعادة المبلغ لمحفظتك`,
+        { amount: request.amount, note }
+      ).catch(console.error);
 
       return updatedRequest;
     });

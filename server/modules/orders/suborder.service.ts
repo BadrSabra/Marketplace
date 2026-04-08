@@ -5,6 +5,7 @@ import type { User, SubOrder } from "@shared/schema";
 import { auditService } from "../../services/auditService";
 import { allowedTransitions } from "./suborder.types";
 import { emitNotification } from "../notifications/notification.emitter";
+import { notifyUser } from "../notifications/push.service";
 
 export class SubOrderService {
   // ... (existing code)
@@ -86,6 +87,39 @@ export class SubOrderService {
           newStatus,
           timestamp: new Date()
         });
+
+        const statusMessages: Record<string, string> = {
+          ACCEPTED: "تم قبول طلبك من المتجر",
+          IN_TRANSIT: "طلبك في الطريق إليك",
+          DELIVERED: "تم تسليم طلبك بنجاح",
+          CANCELLED: "تم إلغاء طلبك",
+        };
+        const statusTitles: Record<string, string> = {
+          ACCEPTED: "تم قبول الطلب",
+          IN_TRANSIT: "الطلب في الطريق",
+          DELIVERED: "تم التسليم",
+          CANCELLED: "تم الإلغاء",
+        };
+        if (statusMessages[newStatus]) {
+          notifyUser(
+            customer.id,
+            "ORDER_STATUS_UPDATE",
+            statusTitles[newStatus] || "تحديث الطلب",
+            statusMessages[newStatus],
+            { subOrderId, newStatus }
+          ).catch(console.error);
+        }
+      }
+
+      // Also notify assigned driver if order is delivered
+      if (newStatus === "DELIVERED" && updatedSubOrder.assignedDriverId) {
+        notifyUser(
+          updatedSubOrder.assignedDriverId,
+          "ORDER_STATUS_UPDATE",
+          "تم التسليم",
+          "تم تأكيد تسليم الطلب بنجاح وسيتم إضافة أرباحك",
+          { subOrderId, newStatus }
+        ).catch(console.error);
       }
 
       return {

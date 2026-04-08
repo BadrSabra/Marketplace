@@ -32,6 +32,7 @@ import { deliveryOtpController } from "./modules/delivery/deliveryOtp.controller
 import { loginLimiter, orderLimiter, depositLimiter } from "./middleware/security";
 import { chatController } from "./modules/chat/chat.controller";
 import { deployController } from "./modules/deploy/deploy.controller";
+import notificationRouter from "./modules/notifications/notification.routes";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -66,6 +67,9 @@ export async function registerRoutes(
   app.post("/api/delivery/offers/:offerId/reject", authenticate, authorizeRole(["CUSTOMER"]), deliveryOfferController.customerRejectOffer.bind(deliveryOfferController));
   app.post("/api/delivery/offers/:offerId/counter", authenticate, authorizeRole(["CUSTOMER"]), deliveryOfferController.customerCounterOffer.bind(deliveryOfferController));
   
+  // Notifications
+  app.use("/api/notifications", notificationRouter);
+
   // Chat
   app.get("/api/chat/rooms", authenticate, chatController.getMyRooms.bind(chatController));
   app.get("/api/chat/rooms/:roomId/messages", authenticate, chatController.getMessages.bind(chatController));
@@ -518,6 +522,16 @@ export async function registerRoutes(
         .returning();
       
       if (!user) return res.status(404).json({ message: "User not found" });
+
+      const { notifyUser } = await import("./modules/notifications/push.service");
+      const roleLabel = user.role === "DRIVER" ? "سائق" : "صاحب متجر";
+      notifyUser(
+        user.id,
+        "ACCOUNT_APPROVED",
+        "تم قبول حسابك",
+        `تهانينا! تم قبول حسابك كـ${roleLabel} ويمكنك الآن تسجيل الدخول`,
+        { role: user.role }
+      ).catch(console.error);
       
       const { password, ...cleanUser } = user;
       res.json(cleanUser);

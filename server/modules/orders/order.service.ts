@@ -2,6 +2,7 @@ import { db } from "../../db";
 import { orders, subOrders, orderItems, products, wallets, walletTransactions, stores, users, deliveryOtps } from "@shared/schema";
 import { eq, and, sql, inArray, gt } from "drizzle-orm";
 import { emitNotification } from "../notifications/notification.emitter";
+import { notifyUser } from "../notifications/push.service";
 import { deliveryOtpService } from "../delivery/deliveryOtp.service";
 import { chatService } from "../chat/chat.service";
 
@@ -121,17 +122,32 @@ export class OrderService {
         });
       }
 
-      return { order, subOrdersCreated };
-    }).then(async ({ order, subOrdersCreated }) => {
+      return { order, subOrdersCreated, customerId: customer?.id };
+    }).then(async ({ order, subOrdersCreated, customerId }) => {
       // Create ORDER_STORE chat rooms after transaction commits
       for (const { subOrderId, ownerId, storeName } of subOrdersCreated) {
         try {
-          await chatService.createRoom("ORDER_STORE", [customerId, ownerId], {
+          await chatService.createRoom("ORDER_STORE", [customerId as string, ownerId], {
             referenceId: subOrderId,
             title: `طلب من ${storeName}`,
           });
         } catch {}
+
+        // Notify store owner
+        notifyUser(ownerId, "NEW_ORDER", "طلب جديد", `لديك طلب جديد بانتظار موافقتك`, {
+          orderId: order.id,
+          subOrderId,
+        }).catch(console.error);
       }
+
+      // Notify customer
+      if (customerId) {
+        notifyUser(customerId, "ORDER_STATUS_UPDATE", "تم استلام طلبك", "طلبك قيد المراجعة من المتجر", {
+          orderId: order.id,
+          status: "PENDING",
+        }).catch(console.error);
+      }
+
       return order;
     });
   }

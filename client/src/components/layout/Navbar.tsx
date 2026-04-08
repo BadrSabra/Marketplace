@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, LogOut, LayoutDashboard, Menu, X, ShoppingCart, Package, MessageCircle } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { NotificationBell } from "@/components/ui/notification-bell";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -55,6 +56,9 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
+          {/* Notification Bell - visible when logged in */}
+          {user && <NotificationBell />}
+
           {/* Chat Icon - visible when logged in */}
           {user && (
             <Link href="/chat">

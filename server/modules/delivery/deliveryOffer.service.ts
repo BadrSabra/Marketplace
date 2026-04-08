@@ -4,6 +4,7 @@ import { eq, and, ne } from "drizzle-orm";
 import { auditService } from "../../services/auditService";
 import { deliveryOtpService } from "./deliveryOtp.service";
 import { chatService } from "../chat/chat.service";
+import { notifyUser } from "../notifications/push.service";
 
 export class DeliveryOfferService {
   async createOffer(subOrderId: string, driverId: string, data: { proposedFee: number; notes?: string }) {
@@ -36,6 +37,18 @@ export class DeliveryOfferService {
         performedByRole: "DRIVER",
         metadata: { subOrderId, proposedFee: data.proposedFee }
       });
+
+      // Notify customer: driver submitted an offer
+      const [parentOrder] = await tx.select().from(orders).where(eq(orders.id, subOrder.orderId)).limit(1);
+      if (parentOrder) {
+        notifyUser(
+          parentOrder.customerId,
+          "NEW_OFFER",
+          "عرض توصيل جديد",
+          `سائق قدّم عرضاً للتوصيل بمبلغ ${data.proposedFee} جنيه`,
+          { subOrderId, offerId: offer.id, proposedFee: data.proposedFee }
+        ).catch(console.error);
+      }
 
       return offer;
     });
@@ -152,6 +165,15 @@ export class DeliveryOfferService {
         newValue: { status: "ACCEPTED", assignedDriverId: offer.driverId, deliveryFee }
       });
 
+      // Notify driver that their offer was accepted
+      notifyUser(
+        offer.driverId,
+        "OFFER_ACCEPTED",
+        "تم قبول عرضك",
+        `تم قبول عرضك للتوصيل بمبلغ ${deliveryFee} جنيه`,
+        { offerId, subOrderId: offer.subOrderId, deliveryFee }
+      ).catch(console.error);
+
       return updatedSubOrder;
     }).then(async (updatedSubOrder) => {
       // Generate OTP after transaction commits
@@ -191,6 +213,15 @@ export class DeliveryOfferService {
         .set({ status: "REJECTED", updatedAt: new Date() })
         .where(eq(deliveryOffers.id, offerId));
 
+      // Notify driver that their offer was rejected
+      notifyUser(
+        offer.driverId,
+        "OFFER_REJECTED",
+        "تم رفض عرضك",
+        "تم رفض عرضك للتوصيل من قِبل العميل",
+        { offerId, subOrderId: offer.subOrderId }
+      ).catch(console.error);
+
       return { success: true };
     });
   }
@@ -226,6 +257,15 @@ export class DeliveryOfferService {
         performedByRole: "CUSTOMER",
         newValue: { counterFee, originalFee: offer.offeredFee }
       });
+
+      // Notify driver about counter-offer
+      notifyUser(
+        offer.driverId,
+        "OFFER_COUNTERED",
+        "عرض مضاد",
+        `قدّم العميل عرضاً مضاداً بمبلغ ${counterFee} جنيه`,
+        { offerId, subOrderId: offer.subOrderId, counterFee, originalFee: offer.offeredFee }
+      ).catch(console.error);
 
       return updatedOffer;
     });

@@ -205,6 +205,48 @@ export const auditLogs = pgTable("audit_logs", {
   };
 });
 
+// NOTIFICATIONS
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "NEW_ORDER",
+  "ORDER_STATUS_UPDATE",
+  "NEW_OFFER",
+  "OFFER_ACCEPTED",
+  "OFFER_REJECTED",
+  "OFFER_COUNTERED",
+  "ACCOUNT_APPROVED",
+  "DEPOSIT_APPROVED",
+  "DEPOSIT_REJECTED",
+  "WITHDRAWAL_APPROVED",
+  "WITHDRAWAL_REJECTED",
+  "WALLET_UPDATE",
+  "SYSTEM_ALERT",
+]);
+
+export const notifications = pgTable("notifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: notificationTypeEnum("type").notNull(),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  data: jsonb("data").$type<Record<string, any>>().default({}),
+  isRead: boolean("is_read").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => [index("notifications_user_idx").on(t.userId, t.isRead)]);
+
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+
 // SUPPORT CHAT
 export const supportMessages = pgTable("support_messages", {
   id: uuid("id").primaryKey().defaultRandom(),
