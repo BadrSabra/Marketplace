@@ -38,7 +38,12 @@ export async function registerRoutes(
     const { otpLimiter, generalLimiter } = await import("./middleware/security");
     app.use(generalLimiter);
     app.use(auditMiddleware);
-    
+
+    // Health check for deployment monitoring
+    app.get("/api/health", (_req, res) => {
+      res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+    });
+
     // Ledger
     app.use("/api", ledgerRouter);
   

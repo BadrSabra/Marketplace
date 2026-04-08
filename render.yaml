@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: mit-gaber
+    env: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mit-gaber-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: PORT
+        value: 10000
+
+databases:
+  - name: mit-gaber-db
+    databaseName: mitgaber
+    user: mitgaber
+    plan: free
+    region: frankfurt
