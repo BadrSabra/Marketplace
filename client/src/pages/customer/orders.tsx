@@ -163,7 +163,7 @@ export default function CustomerOrders() {
 
                         <div className="flex items-center justify-between flex-row-reverse">
                           <p className="text-sm font-bold text-primary">
-                            EGP {parseFloat(order.totalPrice).toFixed(2)}
+                            {parseFloat(order.totalPrice).toFixed(2)} ج.م
                           </p>
                           <Link href={`/customer/order/${order.id}`}>
                             <Button

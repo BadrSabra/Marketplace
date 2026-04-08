@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, DollarSign, History, TrendingUp, Filter, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
@@ -33,8 +34,8 @@ export default function DriverEarnings() {
       });
       if (type !== "ALL") params.append("type", type);
       
-      const res = await fetch(`/api/ledger/transactions?${params.toString()}`);
-      if (!res.ok) throw new Error("Failed to fetch transactions");
+      const res = await apiFetch(`/api/ledger/transactions?${params.toString()}`);
+      if (!res.ok) throw new Error("فشل تحميل المعاملات");
       return res.json();
     }
   });
@@ -86,7 +87,7 @@ export default function DriverEarnings() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-balance">${balanceData?.balance || "0.00"}</div>
+            <div className="text-2xl font-bold" data-testid="text-balance">{balanceData?.balance || "0.00"} ج.م</div>
           </CardContent>
         </Card>
 
@@ -96,7 +97,7 @@ export default function DriverEarnings() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-commissions">${commissionTotal.toFixed(2)}</div>
+            <div className="text-2xl font-bold" data-testid="text-commissions">{commissionTotal.toFixed(2)} ج.م</div>
           </CardContent>
         </Card>
       </div>
@@ -117,7 +118,7 @@ export default function DriverEarnings() {
                 <SelectItem value="DEPOSIT">{t('customer.wallet.types.DEPOSIT')}</SelectItem>
                 <SelectItem value="COMMISSION">{t('customer.wallet.types.COMMISSION')}</SelectItem>
                 <SelectItem value="REFUND">{t('customer.wallet.types.REFUND')}</SelectItem>
-                <SelectItem value="WITHDRAWAL">{t('customer.wallet.types.DEPOSIT')}</SelectItem>
+                <SelectItem value="WITHDRAWAL">{t('customer.wallet.types.WITHDRAWAL')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -150,7 +151,7 @@ export default function DriverEarnings() {
                       "font-medium text-right",
                       tx.type === 'DEPOSIT' || tx.type === 'COMMISSION' ? 'text-green-600' : 'text-red-600'
                     )}>
-                      {tx.type === 'DEPOSIT' || tx.type === 'COMMISSION' ? '+' : '-'}${parseFloat(tx.amount).toFixed(2)}
+                      {tx.type === 'DEPOSIT' || tx.type === 'COMMISSION' ? '+' : '-'}{parseFloat(tx.amount).toFixed(2)} ج.م
                     </TableCell>
                     <TableCell className="text-right">
                       <Badge variant={

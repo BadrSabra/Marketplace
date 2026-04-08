@@ -137,7 +137,7 @@ export default function AdminWithdrawalsPage() {
                       <TableCell className="text-muted-foreground text-sm text-right">{w.user?.email || "—"}</TableCell>
                       <TableCell className="text-right">
                         <span className="font-bold text-orange-600 text-lg">
-                          {parseFloat(w.request.amount).toFixed(2)} EGP
+                          {parseFloat(w.request.amount).toFixed(2)} ج.م
                         </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm text-right">

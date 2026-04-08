@@ -129,7 +129,7 @@ function WithdrawDialog({ open, onClose, balance }: { open: boolean; onClose: ()
 
 const depositSchema = z.object({
   amount: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
-    message: "Amount must be a positive number",
+    message: "يجب أن يكون المبلغ رقماً موجباً",
   }),
   receiptUrl: z.string().min(1, "يجب رفع صورة الإيصال"),
 });
@@ -295,7 +295,7 @@ export default function CustomerWallet() {
             <WalletIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-balance">${balanceData?.balance || "0.00"}</div>
+            <div className="text-2xl font-bold" data-testid="text-balance">{balanceData?.balance || "0.00"} ج.م</div>
           </CardContent>
         </Card>
 
@@ -305,7 +305,7 @@ export default function CustomerWallet() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-pending-holds">${pendingTotal.toFixed(2)}</div>
+            <div className="text-2xl font-bold" data-testid="text-pending-holds">{pendingTotal.toFixed(2)} ج.م</div>
           </CardContent>
         </Card>
 

@@ -56,14 +56,14 @@ export default function ProductsPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1 font-semibold text-foreground">
                         <Tag className="w-3.5 h-3.5 text-primary" />
-                        ${Number(product.price).toFixed(2)}
+                        {Number(product.price).toFixed(2)} ج.م
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1.5">
                         <Archive className="w-4 h-4 text-muted-foreground" />
                         <span className={`font-medium ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-destructive'}`}>
-                          {product.stock} units
+                          {product.stock} وحدة
                         </span>
                       </div>
                     </td>

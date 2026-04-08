@@ -84,7 +84,7 @@ export default function DriverWalletPage() {
               </div>
               <div>
                 <p className="text-primary-foreground/80 text-sm">الرصيد الحالي</p>
-                <h2 className="text-4xl font-bold">{wallet?.balance || "0.00"} EGP</h2>
+                <h2 className="text-4xl font-bold">{wallet?.balance || "0.00"} ج.م</h2>
               </div>
             </div>
             <Button
@@ -147,7 +147,7 @@ export default function DriverWalletPage() {
           <div className="space-y-4 py-2">
             <div className="bg-muted rounded-xl p-3 text-center">
               <p className="text-xs text-muted-foreground">الرصيد المتاح</p>
-              <p className="text-2xl font-bold text-primary">{wallet?.balance} EGP</p>
+              <p className="text-2xl font-bold text-primary">{wallet?.balance} ج.م</p>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">المبلغ المراد سحبه</label>
@@ -164,7 +164,7 @@ export default function DriverWalletPage() {
                 data-testid="input-withdraw-amount"
               />
               <p className="text-xs text-muted-foreground text-center">
-                الحد الأقصى: {wallet?.balance} EGP
+                الحد الأقصى: {wallet?.balance} ج.م
               </p>
               <p className="text-xs text-amber-600 text-center mt-2 bg-amber-50 rounded-lg p-2">
                 ⏳ سيتم مراجعة طلبك من المشرف قبل إتمام عملية السحب

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useDriverTasks, useAvailableOffers, useSubmitOffer, useVerifyOtp } from "@/hooks/use-driver";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,10 +14,6 @@ import type { ActiveDelivery, AvailableTask } from "@/lib/api/driver";
 export default function DriverTasksPage() {
   const { data: tasks, isLoading: tasksLoading, error: tasksError } = useDriverTasks();
   const { data: offers, isLoading: offersLoading, error: offersError } = useAvailableOffers();
-
-  useEffect(() => {
-    console.log("TASKS_PAGE_MOUNTED");
-  }, []);
 
   if (tasksLoading || offersLoading) {
     return <TasksSkeleton />;

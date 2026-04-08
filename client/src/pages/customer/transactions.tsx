@@ -239,7 +239,7 @@ export default function CustomerTransactions() {
                       </TableCell>
                       <TableCell className={`font-bold text-right ${getAmountColor(t_row.type)}`}>
                         {["DEPOSIT", "COMMISSION", "REFUND"].includes(t_row.type) ? "+" : "-"}
-                        EGP {Math.abs(parseFloat(t_row.amount)).toFixed(2)}
+                        {Math.abs(parseFloat(t_row.amount)).toFixed(2)} ج.م
                       </TableCell>
                       <TableCell className="text-right">
                         <Badge variant="secondary" className={getStatusColor(t_row.status)}>

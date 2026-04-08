@@ -79,7 +79,7 @@ export default function OrdersPage() {
                     </td>
                     <td className="px-6 py-4 font-medium">
                       <div className="text-foreground">
-                        Total: ${Number((order as any).totalPrice || 0).toFixed(2)}
+                        الإجمالي: {Number((order as any).totalPrice || 0).toFixed(2)} ج.م
                       </div>
                     </td>
                   </tr>

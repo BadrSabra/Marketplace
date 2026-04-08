@@ -36,7 +36,7 @@ export default function DriverDashboard() {
             {walletLoading ? (
               <Skeleton className="h-8 w-24" />
             ) : (
-              <div className="text-2xl font-bold">{wallet?.balance || "0.00"} EGP</div>
+              <div className="text-2xl font-bold">{wallet?.balance || "0.00"} ج.م</div>
             )}
           </CardContent>
         </Card>

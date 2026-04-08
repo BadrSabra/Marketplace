@@ -22,7 +22,7 @@ export default function AdminDepositsPage() {
       const res = await fetch("/api/admin/deposits/pending", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!res.ok) throw new Error("Failed to fetch deposits");
+      if (!res.ok) throw new Error("فشل تحميل طلبات الإيداع");
       return res.json();
     },
     refetchInterval: 30000,
@@ -128,7 +128,7 @@ export default function AdminDepositsPage() {
                       <TableCell className="text-muted-foreground text-sm">{d.user?.email || "—"}</TableCell>
                       <TableCell>
                         <span className="font-bold text-green-600 text-lg">
-                          ${parseFloat(d.transaction.amount).toFixed(2)}
+                          {parseFloat(d.transaction.amount).toFixed(2)} ج.م
                         </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
