@@ -3,6 +3,7 @@ import { deliveryOffers, subOrders, wallets, walletTransactions, orders, users }
 import { eq, and, ne } from "drizzle-orm";
 import { auditService } from "../../services/auditService";
 import { deliveryOtpService } from "./deliveryOtp.service";
+import { chatService } from "../chat/chat.service";
 
 export class DeliveryOfferService {
   async createOffer(subOrderId: string, driverId: string, data: { proposedFee: number; notes?: string }) {
@@ -155,6 +156,21 @@ export class DeliveryOfferService {
     }).then(async (updatedSubOrder) => {
       // Generate OTP after transaction commits
       await deliveryOtpService.generateOtp(updatedSubOrder.orderId, updatedSubOrder.id);
+
+      // Create ORDER_DRIVER chat room between customer and driver
+      try {
+        const [parentOrder] = await db.select().from(orders).where(eq(orders.id, updatedSubOrder.orderId));
+        if (parentOrder && updatedSubOrder.assignedDriverId) {
+          const existingRoom = await chatService.findRoomByReference("ORDER_DRIVER", updatedSubOrder.id);
+          if (!existingRoom) {
+            await chatService.createRoom("ORDER_DRIVER", [parentOrder.customerId, updatedSubOrder.assignedDriverId], {
+              referenceId: updatedSubOrder.id,
+              title: "تنسيق التوصيل",
+            });
+          }
+        }
+      } catch {}
+
       return updatedSubOrder;
     });
   }

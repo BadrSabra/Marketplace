@@ -3,6 +3,7 @@ import { orders, subOrders, orderItems, products, wallets, walletTransactions, s
 import { eq, and, sql, inArray, gt } from "drizzle-orm";
 import { emitNotification } from "../notifications/notification.emitter";
 import { deliveryOtpService } from "../delivery/deliveryOtp.service";
+import { chatService } from "../chat/chat.service";
 
 export class OrderService {
   async createMultiStoreOrder(customerId: string, items: { productId: string, quantity: number }[]) {
@@ -62,6 +63,8 @@ export class OrderService {
       const [customer] = await tx.select().from(users).where(eq(users.id, customerId)).limit(1);
 
       // 5. Create sub-orders and order items per store
+      const subOrdersCreated: { subOrderId: string; ownerId: string; storeName: string }[] = [];
+
       for (const [storeId, storeItems] of Object.entries(storeGroups)) {
         const subtotal = storeItems.reduce(
           (sum, { product, quantity }) => sum + parseFloat(product.price) * quantity,
@@ -95,7 +98,7 @@ export class OrderService {
           }
         }
 
-        // Notify store owner
+        // Notify store owner and track for chat room creation
         const [store] = await tx.select().from(stores).where(eq(stores.id, storeId)).limit(1);
         if (store) {
           const [owner] = await tx.select().from(users).where(eq(users.id, store.ownerId)).limit(1);
@@ -105,6 +108,7 @@ export class OrderService {
               subOrderId: subOrder.id,
               status: "PENDING",
             });
+            subOrdersCreated.push({ subOrderId: subOrder.id, ownerId: owner.id, storeName: store.name });
           }
         }
       }
@@ -117,6 +121,17 @@ export class OrderService {
         });
       }
 
+      return { order, subOrdersCreated };
+    }).then(async ({ order, subOrdersCreated }) => {
+      // Create ORDER_STORE chat rooms after transaction commits
+      for (const { subOrderId, ownerId, storeName } of subOrdersCreated) {
+        try {
+          await chatService.createRoom("ORDER_STORE", [customerId, ownerId], {
+            referenceId: subOrderId,
+            title: `طلب من ${storeName}`,
+          });
+        } catch {}
+      }
       return order;
     });
   }

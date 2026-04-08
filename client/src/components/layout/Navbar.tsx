@@ -9,13 +9,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, LogOut, LayoutDashboard, Menu, X, ShoppingCart, Package } from "lucide-react";
+import { User, LogOut, LayoutDashboard, Menu, X, ShoppingCart, Package, MessageCircle } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const { totalItems } = useCart();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const { data: unreadData } = useQuery<{ count: number }>({
+    queryKey: ["/api/chat/unread"],
+    enabled: !!user,
+    refetchInterval: 30000,
+    staleTime: 10000,
+  });
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -47,6 +55,20 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
+          {/* Chat Icon - visible when logged in */}
+          {user && (
+            <Link href="/chat">
+              <Button variant="ghost" size="icon" className="relative" data-testid="button-chat">
+                <MessageCircle className="h-5 w-5" />
+                {(unreadData?.count ?? 0) > 0 && (
+                  <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                    {(unreadData?.count ?? 0) > 9 ? "9+" : unreadData?.count}
+                  </span>
+                )}
+              </Button>
+            </Link>
+          )}
+
           {/* Cart Icon - visible when customer is logged in */}
           {user && (user as any).role === "CUSTOMER" && (
             <Link href="/customer/cart">

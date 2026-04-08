@@ -9,7 +9,8 @@ import {
   Wallet, 
   LogOut,
   Menu,
-  ChevronRight
+  ChevronRight,
+  MessageCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Spinner } from "@/components/ui/spinner";
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
   { href: "/store/dashboard/orders", label: "store.orders.title", icon: ShoppingCart },
   { href: "/store/inventory", label: "store.inventory.title", icon: Package },
   { href: "/store/earnings", label: "store.earnings.title", icon: Wallet },
+  { href: "/chat", label: "chat", icon: MessageCircle },
 ];
 
 export function StoreLayout({ children }: { children: ReactNode }) {

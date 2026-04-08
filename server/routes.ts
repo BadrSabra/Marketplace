@@ -29,6 +29,7 @@ import { deliveryOfferController } from "./modules/delivery/deliveryOffer.contro
 import { deliveryOtpController } from "./modules/delivery/deliveryOtp.controller";
 
 import { loginLimiter, orderLimiter, depositLimiter } from "./middleware/security";
+import { chatController } from "./modules/chat/chat.controller";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -54,6 +55,14 @@ export async function registerRoutes(
   app.post("/api/delivery/offers/:offerId/reject", authenticate, authorizeRole(["CUSTOMER"]), deliveryOfferController.customerRejectOffer.bind(deliveryOfferController));
   app.post("/api/delivery/offers/:offerId/counter", authenticate, authorizeRole(["CUSTOMER"]), deliveryOfferController.customerCounterOffer.bind(deliveryOfferController));
   
+  // Chat
+  app.get("/api/chat/rooms", authenticate, chatController.getMyRooms.bind(chatController));
+  app.get("/api/chat/rooms/:roomId/messages", authenticate, chatController.getMessages.bind(chatController));
+  app.post("/api/chat/rooms/:roomId/messages", authenticate, chatController.sendMessage.bind(chatController));
+  app.post("/api/chat/rooms/:roomId/read", authenticate, chatController.markRead.bind(chatController));
+  app.post("/api/chat/support", authenticate, chatController.openSupportRoom.bind(chatController));
+  app.get("/api/chat/unread", authenticate, chatController.getUnreadCount.bind(chatController));
+
   // Deposits
   app.use("/api", depositRouter);
   // --- AUTH MODULE ---

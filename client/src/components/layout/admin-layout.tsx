@@ -11,7 +11,8 @@ import {
   Menu,
   ShieldAlert,
   Wallet,
-  ArrowDownLeft
+  ArrowDownLeft,
+  MessageCircle
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
   { href: "/stores", label: "Stores", icon: StoreIcon },
   { href: "/products", label: "Products", icon: Package },
   { href: "/orders", label: "Orders", icon: ShoppingCart },
+  { href: "/chat", label: "الرسائل", icon: MessageCircle },
 ];
 
 export function AdminLayout({ children }: { children: ReactNode }) {

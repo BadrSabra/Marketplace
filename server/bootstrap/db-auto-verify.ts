@@ -169,6 +169,30 @@ export async function autoVerifyDatabase() {
         new_value JSONB,
         metadata JSONB,
         created_at TIMESTAMP DEFAULT NOW()
+      )`,
+      chat_rooms: `CREATE TABLE chat_rooms (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        type TEXT NOT NULL CHECK (type IN ('ORDER_STORE','ORDER_DRIVER','SUPPORT')),
+        reference_id UUID,
+        title TEXT,
+        status TEXT NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN','CLOSED')),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )`,
+      chat_participants: `CREATE TABLE chat_participants (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        room_id UUID NOT NULL REFERENCES chat_rooms(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        last_read_at TIMESTAMP,
+        joined_at TIMESTAMP DEFAULT NOW()
+      )`,
+      chat_messages: `CREATE TABLE chat_messages (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        room_id UUID NOT NULL REFERENCES chat_rooms(id) ON DELETE CASCADE,
+        sender_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        content TEXT NOT NULL,
+        type TEXT NOT NULL DEFAULT 'TEXT' CHECK (type IN ('TEXT','SYSTEM')),
+        created_at TIMESTAMP DEFAULT NOW()
       )`
     };
 

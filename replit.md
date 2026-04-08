@@ -51,3 +51,38 @@ A full-stack hyperlocal marketplace platform built with React (Vite) frontend, N
 8. **CRITICAL**: Fixed Wouter route ordering in `App.tsx` — `/store/dashboard`, `/store/earnings`, `/store/inventory`, `/store/order/:id` now come **before** the wildcard `/store/:id` route. Previously Wouter matched `/store/dashboard` as a public store page, sending requests to `/api/public/stores/dashboard` and returning 500 errors ("المتجر غير موجود").
 9. Added UUID validation in `suborder.controller.ts` — non-UUID IDs now return 400 instead of crashing with a PostgreSQL syntax error (500).
 10. Added UUID validation in `public.controller.ts` — non-UUID store IDs in `/api/public/stores/:id` now return 404 instead of a DB crash (500).
+
+## Real-Time Chat System (Socket.IO)
+
+### Room Types
+| Type | Participants | Trigger |
+|------|-------------|---------|
+| `ORDER_STORE` | Customer ↔ Store Owner | Auto-created on sub-order creation |
+| `ORDER_DRIVER` | Customer ↔ Driver | Auto-created on driver offer acceptance |
+| `SUPPORT` | Any User ↔ Admin | User calls `POST /api/chat/support` |
+
+### Chat API Endpoints
+- `GET /api/chat/rooms` — list all rooms the user is a participant in
+- `POST /api/chat/support` — open (or retrieve) a SUPPORT room for the current user
+- `GET /api/chat/rooms/:id/messages` — fetch messages (paginated, newest last)
+- `POST /api/chat/rooms/:id/messages` — send a message (only participants)
+- `POST /api/chat/rooms/:id/read` — mark all unread messages as read
+- `GET /api/chat/unread` — get total unread count for current user
+
+### Socket.IO Events
+- **Client → Server**: `join_room`, `send_message`, `mark_read`, `leave_room`
+- **Server → Client**: `new_message`, `unread_update`, `marked_read`
+
+### Frontend
+- `/chat` — list of all chat rooms with unread badges
+- `/chat/:roomId` — real-time chat room view
+- Unread counter shown in all 4 role navbars (polling every 30s + real-time Socket.IO updates)
+- `use-chat-socket.ts` hook handles Socket.IO connection lifecycle
+
+### Key Files
+- `server/modules/chat/chat.service.ts` — room/message CRUD + unread counts
+- `server/modules/chat/chat.socket.ts` — Socket.IO event handlers
+- `server/modules/chat/chat.controller.ts` — REST endpoints
+- `client/src/pages/chat/index.tsx` — chat list page
+- `client/src/pages/chat/room.tsx` — chat room page
+- `client/src/hooks/use-chat-socket.ts` — Socket.IO hook

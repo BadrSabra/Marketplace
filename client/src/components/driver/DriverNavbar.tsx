@@ -8,7 +8,8 @@ import {
   LogOut, 
   Menu,
   CheckCircle2,
-  XCircle
+  XCircle,
+  MessageCircle
 } from "lucide-react";
 import {
   Sheet,
@@ -16,15 +17,26 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export default function DriverNavbar() {
   const { user, logout } = useAuth();
   const [location] = useLocation();
   const [isOnline, setIsOnline] = useState(true);
 
+  const { data: unreadData } = useQuery<{ count: number }>({
+    queryKey: ["/api/chat/unread"],
+    enabled: !!user,
+    refetchInterval: 30000,
+    staleTime: 10000,
+  });
+
+  const unreadCount = unreadData?.count ?? 0;
+
   const navItems = [
     { href: "/driver/tasks", label: "المهام", icon: ClipboardList },
     { href: "/driver/wallet", label: "المحفظة", icon: Wallet },
+    { href: "/chat", label: "الرسائل", icon: MessageCircle, badge: unreadCount },
     { href: "/driver/profile", label: "الملف الشخصي", icon: User },
   ];
 
@@ -32,12 +44,19 @@ export default function DriverNavbar() {
     <>
       {navItems.map((item) => (
         <Link key={item.href} href={item.href}>
-          <a className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+          <a className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors relative ${
             location === item.href 
               ? "bg-primary text-primary-foreground" 
               : "hover:bg-muted"
           }`}>
-            <item.icon className="w-5 h-5" />
+            <div className="relative">
+              <item.icon className="w-5 h-5" />
+              {(item as any).badge > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center">
+                  {(item as any).badge > 9 ? "9+" : (item as any).badge}
+                </span>
+              )}
+            </div>
             <span>{item.label}</span>
           </a>
         </Link>

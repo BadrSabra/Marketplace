@@ -5,6 +5,7 @@ import { createServer } from "http";
 import { autoVerifyDatabase } from "./bootstrap/db-auto-verify";
 import { errorHandler, requestIdMiddleware } from "./middleware/error";
 import { securityMiddleware, generalLimiter, payloadSizeLimit } from "./middleware/security";
+import { initChatSocket } from "./modules/chat/chat.socket";
 import path from "path";
 import fs from "fs";
 
@@ -89,6 +90,7 @@ app.use((req, res, next) => {
     process.exit(1);
   }
   
+  initChatSocket(httpServer);
   await registerRoutes(httpServer, app);
 
   app.use(errorHandler);

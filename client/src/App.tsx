@@ -39,6 +39,8 @@ import AdminDeposits from "@/pages/admin/deposits";
 import AdminWithdrawals from "@/pages/admin/withdrawals";
 import DriverNavbar from "@/components/driver/DriverNavbar";
 import CartPage from "@/pages/customer/cart";
+import ChatListPage from "@/pages/chat/index";
+import ChatRoomPage from "@/pages/chat/room";
 
 function DriverLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -196,6 +198,14 @@ function Router() {
       </Route>
       <Route path="/orders">
         {() => <ProtectedRoute component={OrdersPage} />}
+      </Route>
+      
+      {/* Chat Routes */}
+      <Route path="/chat">
+        {() => <ProtectedRoute component={ChatListPage} />}
+      </Route>
+      <Route path="/chat/:roomId">
+        {() => <ProtectedRoute component={ChatRoomPage} />}
       </Route>
       
       <Route component={NotFound} />

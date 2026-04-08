@@ -5,6 +5,9 @@ import { z } from "zod";
 
 // ENUMS
 export const roleEnum = pgEnum("role", ["ADMIN", "CUSTOMER", "STORE_OWNER", "DRIVER"]);
+export const chatRoomTypeEnum = pgEnum("chat_room_type", ["ORDER_STORE", "ORDER_DRIVER", "SUPPORT"]);
+export const chatRoomStatusEnum = pgEnum("chat_room_status", ["OPEN", "CLOSED"]);
+export const chatMessageTypeEnum = pgEnum("chat_message_type", ["TEXT", "SYSTEM"]);
 export const transactionTypeEnum = pgEnum("transaction_type", ["DEPOSIT", "WITHDRAWAL", "REFUND", "COMMISSION"]);
 export const transactionStatusEnum = pgEnum("transaction_status", ["PENDING", "COMPLETED", "FAILED"]);
 export const orderStatusEnum = pgEnum("order_status", ["PENDING", "ACCEPTED", "IN_TRANSIT", "DELIVERED", "CANCELLED"]);
@@ -260,6 +263,44 @@ export const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
 });
+
+// CHAT ROOMS
+export const chatRooms = pgTable("chat_rooms", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  type: chatRoomTypeEnum("type").notNull(),
+  referenceId: uuid("reference_id"),
+  title: text("title"),
+  status: chatRoomStatusEnum("status").notNull().default("OPEN"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => [index("chat_rooms_reference_idx").on(t.referenceId)]);
+
+export const chatParticipants = pgTable("chat_participants", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  roomId: uuid("room_id").notNull().references(() => chatRooms.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  lastReadAt: timestamp("last_read_at"),
+  joinedAt: timestamp("joined_at").notNull().defaultNow(),
+}, (t) => [index("chat_participants_room_user_idx").on(t.roomId, t.userId)]);
+
+export const chatMessages = pgTable("chat_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  roomId: uuid("room_id").notNull().references(() => chatRooms.id, { onDelete: "cascade" }),
+  senderId: uuid("sender_id").references(() => users.id, { onDelete: "set null" }),
+  content: text("content").notNull(),
+  type: chatMessageTypeEnum("type").notNull().default("TEXT"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => [index("chat_messages_room_idx").on(t.roomId)]);
+
+// CHAT INSERT SCHEMAS
+export const insertChatRoomSchema = createInsertSchema(chatRooms).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true, createdAt: true });
+
+// CHAT TYPES
+export type ChatRoom = typeof chatRooms.$inferSelect;
+export type ChatParticipant = typeof chatParticipants.$inferSelect;
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 
 // API TYPES
 export type User = typeof users.$inferSelect;

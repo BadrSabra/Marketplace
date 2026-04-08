@@ -24,6 +24,14 @@ export const ar = {
     no_orders: "لا توجد طلبات حالياً",
     add_product: "إضافة منتج",
     wallet_balance: "رصيد المحفظة",
+    dashboard: {
+      title: "لوحة التحكم",
+      your_store: "متجرك",
+      wallet_balance: "رصيد المحفظة",
+    },
+    orders: { title: "الطلبات" },
+    inventory: { title: "المخزون" },
+    earnings: { title: "الأرباح" },
   },
 
   wallet: {
@@ -35,5 +43,11 @@ export const ar = {
   notifications: {
     order_status_updated: "تم تحديث حالة الطلب",
     operation_failed: "فشلت العملية",
-  }
+  },
+
+  auth: {
+    login: { logout: "تسجيل الخروج" },
+  },
+
+  chat: "الرسائل",
 };
