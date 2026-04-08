@@ -3,7 +3,7 @@ import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, wallets, stores, orders, subOrders, auditLogs } from "@shared/schema";
+import { users, wallets, walletTransactions, stores, orders, subOrders, auditLogs } from "@shared/schema";
 import { walletService } from "./modules/wallet/wallet.service";
 import { ledgerService } from "./modules/ledger/ledger.service";
 import { api } from "@shared/routes";
@@ -446,6 +446,34 @@ export async function registerRoutes(
         await tx.update(orders)
           .set({ overallStatus: status, updatedAt: new Date() })
           .where(eq(orders.id, id));
+
+        // Refund the customer wallet if cancelling a paid order
+        if (status === "CANCELLED" && parentOrder.paymentStatus === "PAID") {
+          const [customerWallet] = await tx
+            .select()
+            .from(wallets)
+            .where(eq(wallets.userId, parentOrder.customerId));
+
+          if (customerWallet) {
+            const refundAmount = parseFloat(parentOrder.totalPrice);
+            const newBalance = (parseFloat(customerWallet.balance) + refundAmount).toFixed(2);
+            await tx
+              .update(wallets)
+              .set({ balance: newBalance, updatedAt: new Date() })
+              .where(eq(wallets.id, customerWallet.id));
+
+            await tx.insert(walletTransactions).values({
+              walletId: customerWallet.id,
+              type: "REFUND",
+              amount: parentOrder.totalPrice,
+              relatedOrderId: parentOrder.id,
+              status: "COMPLETED",
+              notes: `استرداد تلقائي - إلغاء الطلب #${parentOrder.id.slice(0, 8)} بواسطة الإدارة`,
+            });
+
+            console.log(`[Admin] Refunded ${parentOrder.totalPrice} to customer ${parentOrder.customerId} for cancelled order ${id}`);
+          }
+        }
       });
 
       res.json({ message: `Order and all sub-orders marked as ${status}` });

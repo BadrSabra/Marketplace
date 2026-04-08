@@ -189,18 +189,20 @@ export default function CartPage() {
                     <span className="font-bold">{totalPrice.toFixed(2)} ج.م</span>
                     <span className="text-muted-foreground">المجموع</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="font-bold text-green-600">مجاني</span>
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="text-left">
+                      <span className="text-xs font-medium text-amber-600 bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded-full">سيُحدده السائق لاحقاً</span>
+                    </div>
                     <span className="text-muted-foreground">التوصيل</span>
                   </div>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-black text-lg">
                   <span className="text-primary">{totalPrice.toFixed(2)} ج.م</span>
-                  <span>الإجمالي</span>
+                  <span>إجمالي المنتجات</span>
                 </div>
                 <p className="text-xs text-muted-foreground text-center">
-                  سيُخصم المبلغ من رصيد محفظتك عند تأكيد الطلب
+                  سيُخصم مبلغ المنتجات من محفظتك الآن، ورسوم التوصيل تُحدَّد بعد موافقة السائق
                 </p>
                 <Button
                   className="w-full h-12 text-base font-bold rounded-xl shadow-md"

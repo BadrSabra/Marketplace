@@ -1,5 +1,5 @@
 import { db } from "../../db";
-import { subOrders, stores, orderItems, products, deliveryOffers, users, orders, deliveryOtps } from "@shared/schema";
+import { subOrders, stores, orderItems, products, deliveryOffers, users, orders, deliveryOtps, wallets, walletTransactions } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import type { User, SubOrder } from "@shared/schema";
 import { auditService } from "../../services/auditService";
@@ -49,10 +49,37 @@ export class SubOrderService {
         .where(eq(subOrders.id, subOrderId))
         .returning();
 
-      // 5. Audit & Logging
+      // 5. Refund customer wallet if sub-order is cancelled and payment was made
+      if (newStatus === "CANCELLED" && parentOrder.paymentStatus === "PAID") {
+        const [customerWallet] = await tx
+          .select()
+          .from(wallets)
+          .where(eq(wallets.userId, parentOrder.customerId));
+
+        if (customerWallet) {
+          const newBalance = (parseFloat(customerWallet.balance) + parseFloat(subOrder.subtotal)).toFixed(2);
+          await tx
+            .update(wallets)
+            .set({ balance: newBalance, updatedAt: new Date() })
+            .where(eq(wallets.id, customerWallet.id));
+
+          await tx.insert(walletTransactions).values({
+            walletId: customerWallet.id,
+            type: "REFUND",
+            amount: subOrder.subtotal,
+            relatedOrderId: parentOrder.id,
+            status: "COMPLETED",
+            notes: `استرداد تلقائي - إلغاء طلب فرعي #${subOrderId.slice(0, 8)} من المتجر`,
+          });
+
+          console.log(`[SubOrderService] Refunded ${subOrder.subtotal} to customer wallet for cancelled sub-order ${subOrderId}`);
+        }
+      }
+
+      // 6. Audit & Logging
       // ... (existing code)
 
-      // 6. Notifications
+      // 7. Notifications
       if (customer) {
         emitNotification("ORDER_STATUS_UPDATE", customer.id, customer.role, {
           subOrderId,

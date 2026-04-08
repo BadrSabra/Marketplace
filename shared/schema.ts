@@ -59,8 +59,9 @@ export const walletTransactions = pgTable("wallet_transactions", {
   walletId: uuid("wallet_id").notNull().references(() => wallets.id),
   type: transactionTypeEnum("type").notNull(),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
-  relatedOrderId: uuid("related_order_id"), // Nullable initially
+  relatedOrderId: uuid("related_order_id"),
   receiptUrl: text("receipt_url"),
+  notes: text("notes"),
   status: transactionStatusEnum("status").notNull().default("PENDING"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

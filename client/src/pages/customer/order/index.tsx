@@ -3,7 +3,7 @@ import { useParams, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Package, Truck, Phone, ChevronRight, ArrowRight, CheckCircle, XCircle, Tag, ArrowLeftRight, Clock } from "lucide-react";
+import { Loader2, Package, Truck, Phone, ChevronRight, ArrowRight, CheckCircle, XCircle, Tag, ArrowLeftRight, Clock, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
@@ -278,10 +278,28 @@ function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; or
 
 export default function CustomerOrderDetails() {
   const { id } = useParams();
+  const { toast } = useToast();
+  const [cancelConfirmId, setCancelConfirmId] = useState<string | null>(null);
 
   const { data: order, isLoading, error } = useQuery<any>({
     queryKey: [`/api/orders/${id}`],
     refetchInterval: 30000,
+  });
+
+  const cancelSubOrderMutation = useMutation({
+    mutationFn: async (subOrderId: string) => {
+      const res = await apiRequest("PATCH", `/api/suborders/${subOrderId}/cancel`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "تم إلغاء الطلب الفرعي", description: "سيتم استرداد المبلغ إلى محفظتك تلقائياً." });
+      queryClient.invalidateQueries({ queryKey: [`/api/orders/${id}`] });
+      setCancelConfirmId(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "فشل الإلغاء", description: err.message || "حدث خطأ أثناء الإلغاء", variant: "destructive" });
+      setCancelConfirmId(null);
+    },
   });
 
   if (isLoading) {
@@ -436,8 +454,20 @@ export default function CustomerOrderDetails() {
                       })}
                     </TableBody>
                   </Table>
-                  <div className="mt-4 flex justify-start">
+                  <div className="mt-4 flex justify-between items-center">
                     <p className="text-sm font-bold">الإجمالي الفرعي: {parseFloat(sub.subtotal).toFixed(2)} جنيه</p>
+                    {["PENDING"].includes(sub.status) && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setCancelConfirmId(sub.id)}
+                        data-testid={`button-cancel-suborder-${sub.id}`}
+                        className="gap-2"
+                      >
+                        <XCircle className="h-4 w-4" />
+                        إلغاء الطلب
+                      </Button>
+                    )}
                   </div>
                   {sub.status === "ACCEPTED" && !sub.assignedDriverId && (
                     <DeliveryOffersSection subOrderId={sub.id} orderId={order.id} />
@@ -478,6 +508,35 @@ export default function CustomerOrderDetails() {
           </div>
         </div>
       </main>
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={!!cancelConfirmId} onOpenChange={(open) => !open && setCancelConfirmId(null)}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-right">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              تأكيد الإلغاء
+            </DialogTitle>
+            <DialogDescription className="text-right">
+              هل أنت متأكد من إلغاء هذا الطلب الفرعي؟ سيتم استرداد المبلغ إلى محفظتك تلقائياً.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 flex-row-reverse">
+            <Button
+              variant="destructive"
+              onClick={() => cancelConfirmId && cancelSubOrderMutation.mutate(cancelConfirmId)}
+              disabled={cancelSubOrderMutation.isPending}
+              data-testid="button-confirm-cancel"
+            >
+              {cancelSubOrderMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : null}
+              نعم، إلغاء الطلب
+            </Button>
+            <Button variant="outline" onClick={() => setCancelConfirmId(null)}>
+              تراجع
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
