@@ -23,7 +23,7 @@ export const createProductSchema = z.object({
   stock: z.number().int().min(0),
   description: z.string().max(500).optional(),
   category: z.string().min(1),
-  store_id: z.string().uuid(),
+  store_id: z.string().uuid().optional(),
 });
 
 export const updateProductSchema = z.object({

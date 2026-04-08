@@ -24,7 +24,16 @@ export class ProductsService {
   }
 
   async createProduct(data: CreateProductDTO, user: any): Promise<ProductDTO> {
-    const [store] = await db.select().from(stores).where(eq(stores.id, data.store_id));
+    let storeId = data.store_id;
+
+    // Auto-detect store from authenticated user if store_id not provided
+    if (!storeId) {
+      const [ownedStore] = await db.select().from(stores).where(eq(stores.ownerId, user.id)).limit(1);
+      if (!ownedStore) throw new Error("STORE_NOT_FOUND");
+      storeId = ownedStore.id;
+    }
+
+    const [store] = await db.select().from(stores).where(eq(stores.id, storeId));
     if (!store) throw new Error("STORE_NOT_FOUND");
     
     if (user.role !== "ADMIN" && store.ownerId !== user.id) {
@@ -32,7 +41,7 @@ export class ProductsService {
     }
 
     const [product] = await db.insert(products).values({
-      storeId: data.store_id,
+      storeId: storeId,
       name: data.name,
       price: data.price.toString(),
       stock: data.stock,
@@ -40,7 +49,7 @@ export class ProductsService {
       category: data.category,
     }).returning();
 
-    console.log(`[AUDIT-PRODUCT] user=${user.id} action=CREATE product_id=${product.id} store_id=${product.storeId}`);
+    console.log(`[AUDIT-PRODUCT] user=${user.id} action=CREATE product_id=${product.id} store_id=${storeId}`);
     return this.mapToDTO(product);
   }
 

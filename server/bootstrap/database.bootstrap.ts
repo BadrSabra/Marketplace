@@ -50,7 +50,7 @@ export async function initializeDatabase() {
 
     // 2. Ensure Core Tables Exist
     console.log("[DB] Checking tables...");
-    const tables = ['users', 'wallets', 'stores', 'orders', 'sub_orders', 'delivery_otps', 'ledger', 'withdrawal_requests'];
+    const tables = ['users', 'wallets', 'stores', 'products', 'wallet_transactions', 'orders', 'sub_orders', 'delivery_otps', 'ledger', 'withdrawal_requests'];
     for (const table of tables) {
       const tableCheck = await pool.query(`SELECT to_regclass('public.${table}')`);
       if (!tableCheck.rows[0].to_regclass) {
@@ -93,6 +93,34 @@ export async function initializeDatabase() {
               location_text TEXT,
               created_at TIMESTAMP DEFAULT NOW(),
               updated_at TIMESTAMP DEFAULT NOW()
+            )
+          `);
+        } else if (table === 'products') {
+          await pool.query(`
+            CREATE TABLE IF NOT EXISTS products (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              store_id UUID NOT NULL REFERENCES stores(id),
+              name TEXT NOT NULL,
+              description TEXT,
+              price DECIMAL(10,2) NOT NULL,
+              stock INTEGER NOT NULL DEFAULT 0,
+              category TEXT NOT NULL DEFAULT 'General',
+              image_url TEXT,
+              created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+              updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+            )
+          `);
+        } else if (table === 'wallet_transactions') {
+          await pool.query(`
+            CREATE TABLE IF NOT EXISTS wallet_transactions (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              wallet_id UUID NOT NULL REFERENCES wallets(id),
+              type TEXT NOT NULL,
+              amount DECIMAL(12,2) NOT NULL,
+              related_order_id UUID,
+              receipt_url TEXT,
+              status TEXT NOT NULL DEFAULT 'PENDING',
+              created_at TIMESTAMP NOT NULL DEFAULT NOW()
             )
           `);
         } else if (table === 'orders') {
@@ -173,12 +201,25 @@ export async function initializeDatabase() {
     // 3. Ensure Missing Columns
     console.log("[DB] Checking columns...");
     const columnChecks = [
-      { table: 'users', column: 'role', type: 'role NOT NULL DEFAULT \'CUSTOMER\'' },
-      { table: 'users', column: 'email', type: 'VARCHAR UNIQUE NOT NULL' },
-      { table: 'delivery_otps', column: 'expires_at', type: 'TIMESTAMP NOT NULL' },
+      { table: 'users', column: 'role', type: "TEXT NOT NULL DEFAULT 'CUSTOMER'" },
+      { table: 'users', column: 'email', type: 'VARCHAR UNIQUE NOT NULL DEFAULT \'\'' },
+      { table: 'users', column: 'drivers_license_url', type: 'TEXT' },
+      { table: 'users', column: 'transport_type', type: 'VARCHAR' },
+      { table: 'users', column: 'avatar_url', type: 'TEXT' },
+      { table: 'users', column: 'addresses', type: "TEXT[] DEFAULT '{}'" },
+      { table: 'stores', column: 'image_url', type: 'TEXT' },
+      { table: 'stores', column: 'description', type: 'TEXT' },
+      { table: 'stores', column: 'location_text', type: 'TEXT' },
+      { table: 'stores', column: 'type', type: 'VARCHAR' },
+      { table: 'products', column: 'image_url', type: 'TEXT' },
+      { table: 'products', column: 'description', type: 'TEXT' },
+      { table: 'sub_orders', column: 'expected_delivery_fee', type: 'DECIMAL(10,2) DEFAULT 0' },
+      { table: 'withdrawal_requests', column: 'admin_note', type: 'TEXT' },
+      { table: 'withdrawal_requests', column: 'reviewed_by_admin_id', type: 'UUID REFERENCES users(id)' },
+      { table: 'delivery_otps', column: 'expires_at', type: 'TIMESTAMP NOT NULL DEFAULT NOW()' },
       { table: 'delivery_otps', column: 'attempt_count', type: 'INTEGER DEFAULT 0' },
-      { table: 'delivery_otps', column: 'status', type: 'TEXT NOT NULL DEFAULT \'PENDING\'' },
-      { table: 'delivery_otps', column: 'otp_code', type: 'TEXT NOT NULL' },
+      { table: 'delivery_otps', column: 'status', type: "TEXT NOT NULL DEFAULT 'PENDING'" },
+      { table: 'delivery_otps', column: 'otp_code', type: 'TEXT NOT NULL DEFAULT \'\'' },
       { table: 'delivery_otps', column: 'sub_order_id', type: 'UUID REFERENCES sub_orders(id)' },
       { table: 'delivery_otps', column: 'order_id', type: 'UUID NOT NULL REFERENCES orders(id)' }
     ];

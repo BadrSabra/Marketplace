@@ -82,15 +82,19 @@ export class LedgerService {
       .from(ledger)
       .where(whereClause);
 
-    // Fetch held funds (PENDING wallet transactions)
-    const [heldFundsResult] = await db
-      .select({ sum: sql<string>`sum(amount)` })
-      .from(walletTransactions)
-      .innerJoin(wallets, eq(walletTransactions.walletId, wallets.id))
-      .where(and(
-        eq(wallets.userId, filters.user_id || ""),
-        eq(walletTransactions.status, "PENDING")
-      ));
+    // Fetch held funds (PENDING wallet transactions) - only when user_id is defined
+    let heldFundsResult: { sum: string } | undefined;
+    if (filters.user_id) {
+      const [result] = await db
+        .select({ sum: sql<string>`sum(amount)` })
+        .from(walletTransactions)
+        .innerJoin(wallets, eq(walletTransactions.walletId, wallets.id))
+        .where(and(
+          eq(wallets.userId, filters.user_id),
+          eq(walletTransactions.status, "PENDING")
+        ));
+      heldFundsResult = result;
+    }
 
     return {
       total: Number(totalCount.count),

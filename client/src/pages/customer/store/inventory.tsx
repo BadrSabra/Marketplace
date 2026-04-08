@@ -71,7 +71,7 @@ export default function StoreInventory() {
     queryKey: ["/api/stores"],
   });
   
-  const myStore = stores?.find(s => s.ownerId === user?.id);
+  const myStore = stores?.find(s => (s.ownerId ?? s.owner_id) === user?.id);
 
   const { data: products, isLoading } = useQuery<Product[]>({
     queryKey: [`/api/products?store_id=${myStore?.id}`],
