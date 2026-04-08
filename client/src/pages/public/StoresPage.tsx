@@ -68,7 +68,15 @@ export default function StoresPage() {
               <Link key={store.id} href={`/store/${store.id}`}>
                 <Card className="group overflow-hidden rounded-3xl border-none shadow-md hover:shadow-xl transition-all cursor-pointer bg-white dark:bg-slate-900">
                   <div className="relative h-48 bg-slate-200 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
-                    <StoreIcon className="h-20 w-20 text-slate-400 group-hover:scale-110 transition-transform duration-500" />
+                    {store.logoUrl ? (
+                      <img
+                        src={store.logoUrl}
+                        alt={store.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <StoreIcon className="h-20 w-20 text-slate-400 group-hover:scale-110 transition-transform duration-500" />
+                    )}
                     <div className="absolute top-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
                       <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
                       <span className="text-sm font-bold">4.5</span>
