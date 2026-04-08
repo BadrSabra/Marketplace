@@ -27,9 +27,19 @@ export class DeliveryOtpController {
 
   async generateOtp(req: Request, res: Response) {
     try {
-      const { id: subOrderId } = req.params;
+      const subOrderId = req.params.id as string;
+      const driverId = (req as any).user?.id;
+
       const [subOrder] = await db.select().from(subOrders).where(eq(subOrders.id, subOrderId));
       if (!subOrder) return res.status(404).json({ error: "Sub-order not found" });
+
+      if (subOrder.assignedDriverId !== driverId) {
+        return res.status(403).json({ error: "لا يمكنك توليد رمز OTP لطلب غير مُسند إليك" });
+      }
+
+      if (subOrder.status !== "IN_TRANSIT") {
+        return res.status(400).json({ error: "لا يمكن توليد OTP إلا للطلبات في حالة IN_TRANSIT" });
+      }
 
       const otpCode = await deliveryOtpService.generateOtp(subOrder.orderId, subOrderId);
       res.json({ otpCode });
@@ -40,7 +50,7 @@ export class DeliveryOtpController {
 
   async verify(req: Request, res: Response) {
     try {
-      const subOrderId = req.params.id;
+      const subOrderId = req.params.id as string;
       const { otpCode } = verifySchema.parse(req.body);
 
       const [subOrder] = await db.select().from(subOrders).where(eq(subOrders.id, subOrderId));

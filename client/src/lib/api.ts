@@ -26,7 +26,7 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
         const errorData = await response.json();
-        errorMessage = errorData.error?.message || errorData.message || errorMessage;
+        errorMessage = errorData.error?.message || (typeof errorData.error === "string" ? errorData.error : undefined) || errorData.message || errorMessage;
       }
     } catch (e) {
       // Ignore JSON parse errors for non-JSON error responses

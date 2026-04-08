@@ -7,7 +7,6 @@ export function useOrders() {
     queryKey: ["/api/orders/my-orders"],
     queryFn: async () => {
       const res = await apiFetch("/api/orders/my-orders");
-      if (!res.ok) throw new Error("Failed to fetch orders");
       return res.json();
     },
     refetchInterval: 30000,

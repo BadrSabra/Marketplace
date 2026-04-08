@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { t } from "@/i18n";
+import { cn } from "@/lib/utils";
 
 export default function DriverEarnings() {
   const [page, setPage] = useState(0);

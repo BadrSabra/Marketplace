@@ -10,8 +10,8 @@ const offerSchema = z.object({
 export class DeliveryOfferController {
   async submitOffer(req: Request, res: Response) {
     try {
-      const { id: subOrderId } = req.params;
-      const driverId = (req as any).user.id;
+      const subOrderId = req.params.id as string;
+      const driverId = (req as any).user.id as string;
       const validated = offerSchema.parse(req.body);
 
       const offer = await deliveryOfferService.createOffer(subOrderId, driverId, validated);
@@ -32,7 +32,7 @@ export class DeliveryOfferController {
 
   async getOffersForSubOrder(req: Request, res: Response) {
     try {
-      const { id: subOrderId } = req.params;
+      const subOrderId = req.params.id as string;
       const offers = await deliveryOfferService.getOffersForSubOrder(subOrderId);
       res.json(offers);
     } catch (err: any) {
@@ -42,8 +42,8 @@ export class DeliveryOfferController {
 
   async customerAcceptOffer(req: Request, res: Response) {
     try {
-      const { offerId } = req.params;
-      const customerId = (req as any).user.id;
+      const offerId = req.params.offerId as string;
+      const customerId = (req as any).user.id as string;
       const result = await deliveryOfferService.customerAcceptOffer(offerId, customerId);
       res.json(result);
     } catch (err: any) {
@@ -72,8 +72,8 @@ export class DeliveryOfferController {
 
   async customerRejectOffer(req: Request, res: Response) {
     try {
-      const { offerId } = req.params;
-      const customerId = (req as any).user.id;
+      const offerId = req.params.offerId as string;
+      const customerId = (req as any).user.id as string;
       const result = await deliveryOfferService.customerRejectOffer(offerId, customerId);
       res.json(result);
     } catch (err: any) {
@@ -86,8 +86,8 @@ export class DeliveryOfferController {
 
   async customerCounterOffer(req: Request, res: Response) {
     try {
-      const { offerId } = req.params;
-      const customerId = (req as any).user.id;
+      const offerId = req.params.offerId as string;
+      const customerId = (req as any).user.id as string;
       const schema = z.object({ counterFee: z.coerce.number().positive("يجب أن يكون السعر رقماً موجباً") });
       const { counterFee } = schema.parse(req.body);
       const result = await deliveryOfferService.customerCounterOffer(offerId, customerId, counterFee);
@@ -111,8 +111,8 @@ export class DeliveryOfferController {
 
   async acceptTask(req: Request, res: Response) {
     try {
-      const { id: subOrderId } = req.params;
-      const driverId = (req as any).user.id;
+      const subOrderId = req.params.id as string;
+      const driverId = (req as any).user.id as string;
 
       const result = await deliveryOfferService.acceptTask(subOrderId, driverId);
       res.json(result);

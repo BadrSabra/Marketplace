@@ -20,7 +20,7 @@ router.get("/admin/deposits/pending", authenticate, authorizeRole(["ADMIN"]), as
 
 router.post("/admin/deposits/:id/approve", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const transaction = await walletService.approveDeposit(id);
 
     // Notify user
@@ -56,7 +56,7 @@ router.post("/admin/deposits/:id/approve", authenticate, authorizeRole(["ADMIN"]
 
 router.post("/admin/deposits/:id/reject", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     // Fetch user info before updating
     const [txBefore] = await db

@@ -20,7 +20,6 @@ export function useApproveUser() {
       const res = await apiFetch(`/api/admin/users/${userId}/approve`, {
         method: "PATCH",
       });
-      if (!res.ok) throw new Error("Failed to approve user");
       return res.json();
     },
     onSuccess: () => {

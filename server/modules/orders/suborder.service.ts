@@ -1,24 +1,16 @@
 import { db } from "../../db";
 import { subOrders, stores, orderItems, products, deliveryOffers, users, orders, deliveryOtps, wallets, walletTransactions } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
-import type { User, SubOrder } from "@shared/schema";
+import type { User } from "@shared/schema";
 import { auditService } from "../../services/auditService";
-import { allowedTransitions } from "./suborder.types";
+import { allowedTransitions, type SubOrderStatus } from "./suborder.types";
 import { notifyUser, notifyAllDrivers } from "../notifications/push.service";
 
 export class SubOrderService {
-  // ... (existing code)
 
   validateSubOrderTransition(currentStatus: string, nextStatus: string) {
-    const allowed: Record<string, string[]> = {
-      'PENDING': ['ACCEPTED', 'CANCELLED'],
-      'ACCEPTED': ['IN_TRANSIT', 'CANCELLED'],
-      'IN_TRANSIT': ['DELIVERED'],
-      'DELIVERED': [],
-      'CANCELLED': []
-    };
-
-    if (!allowed[currentStatus]?.includes(nextStatus)) {
+    const allowed = allowedTransitions[currentStatus as SubOrderStatus];
+    if (!allowed || !allowed.includes(nextStatus as SubOrderStatus)) {
       console.error(`[BLOCK] Illegal status transition: ${currentStatus} -> ${nextStatus}`);
       throw new Error(`BUSINESS_RULE_VIOLATION: Illegal state transition from ${currentStatus} to ${nextStatus}`);
     }
@@ -34,30 +26,50 @@ export class SubOrderService {
 
       if (!subOrder) throw new Error("NOT_FOUND");
 
-      // 4️⃣ SUBORDER STATE TRANSITION GUARD
       this.validateSubOrderTransition(subOrder.status, newStatus);
 
       const [parentOrder] = await tx.select().from(orders).where(eq(orders.id, subOrder.orderId));
       const [customer] = await tx.select().from(users).where(eq(users.id, parentOrder.customerId));
 
-      // ... (validation code)
+      const isStoreOwner = actorUser.role === "STORE_OWNER";
+      const isDriver = actorUser.role === "DRIVER";
+      const isAdmin = actorUser.role === "ADMIN";
 
-      // 4. Update status
+      if (isStoreOwner) {
+        const [store] = await tx.select().from(stores).where(eq(stores.id, subOrder.storeId));
+        if (!store || store.ownerId !== actorUser.id) {
+          throw new Error("UNAUTHORIZED: Store owner does not own this sub-order");
+        }
+        if (!["ACCEPTED", "CANCELLED"].includes(newStatus)) {
+          throw new Error("UNAUTHORIZED: Store owner can only ACCEPT or CANCEL sub-orders");
+        }
+      } else if (isDriver) {
+        if (subOrder.assignedDriverId && subOrder.assignedDriverId !== actorUser.id) {
+          throw new Error("UNAUTHORIZED: Driver not assigned to this sub-order");
+        }
+      } else if (!isAdmin) {
+        throw new Error("UNAUTHORIZED: Insufficient role");
+      }
+
       const [updatedSubOrder] = await tx
         .update(subOrders)
         .set({ status: newStatus, updatedAt: new Date() })
         .where(eq(subOrders.id, subOrderId))
         .returning();
 
-      // 5. Refund customer wallet if sub-order is cancelled and payment was made
       if (newStatus === "CANCELLED" && parentOrder.paymentStatus === "PAID") {
         const [customerWallet] = await tx
           .select()
           .from(wallets)
-          .where(eq(wallets.userId, parentOrder.customerId));
+          .where(eq(wallets.userId, parentOrder.customerId))
+          .for("update");
 
         if (customerWallet) {
-          const newBalance = (parseFloat(customerWallet.balance) + parseFloat(subOrder.subtotal)).toFixed(2);
+          const refundAmount = parseFloat(subOrder.subtotal);
+          const deliveryFeeRefund = subOrder.expectedDeliveryFee ? parseFloat(subOrder.expectedDeliveryFee) : 0;
+          const totalRefund = refundAmount + deliveryFeeRefund;
+          const newBalance = (parseFloat(customerWallet.balance) + totalRefund).toFixed(2);
+
           await tx
             .update(wallets)
             .set({ balance: newBalance, updatedAt: new Date() })
@@ -66,20 +78,27 @@ export class SubOrderService {
           await tx.insert(walletTransactions).values({
             walletId: customerWallet.id,
             type: "REFUND",
-            amount: subOrder.subtotal,
+            amount: totalRefund.toFixed(2),
             relatedOrderId: parentOrder.id,
             status: "COMPLETED",
             notes: `استرداد تلقائي - إلغاء طلب فرعي #${subOrderId.slice(0, 8)} من المتجر`,
           });
 
-          console.log(`[SubOrderService] Refunded ${subOrder.subtotal} to customer wallet for cancelled sub-order ${subOrderId}`);
+          console.log(`[SubOrderService] Refunded ${totalRefund} to customer wallet for cancelled sub-order ${subOrderId}`);
         }
       }
 
-      // 6. Audit & Logging
-      // ... (existing code)
+      await auditService.logEvent({
+        actionType: "SUB_ORDER_STATUS_UPDATE",
+        entityType: "sub_order",
+        entityId: subOrderId,
+        performedByUserId: actorUser.id,
+        performedByRole: actorUser.role,
+        oldValue: { status: subOrder.status },
+        newValue: { status: newStatus },
+        metadata: { orderId: subOrder.orderId },
+      });
 
-      // 7. Notifications
       if (customer) {
         const statusMessages: Record<string, string> = {
           ACCEPTED: "تم قبول طلبك من المتجر",
@@ -104,7 +123,6 @@ export class SubOrderService {
         }
       }
 
-      // Also notify assigned driver if order is delivered
       if (newStatus === "DELIVERED" && updatedSubOrder.assignedDriverId) {
         notifyUser(
           updatedSubOrder.assignedDriverId,
@@ -116,7 +134,10 @@ export class SubOrderService {
       }
 
       return {
-        // ... (existing code)
+        sub_order_id: updatedSubOrder.id,
+        old_status: subOrder.status,
+        new_status: updatedSubOrder.status,
+        updated_at: updatedSubOrder.updatedAt.toISOString(),
       };
     });
 
@@ -139,12 +160,15 @@ export class SubOrderService {
         orderId: subOrders.orderId,
         status: subOrders.status,
         subtotal: subOrders.subtotal,
+        storeName: stores.name,
+        storeId: subOrders.storeId,
         customerName: users.name,
         customerPhone: users.phone,
       })
       .from(subOrders)
       .innerJoin(orders, eq(subOrders.orderId, orders.id))
       .innerJoin(users, eq(orders.customerId, users.id))
+      .innerJoin(stores, eq(subOrders.storeId, stores.id))
       .where(
         and(
           eq(subOrders.assignedDriverId, driverId),

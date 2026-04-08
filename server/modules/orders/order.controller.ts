@@ -12,7 +12,7 @@ const createOrderSchema = z.object({
 export class OrderController {
   async create(req: Request, res: Response) {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req as any).user.id;
       const { items } = createOrderSchema.parse(req.body);
       const order = await orderService.createMultiStoreOrder(userId, items);
       res.status(201).json(order);
@@ -23,7 +23,7 @@ export class OrderController {
 
   async get(req: Request, res: Response) {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const order = await orderService.getOrderWithSubOrders(id);
       res.json(order);
     } catch (error: any) {
@@ -33,7 +33,7 @@ export class OrderController {
 
   async getMyOrders(req: Request, res: Response) {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req as any).user.id;
       const orders = await orderService.getCustomerOrders(userId);
       res.json(orders);
     } catch (error: any) {
@@ -43,7 +43,7 @@ export class OrderController {
 
   async getMyStoreOrders(req: Request, res: Response) {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req as any).user.id;
       const orders = await orderService.getStoreOwnerOrders(userId);
       res.json(orders);
     } catch (error: any) {
@@ -53,8 +53,8 @@ export class OrderController {
 
   async cancelSubOrder(req: Request, res: Response) {
     try {
-      const userId = (req.user as any).id;
-      const { id } = req.params;
+      const userId = (req as any).user.id;
+      const id = req.params.id as string;
       await orderService.cancelSubOrder(id, userId);
       res.json({ message: "SubOrder cancelled and refunded if applicable" });
     } catch (error: any) {

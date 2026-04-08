@@ -42,10 +42,6 @@ export function useDeleteStore() {
       const res = await apiFetch(`/api/stores/${id}`, {
         method: 'DELETE',
       });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to delete store");
-      }
       return await res.json();
     },
     onSuccess: () => {

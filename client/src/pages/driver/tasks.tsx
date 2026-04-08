@@ -66,7 +66,7 @@ export default function DriverTasksPage() {
           {!offers || offers.length === 0 ? (
             <Card className="col-span-full p-8 text-center text-muted-foreground">
               لا توجد طلبات متاحة حالياً
-              <Button variant="link" onClick={() => window.location.reload()}>التحديث</Button>
+              <Button variant="ghost" onClick={() => window.location.reload()}>التحديث</Button>
             </Card>
           ) : (
             offers.map(offer => <OfferCard key={offer.sub_order_id} offer={offer} />)

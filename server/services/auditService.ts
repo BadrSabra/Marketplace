@@ -37,6 +37,7 @@ export class AuditService {
     actionType?: string;
     startDate?: string;
     endDate?: string;
+    status?: string;
     limit?: number;
     offset?: number;
   }) {

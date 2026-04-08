@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 
 export default function StoreGrid() {
-  const { data: stores, isLoading, error, refetch } = useQuery({
+  const { data: stores, isLoading, error, refetch } = useQuery<any[]>({
     queryKey: ["/api/public/stores"],
   });
 

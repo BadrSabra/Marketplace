@@ -18,7 +18,7 @@ const withdrawSchema = z.object({
 export class WalletController {
   async getBalance(req: Request, res: Response) {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req as any).user.id;
       const balance = await walletService.getBalance(userId);
       res.json({ balance });
     } catch (error: any) {
@@ -28,7 +28,7 @@ export class WalletController {
 
   async deposit(req: Request, res: Response) {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req as any).user.id;
       const validated = depositSchema.parse(req.body);
       
       const transaction = await walletService.createDeposit(
@@ -57,7 +57,7 @@ export class WalletController {
 
   async approveDeposit(req: Request, res: Response) {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const transaction = await walletService.approveDeposit(id);
       res.json(transaction);
     } catch (error: any) {
@@ -67,7 +67,7 @@ export class WalletController {
 
   async withdraw(req: Request, res: Response) {
     try {
-      const userId = (req.user as any).id;
+      const userId = (req as any).user.id;
       const validated = withdrawSchema.parse(req.body);
       const request = await walletService.withdraw(userId, validated.amount);
       res.json({ message: "تم إرسال طلب السحب بنجاح وهو قيد المراجعة من المشرف", request });
@@ -93,8 +93,8 @@ export class WalletController {
 
   async approveWithdrawal(req: Request, res: Response) {
     try {
-      const { id } = req.params;
-      const adminId = (req.user as any).id;
+      const id = req.params.id as string;
+      const adminId = (req as any).user.id;
       const request = await walletService.approveWithdrawal(id, adminId);
       res.json(request);
     } catch (error: any) {
@@ -104,8 +104,8 @@ export class WalletController {
 
   async rejectWithdrawal(req: Request, res: Response) {
     try {
-      const { id } = req.params;
-      const adminId = (req.user as any).id;
+      const id = req.params.id as string;
+      const adminId = (req as any).user.id;
       const { note } = req.body;
       const request = await walletService.rejectWithdrawal(id, adminId, note);
       res.json(request);
@@ -116,8 +116,8 @@ export class WalletController {
 
   async adminOverride(req: Request, res: Response) {
     try {
-      const { walletId } = req.params;
-      const actorId = (req.user as any).id;
+      const walletId = req.params.walletId as string;
+      const actorId = (req as any).user.id;
       const { amount, reason } = req.body;
 
       if (!amount || isNaN(parseFloat(amount))) {
@@ -128,7 +128,7 @@ export class WalletController {
       }
 
       const newBalance = await walletService.adminOverride(
-        walletId,
+        walletId as string,
         amount.toString(),
         reason,
         actorId

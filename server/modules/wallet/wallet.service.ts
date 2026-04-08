@@ -1,6 +1,6 @@
 import { db } from "../../db";
 import { walletTransactions, users, wallets, ledger, withdrawalRequests } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import type { Wallet, InsertWallet, WalletTransaction, InsertWalletTransaction, WithdrawalRequest } from "@shared/schema";
 import { notificationService } from "../notifications/notification.service";
 import { notifyUser, notifyAdmins } from "../notifications/push.service";

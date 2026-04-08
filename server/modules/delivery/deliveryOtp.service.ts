@@ -43,15 +43,17 @@ export class DeliveryOtpService {
 
   async verifyOtp(orderId: string, otpCode: string, subOrderId?: string): Promise<void> {
     const now = new Date();
+    const baseWhere = and(
+      eq(deliveryOtps.orderId, orderId),
+      eq(deliveryOtps.status, "PENDING"),
+      gt(deliveryOtps.expiresAt, now),
+      lt(deliveryOtps.attemptCount, 5),
+      subOrderId ? eq(deliveryOtps.subOrderId, subOrderId) : undefined
+    );
+
     const [otpRecord] = await db.select()
       .from(deliveryOtps)
-      .where(and(
-        eq(deliveryOtps.orderId, orderId),
-        subOrderId ? eq(deliveryOtps.subOrderId, subOrderId) : undefined as any,
-        eq(deliveryOtps.status, "PENDING"),
-        gt(deliveryOtps.expiresAt, now),
-        lt(deliveryOtps.attemptCount, 5)
-      ));
+      .where(baseWhere);
 
     if (!otpRecord) {
       throw new Error("Invalid, expired, or too many attempts");

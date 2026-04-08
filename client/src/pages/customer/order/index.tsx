@@ -11,7 +11,8 @@ import { Separator } from "@/components/ui/separator";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/api";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -74,11 +75,7 @@ function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; or
 
   const acceptMutation = useMutation({
     mutationFn: async (offerId: string) => {
-      const res = await apiRequest("POST", `/api/delivery/offers/${offerId}/accept`);
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "حدث خطأ" }));
-        throw new Error(err.error || "حدث خطأ");
-      }
+      const res = await apiFetch(`/api/delivery/offers/${offerId}/accept`, { method: "POST" });
       return res.json();
     },
     onSuccess: () => {
@@ -93,11 +90,7 @@ function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; or
 
   const rejectMutation = useMutation({
     mutationFn: async (offerId: string) => {
-      const res = await apiRequest("POST", `/api/delivery/offers/${offerId}/reject`);
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "حدث خطأ" }));
-        throw new Error(err.error || "حدث خطأ");
-      }
+      const res = await apiFetch(`/api/delivery/offers/${offerId}/reject`, { method: "POST" });
       return res.json();
     },
     onSuccess: () => {
@@ -111,11 +104,10 @@ function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; or
 
   const counterMutation = useMutation({
     mutationFn: async ({ offerId, counterFee }: { offerId: string; counterFee: number }) => {
-      const res = await apiRequest("POST", `/api/delivery/offers/${offerId}/counter`, { counterFee });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "حدث خطأ" }));
-        throw new Error(err.error || "حدث خطأ");
-      }
+      const res = await apiFetch(`/api/delivery/offers/${offerId}/counter`, {
+        method: "POST",
+        body: JSON.stringify({ counterFee }),
+      });
       return res.json();
     },
     onSuccess: () => {
@@ -288,7 +280,7 @@ export default function CustomerOrderDetails() {
 
   const cancelSubOrderMutation = useMutation({
     mutationFn: async (subOrderId: string) => {
-      const res = await apiRequest("PATCH", `/api/suborders/${subOrderId}/cancel`);
+      const res = await apiFetch(`/api/suborders/${subOrderId}/cancel`, { method: "PATCH" });
       return res.json();
     },
     onSuccess: () => {

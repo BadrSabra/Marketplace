@@ -217,7 +217,7 @@ export default function StoreOrders() {
                             <span className="font-mono text-xs font-bold text-primary">#{sub.sub_order_id.split("-")[0]}</span>
                             <span className="text-[10px] text-muted-foreground">{sub.createdAt ? format(new Date(sub.createdAt), "MMM d, HH:mm") : "-"}</span>
                             <Link href={`/store/order/${sub.parent_id}`}>
-                              <Button variant="link" size="sm" className="p-0 h-auto text-[11px] justify-start rtl:justify-end">{t('store.orders.view_details')}</Button>
+                              <Button variant="ghost" size="sm" className="p-0 h-auto text-[11px] justify-start rtl:justify-end">{t('store.orders.view_details')}</Button>
                             </Link>
                           </div>
                         </TableCell>

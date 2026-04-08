@@ -13,7 +13,7 @@ export default function StoresPage() {
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: stores, isLoading } = useQuery({
+  const { data: stores, isLoading } = useQuery<any[]>({
     queryKey: ["/api/public/stores"],
   });
 

@@ -35,8 +35,8 @@ export class OrderService {
         totalPrice += parseFloat(product.price) * item.quantity;
       }
 
-      // 3. Deduct from customer wallet
-      const [wallet] = await tx.select().from(wallets).where(eq(wallets.userId, customerId)).limit(1);
+      // 3. Deduct from customer wallet — SELECT FOR UPDATE to prevent race condition
+      const [wallet] = await tx.select().from(wallets).where(eq(wallets.userId, customerId)).limit(1).for("update");
       if (!wallet) throw new Error("Customer wallet not found");
       const balance = parseFloat(wallet.balance);
       if (balance < totalPrice) throw new Error("Insufficient wallet balance");
@@ -317,28 +317,34 @@ export class OrderService {
 
   async cancelSubOrder(subOrderId: string, userId: string) {
     return await db.transaction(async (tx) => {
-      const [subOrder] = await tx.select().from(subOrders).where(eq(subOrders.id, subOrderId));
+      const [subOrder] = await tx.select().from(subOrders).where(eq(subOrders.id, subOrderId)).for("update");
       if (!subOrder) throw new Error("SubOrder not found");
 
       const [order] = await tx.select().from(orders).where(eq(orders.id, subOrder.orderId));
       if (order.customerId !== userId) throw new Error("Unauthorized");
       if (subOrder.status === "DELIVERED") throw new Error("Cannot cancel delivered sub-order");
+      if (subOrder.status === "CANCELLED") throw new Error("Sub-order already cancelled");
 
-      await tx.update(subOrders).set({ status: "CANCELLED" }).where(eq(subOrders.id, subOrderId));
+      await tx.update(subOrders).set({ status: "CANCELLED", updatedAt: new Date() }).where(eq(subOrders.id, subOrderId));
 
       if (order.paymentStatus === "PAID") {
-        const [wallet] = await tx.select().from(wallets).where(eq(wallets.userId, userId));
+        const [wallet] = await tx.select().from(wallets).where(eq(wallets.userId, userId)).for("update");
         if (wallet) {
+          const subtotalRefund = parseFloat(subOrder.subtotal);
+          const deliveryFeeRefund = subOrder.expectedDeliveryFee ? parseFloat(subOrder.expectedDeliveryFee) : 0;
+          const totalRefund = subtotalRefund + deliveryFeeRefund;
+
           await tx.update(wallets)
-            .set({ balance: (parseFloat(wallet.balance) + parseFloat(subOrder.subtotal)).toFixed(2) })
+            .set({ balance: (parseFloat(wallet.balance) + totalRefund).toFixed(2), updatedAt: new Date() })
             .where(eq(wallets.id, wallet.id));
 
           await tx.insert(walletTransactions).values({
             walletId: wallet.id,
             type: "REFUND",
-            amount: subOrder.subtotal,
+            amount: totalRefund.toFixed(2),
             relatedOrderId: order.id,
             status: "COMPLETED",
+            notes: `استرداد عند إلغاء الطلب الفرعي #${subOrderId.slice(0, 8)}`,
           });
         }
       }

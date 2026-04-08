@@ -205,7 +205,7 @@ export default function StoreEarnings() {
               <TableBody>
                 {transactions && transactions.length > 0 ? (
                   transactions.map((tx) => {
-                    const isCredit = tx.type === "DEPOSIT" || tx.type === "COMMISSION" || tx.type === "REFUND";
+                    const isCredit = (tx.type as string) === "DEPOSIT" || (tx.type as string) === "COMMISSION" || (tx.type as string) === "REFUND";
                     const status = (tx as any).status || "COMPLETED";
                     return (
                       <TableRow key={tx.id} data-testid={`row-transaction-${tx.id}`} className="group rtl:flex-row-reverse">

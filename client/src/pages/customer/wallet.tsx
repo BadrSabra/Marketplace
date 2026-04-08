@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, Plus, Wallet as WalletIcon, History, Filter, ChevronLeft, ChevronRight, Clock, Upload, ImageIcon, X, ArrowDownCircle, MessageCircle, CheckCircle2, Banknote, Info } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/api";
 import { format } from "date-fns";
 import { useState, useRef } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -160,8 +161,7 @@ export default function CustomerWallet() {
   const { data: pendingDeposits, isLoading: pendingLoading } = useQuery<any[]>({
     queryKey: ["/api/wallet/pending"],
     queryFn: async () => {
-      const res = await fetch("/api/wallet/pending");
-      if (!res.ok) throw new Error("Failed to fetch pending deposits");
+      const res = await apiFetch("/api/wallet/pending");
       return res.json();
     }
   });
@@ -179,8 +179,7 @@ export default function CustomerWallet() {
       });
       if (type !== "ALL") params.append("type", type);
       
-      const res = await fetch(`/api/ledger/transactions?${params.toString()}`);
-      if (!res.ok) throw new Error("Failed to fetch transactions");
+      const res = await apiFetch(`/api/ledger/transactions?${params.toString()}`);
       return res.json();
     }
   });

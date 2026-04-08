@@ -15,13 +15,14 @@ export class ChatController {
   async getMessages(req: Request, res: Response) {
     try {
       const userId = (req as any).user.id;
-      const { roomId } = req.params;
-      const { before, limit } = req.query;
+      const roomId = req.params.roomId as string;
+      const before = req.query.before as string | undefined;
+      const limit = req.query.limit as string | undefined;
       const messages = await chatService.getMessages(
         roomId,
         userId,
-        limit ? parseInt(limit as string) : 50,
-        before as string | undefined
+        limit ? parseInt(limit) : 50,
+        before
       );
       res.json(messages);
     } catch (err: any) {
@@ -32,8 +33,8 @@ export class ChatController {
 
   async sendMessage(req: Request, res: Response) {
     try {
-      const userId = (req as any).user.id;
-      const { roomId } = req.params;
+      const userId = (req as any).user.id as string;
+      const roomId = req.params.roomId as string;
       const { content } = req.body;
       if (!content?.trim()) return res.status(400).json({ error: "الرسالة لا يمكن أن تكون فارغة" });
       const msg = await chatService.sendMessage(roomId, userId, content.trim());
@@ -46,8 +47,8 @@ export class ChatController {
 
   async markRead(req: Request, res: Response) {
     try {
-      const userId = (req as any).user.id;
-      const { roomId } = req.params;
+      const userId = (req as any).user.id as string;
+      const roomId = req.params.roomId as string;
       await chatService.markRead(roomId, userId);
       res.json({ success: true });
     } catch (err) {

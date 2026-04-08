@@ -66,7 +66,7 @@ export class ProductsController {
 
   async getOne(req: Request, res: Response) {
     try {
-      const product = await productsService.getProductById(req.params.id);
+      const product = await productsService.getProductById(req.params.id as string);
       res.json(product);
     } catch (err: any) {
       if (err.message === "NOT_FOUND") return res.status(404).json({ error: "Product not found" });
@@ -77,7 +77,7 @@ export class ProductsController {
   async update(req: Request, res: Response) {
     try {
       const validated = updateProductSchema.parse(req.body);
-      const product = await productsService.updateProduct(req.params.id, validated, (req as any).user);
+      const product = await productsService.updateProduct(req.params.id as string, validated, (req as any).user);
       res.json(product);
     } catch (err: any) {
       if (err.name === "ZodError") return res.status(400).json({ error: err.errors });
@@ -89,7 +89,7 @@ export class ProductsController {
 
   async delete(req: Request, res: Response) {
     try {
-      await productsService.deleteProduct(req.params.id, (req as any).user);
+      await productsService.deleteProduct(req.params.id as string, (req as any).user);
       res.status(204).send();
     } catch (err: any) {
       if (err.message === "NOT_FOUND") return res.status(404).json({ error: "Product not found" });
@@ -104,7 +104,7 @@ export class ProductsController {
         return res.status(400).json({ error: "No image file provided" });
       }
       const imageUrl = `/uploads/products/${req.file.filename}`;
-      const product = await productsService.updateProductImage(req.params.id, imageUrl, (req as any).user);
+      const product = await productsService.updateProductImage(req.params.id as string, imageUrl, (req as any).user);
       res.json({ success: true, imageUrl, product });
     } catch (err: any) {
       if (err.message === "NOT_FOUND") return res.status(404).json({ error: "Product not found" });

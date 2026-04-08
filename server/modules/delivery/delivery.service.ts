@@ -40,7 +40,7 @@ export class DeliveryService {
       );
 
     if (filters.store_id) {
-      baseQuery = baseQuery.where(eq(subOrders.storeId, filters.store_id));
+      baseQuery = (baseQuery as any).where(eq(subOrders.storeId, filters.store_id));
     }
 
     if (filters.category) {
@@ -50,7 +50,7 @@ export class DeliveryService {
         .innerJoin(products, eq(orderItems.productId, products.id))
         .where(eq(products.category, filters.category));
       
-      baseQuery = baseQuery.where(sql`${subOrders.id} IN ${subOrdersWithCategory}`);
+      baseQuery = (baseQuery as any).where(sql`${subOrders.id} IN ${subOrdersWithCategory}`);
     }
 
     const totalResults = await db.select({ count: sql<number>`count(*)` }).from(subOrders).where(and(eq(subOrders.status, "ACCEPTED"), isNull(subOrders.assignedDriverId)));

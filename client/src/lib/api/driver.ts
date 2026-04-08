@@ -30,28 +30,34 @@ export type ActiveDelivery = {
 };
 
 export async function getDriverTasks(): Promise<ActiveDelivery[]> {
-  const res = await apiFetch("/api/suborders/active");
-  if (!res.ok) {
-    if (res.status === 403 || res.status === 401) return [];
-    throw new Error(`HTTP ${res.status}`);
+  try {
+    const res = await apiFetch("/api/suborders/active");
+    const data = await res.json();
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    return [data];
+  } catch (err: any) {
+    if (err.message?.includes("401") || err.message?.includes("403") || err.message?.includes("Forbidden") || err.message?.includes("Unauthorized")) {
+      return [];
+    }
+    throw err;
   }
-  const data = await res.json();
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  return [data];
 }
 
 export async function getAvailableOffers(): Promise<AvailableTask[]> {
-  const res = await apiFetch("/api/delivery/available-tasks");
-  if (!res.ok) {
-    if (res.status === 403) return [];
-    throw new Error(`HTTP ${res.status}`);
+  try {
+    const res = await apiFetch("/api/delivery/available-tasks");
+    const data = await res.json();
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (data.tasks && Array.isArray(data.tasks)) return data.tasks;
+    return [];
+  } catch (err: any) {
+    if (err.message?.includes("403") || err.message?.includes("Forbidden")) {
+      return [];
+    }
+    throw err;
   }
-  const data = await res.json();
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  if (data.tasks && Array.isArray(data.tasks)) return data.tasks;
-  return [];
 }
 
 export async function submitOffer(subOrderId: string, proposedFee: number) {
@@ -59,10 +65,6 @@ export async function submitOffer(subOrderId: string, proposedFee: number) {
     method: "POST",
     body: JSON.stringify({ proposedFee }),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-    throw new Error(err.error || `HTTP ${res.status}`);
-  }
   return res.json();
 }
 
@@ -71,7 +73,6 @@ export async function acceptTask(subOrderId: string) {
     method: "PATCH",
     body: JSON.stringify({}),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
@@ -80,21 +81,23 @@ export async function verifyOtp(subOrderId: string, otpCode: string) {
     method: "POST",
     body: JSON.stringify({ otpCode }),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
-    throw new Error(err.message || `HTTP ${res.status}`);
-  }
   return res.json();
 }
 
 export async function getDriverWallet(): Promise<{ balance: string; currency?: string }> {
-  const res = await apiFetch("/api/wallet");
-  if (!res.ok) return { balance: "0.00" };
-  return res.json();
+  try {
+    const res = await apiFetch("/api/wallet");
+    return res.json();
+  } catch {
+    return { balance: "0.00" };
+  }
 }
 
 export async function getWalletTransactions(page = 1, limit = 20): Promise<{ transactions: any[]; total: number }> {
-  const res = await apiFetch(`/api/ledger/transactions?limit=${limit}&offset=${(page - 1) * limit}`);
-  if (!res.ok) return { transactions: [], total: 0 };
-  return res.json();
+  try {
+    const res = await apiFetch(`/api/ledger/transactions?limit=${limit}&offset=${(page - 1) * limit}`);
+    return res.json();
+  } catch {
+    return { transactions: [], total: 0 };
+  }
 }

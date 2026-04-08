@@ -84,7 +84,7 @@ router.get("/admin/ledger", authenticate, authorizeRole(["ADMIN"]), async (req, 
 
 router.get("/admin/ledger/:id", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const transaction = await ledgerService.getTransactionById(id);
     
     if (!transaction) {

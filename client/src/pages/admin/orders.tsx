@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { ShoppingCart, Truck, CreditCard } from "lucide-react";
 
 export default function OrdersPage() {
-  const { data: orders, isLoading } = useOrders();
+  const { data: orders, isLoading } = useOrders().useOrders();
 
   const getStatusColor = (status: string) => {
     switch(status) {
@@ -79,13 +79,8 @@ export default function OrdersPage() {
                     </td>
                     <td className="px-6 py-4 font-medium">
                       <div className="text-foreground">
-                        Fee: ${Number(order.proposedDeliveryFee).toFixed(2)}
+                        Total: ${Number((order as any).totalPrice || 0).toFixed(2)}
                       </div>
-                      {order.finalDeliveryFee && (
-                        <div className="text-xs text-green-600 mt-0.5">
-                          Final: ${Number(order.finalDeliveryFee).toFixed(2)}
-                        </div>
-                      )}
                     </td>
                   </tr>
                 ))}
