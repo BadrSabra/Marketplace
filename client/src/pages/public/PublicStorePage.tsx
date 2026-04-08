@@ -7,9 +7,71 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Store as StoreIcon, ImageOff } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { ShoppingCart, Store as StoreIcon, ImageOff, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useCart } from "@/hooks/use-cart";
+import { useState } from "react";
+
+function ProductItem({ product, storeName, onRequireLogin }: { product: any; storeName: string; onRequireLogin: () => void }) {
+  const { addItem } = useCart();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [added, setAdded] = useState(false);
+
+  const handleAdd = () => {
+    if (!user) {
+      onRequireLogin();
+      return;
+    }
+    addItem({
+      productId: product.id,
+      name: product.name,
+      price: parseFloat(product.price) || 0,
+      storeId: product.storeId,
+      storeName,
+      imageUrl: product.imageUrl,
+    });
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+    toast({ title: "تمت الإضافة", description: "تمت إضافة المنتج إلى السلة بنجاح" });
+  };
+
+  return (
+    <Card className="overflow-hidden group hover:shadow-md transition-shadow">
+      <div className="h-40 md:h-48 bg-slate-100 dark:bg-slate-800 flex items-center justify-center relative overflow-hidden">
+        {product.imageUrl ? (
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          <ImageOff className="h-12 w-12 text-slate-300 dark:text-slate-600" />
+        )}
+      </div>
+      <CardContent className="p-4">
+        <h3 className="font-bold text-base md:text-lg mb-1 truncate">{product.name}</h3>
+        <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4 line-clamp-2 h-8 md:h-10">{product.description}</p>
+        <div className="flex items-center justify-between">
+          <span className="text-lg md:text-xl font-bold text-primary">{product.price} ج.م</span>
+          <Button
+            size="sm"
+            variant={added ? "outline" : "default"}
+            onClick={handleAdd}
+            className={`text-xs md:text-sm transition-all ${added ? "border-green-500 text-green-600" : ""}`}
+            data-testid={`button-add-cart-${product.id}`}
+          >
+            {added ? (
+              <><Check className="h-3 w-3 ml-1 text-green-600" />تمت الإضافة</>
+            ) : (
+              <><ShoppingCart className="h-3 w-3 md:h-4 md:w-4 ml-1 md:ml-2" />إضافة</>
+            )}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function PublicStorePage() {
   const { id } = useParams();
@@ -26,19 +88,12 @@ export default function PublicStorePage() {
     select: (data: any[]) => data.filter(p => p.storeId === id),
   });
 
-  const handleAddToCart = () => {
-    if (!user) {
-      toast({
-        title: "يرجى تسجيل الدخول",
-        description: "يجب تسجيل الدخول لإضافة منتجات إلى السلة",
-      });
-      setLocation("/login");
-      return;
-    }
+  const handleRequireLogin = () => {
     toast({
-      title: "تمت الإضافة",
-      description: "تمت إضافة المنتج إلى السلة بنجاح",
+      title: "يرجى تسجيل الدخول",
+      description: "يجب تسجيل الدخول لإضافة منتجات إلى السلة",
     });
+    setLocation("/login");
   };
 
   if (storeLoading || productsLoading) {
@@ -115,30 +170,12 @@ export default function PublicStorePage() {
           {products && products.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
               {products.map((product: any) => (
-                <Card key={product.id} className="overflow-hidden group hover:shadow-md transition-shadow">
-                  <div className="h-40 md:h-48 bg-slate-100 dark:bg-slate-800 flex items-center justify-center relative overflow-hidden">
-                    {product.imageUrl ? (
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <ImageOff className="h-12 w-12 text-slate-300 dark:text-slate-600" />
-                    )}
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-bold text-base md:text-lg mb-1 truncate">{product.name}</h3>
-                    <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4 line-clamp-2 h-8 md:h-10">{product.description}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg md:text-xl font-bold text-primary">{product.price} ج.م</span>
-                      <Button size="sm" onClick={handleAddToCart} className="text-xs md:text-sm">
-                        <ShoppingCart className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
-                        إضافة
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                <ProductItem
+                  key={product.id}
+                  product={product}
+                  storeName={storeData.name}
+                  onRequireLogin={handleRequireLogin}
+                />
               ))}
             </div>
           ) : (
