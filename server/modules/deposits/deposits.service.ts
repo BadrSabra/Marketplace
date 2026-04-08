@@ -3,7 +3,7 @@ import { deposits } from "@shared/deposits.schema";
 import { wallets, ledger, users } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { auditService } from "../../services/auditService";
-import { emitNotification } from "../notifications/notification.emitter";
+import { notifyUser } from "../notifications/push.service";
 
 export class DepositService {
   async approveDeposit(depositId: string, adminId: string, force = false, notes?: string) {
@@ -89,13 +89,14 @@ export class DepositService {
         metadata: { notes, force }
       });
 
-      // 8. Emit Notification
-      emitNotification("WALLET_UPDATE", customer.id, customer.role, {
-        depositId,
-        amount: deposit.amount,
-        status: "APPROVED",
-        newBalance
-      });
+      // 8. Notify customer
+      notifyUser(
+        customer.id,
+        "DEPOSIT_APPROVED",
+        "تم قبول الإيداع",
+        `تمت الموافقة على إيداعك بمبلغ ${deposit.amount} جنيه`,
+        { depositId, amount: deposit.amount, newBalance }
+      ).catch(console.error);
 
       return {
         deposit_id: depositId,

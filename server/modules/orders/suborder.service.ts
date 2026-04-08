@@ -4,7 +4,6 @@ import { eq, and, inArray } from "drizzle-orm";
 import type { User, SubOrder } from "@shared/schema";
 import { auditService } from "../../services/auditService";
 import { allowedTransitions } from "./suborder.types";
-import { emitNotification } from "../notifications/notification.emitter";
 import { notifyUser, notifyAllDrivers } from "../notifications/push.service";
 
 export class SubOrderService {
@@ -82,12 +81,6 @@ export class SubOrderService {
 
       // 7. Notifications
       if (customer) {
-        emitNotification("ORDER_STATUS_UPDATE", customer.id, customer.role, {
-          subOrderId,
-          newStatus,
-          timestamp: new Date()
-        });
-
         const statusMessages: Record<string, string> = {
           ACCEPTED: "تم قبول طلبك من المتجر",
           IN_TRANSIT: "طلبك في الطريق إليك",

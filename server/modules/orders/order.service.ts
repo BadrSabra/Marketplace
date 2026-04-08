@@ -1,7 +1,6 @@
 import { db } from "../../db";
 import { orders, subOrders, orderItems, products, wallets, walletTransactions, stores, users, deliveryOtps } from "@shared/schema";
 import { eq, and, sql, inArray, gt } from "drizzle-orm";
-import { emitNotification } from "../notifications/notification.emitter";
 import { notifyUser } from "../notifications/push.service";
 import { deliveryOtpService } from "../delivery/deliveryOtp.service";
 import { chatService } from "../chat/chat.service";
@@ -104,22 +103,9 @@ export class OrderService {
         if (store) {
           const [owner] = await tx.select().from(users).where(eq(users.id, store.ownerId)).limit(1);
           if (owner) {
-            emitNotification("ORDER_STATUS_UPDATE", owner.id, owner.role, {
-              orderId: order.id,
-              subOrderId: subOrder.id,
-              status: "PENDING",
-            });
             subOrdersCreated.push({ subOrderId: subOrder.id, ownerId: owner.id, storeName: store.name });
           }
         }
-      }
-
-      // 6. Notify customer
-      if (customer) {
-        emitNotification("ORDER_STATUS_UPDATE", customer.id, customer.role, {
-          orderId: order.id,
-          status: "PENDING",
-        });
       }
 
       return { order, subOrdersCreated, customerId: customer?.id };
