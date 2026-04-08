@@ -69,9 +69,9 @@ export const ar = {
       name_label: "الاسم الكامل",
       name_placeholder: "عبدالرحمن",
       email_label: "البريد الإلكتروني",
-      email_placeholder: "example@email.com",
+      email_placeholder: "example@gmail.com",
       password_label: "كلمة المرور",
-      password_placeholder: "••••••••",
+      password_placeholder: "6 أحرف على الأقل",
       role_label: "أنا...",
       role_placeholder: "اختر الدور",
       roles: {
