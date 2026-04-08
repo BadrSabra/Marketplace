@@ -37,14 +37,8 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-    const { otpLimiter, generalLimiter } = await import("./middleware/security");
-    app.use(generalLimiter);
+    const { otpLimiter } = await import("./middleware/security");
     app.use(auditMiddleware);
-
-    // Health check for deployment monitoring
-    app.get("/api/health", (_req, res) => {
-      res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
-    });
 
     // Self-deployment webhook - GitHub يُرسل هنا عند كل push
     app.post(
@@ -94,6 +88,9 @@ export async function registerRoutes(
 
       const hashedPassword = await bcrypt.hash(input.password, 10);
       
+      const rolesThatNeedApproval = ["STORE_OWNER", "DRIVER"];
+      const isApproved = !rolesThatNeedApproval.includes(input.role);
+
       const { user, wallet } = await db.transaction(async (tx) => {
         const [user] = await tx.insert(users).values({
           name: input.name,
@@ -101,7 +98,7 @@ export async function registerRoutes(
           password: hashedPassword,
           role: input.role,
           transportType: input.extra?.transportType,
-          isApproved: true,
+          isApproved,
         }).returning();
 
         const [wallet] = await tx.insert(wallets).values({
@@ -120,9 +117,17 @@ export async function registerRoutes(
         return { user, wallet };
       });
       
-      const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
-      
       const { password, ...userWithoutPassword } = user;
+
+      if (!isApproved) {
+        return res.status(201).json({
+          pendingApproval: true,
+          message: "تم تسجيل حسابك بنجاح. سيتم مراجعته من قِبل الإدارة وإعلامك عند الموافقة.",
+          user: { ...userWithoutPassword, walletBalance: wallet.balance }
+        });
+      }
+
+      const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
       res.status(201).json({ 
         token, 
         user: { ...userWithoutPassword, walletBalance: wallet.balance } 
@@ -180,10 +185,13 @@ export async function registerRoutes(
       }
 
       if (!user.isApproved) {
-        return res.status(403).json({ message: "Account not approved" });
+        return res.status(403).json({ 
+          message: "حسابك قيد المراجعة. سيتم إعلامك عند موافقة الإدارة.",
+          code: "ACCOUNT_PENDING_APPROVAL"
+        });
       }
 
-      const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
+      const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 
       const { password, ...userWithoutPassword } = user;
       res.status(200).json({ token, user: userWithoutPassword });

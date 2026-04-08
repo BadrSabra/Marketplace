@@ -36,12 +36,18 @@ export function useAuth() {
         throw new Error(resData.message || "Registration failed");
       }
       const parsed = api.auth.register.responses[201].parse(resData);
-      
-      localStorage.setItem("jwt_token", parsed.token);
-      return parsed.user;
+
+      if (parsed.pendingApproval) {
+        return { user: parsed.user, pendingApproval: true, message: (parsed as any).message };
+      }
+
+      localStorage.setItem("jwt_token", (parsed as any).token);
+      return { user: parsed.user, pendingApproval: false };
     },
     onSuccess: (data) => {
-      queryClient.setQueryData([api.auth.me.path], data);
+      if (!data.pendingApproval) {
+        queryClient.setQueryData([api.auth.me.path], data.user);
+      }
     },
   });
 
@@ -53,9 +59,11 @@ export function useAuth() {
         body: JSON.stringify(validated),
       });
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "فشل تسجيل الدخول");
+      }
       const parsed = api.auth.login.responses[200].parse(data);
       
-      // Store token
       localStorage.setItem("jwt_token", parsed.token);
       return parsed.user;
     },

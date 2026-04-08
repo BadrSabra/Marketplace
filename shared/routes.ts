@@ -24,7 +24,10 @@ export const api = {
       path: '/api/auth/register' as const,
       input: registerSchema,
       responses: {
-        201: z.object({ token: z.string(), user: userWithoutPassword }),
+        201: z.union([
+          z.object({ token: z.string(), user: userWithoutPassword, pendingApproval: z.undefined().optional() }),
+          z.object({ pendingApproval: z.literal(true), message: z.string(), user: userWithoutPassword }),
+        ]),
         400: errorSchemas.validation,
       }
     },

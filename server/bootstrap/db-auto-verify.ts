@@ -273,23 +273,6 @@ export async function autoVerifyDatabase() {
       }
     });
 
-    // 5. Delete Store Testing (Admin only)
-    console.log("--- RUNNING ENHANCED STORE DELETION TESTS ---");
-    const allStores = await db.select().from(stores);
-    
-    for (const store of allStores) {
-      try {
-        const result = await storage.deleteStore(store.id);
-        console.log(`Deletion Report for Store: ${store.name}`);
-        console.log(JSON.stringify(result, null, 2));
-      } catch (err: any) {
-        console.error(`Failed to delete store ${store.name}: ${err.message}`);
-      }
-    }
-    if (allStores.length === 0) {
-      console.log("No stores found to test deletion.");
-    }
-
     console.table(report);
     console.log("--- DATABASE AUTO-VERIFICATION COMPLETE: HEALTHY ✅ ---");
     return true;

@@ -60,15 +60,24 @@ export default function RegisterPage() {
   });
   
   const [, setLocation] = useLocation();
+  const [pendingApproval, setPendingApproval] = useState(false);
   const { register, isRegistering } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await register(formData);
-      toast({ title: t("auth.register.success_title"), description: t("auth.register.success_desc") });
-      setLocation("/");
+      const result = await register(formData);
+      if (result?.pendingApproval) {
+        setPendingApproval(true);
+        toast({
+          title: "طلب قيد المراجعة",
+          description: result.message || "سيتم مراجعة طلبك والموافقة عليه قريباً.",
+        });
+      } else {
+        toast({ title: t("auth.register.success_title"), description: t("auth.register.success_desc") });
+        setLocation("/");
+      }
     } catch (error: any) {
       toast({ 
         title: t("auth.register.failed_title"), 
@@ -89,6 +98,24 @@ export default function RegisterPage() {
         transition={{ duration: 0.4, ease: "easeOut" }}
         className="w-full max-w-md bg-card rounded-3xl premium-shadow border border-border/50 p-8 md:p-10 relative z-10"
       >
+        {pendingApproval ? (
+          <div className="text-center space-y-6">
+            <div className="w-20 h-20 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto">
+              <svg className="w-10 h-10 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-foreground">طلبك قيد المراجعة</h2>
+            <p className="text-muted-foreground leading-relaxed">تم تسجيل حسابك بنجاح. سيتم مراجعته من قِبل الإدارة وإعلامك عند الموافقة.</p>
+            <button
+              onClick={() => setLocation("/auth/login")}
+              className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-all"
+            >
+              العودة لتسجيل الدخول
+            </button>
+          </div>
+        ) : (
+        <>
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-foreground mb-2">{t("auth.register.title")}</h1>
           <p className="text-muted-foreground">{t("auth.register.subtitle")}</p>
@@ -228,6 +255,8 @@ export default function RegisterPage() {
             </Link>
           </p>
         </form>
+        </>
+        )}
       </motion.div>
     </div>
   );

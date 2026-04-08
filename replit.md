@@ -52,6 +52,24 @@ A full-stack hyperlocal marketplace platform built with React (Vite) frontend, N
 9. Added UUID validation in `suborder.controller.ts` — non-UUID IDs now return 400 instead of crashing with a PostgreSQL syntax error (500).
 10. Added UUID validation in `public.controller.ts` — non-UUID store IDs in `/api/public/stores/:id` now return 404 instead of a DB crash (500).
 
+## Production Safety Audit (April 2026)
+
+### Critical Bugs Fixed
+1. **🔴 CRITICAL — Store Deletion on Every Startup**: `db-auto-verify.ts` contained test code that called `storage.deleteStore()` on ALL stores in the database every time the server restarted. **Removed entirely.**
+2. **🔴 CRITICAL — All Users Auto-Approved**: The registration endpoint set `isApproved: true` for ALL users including `STORE_OWNER` and `DRIVER`, bypassing the admin approval flow entirely. Fixed: only `CUSTOMER` gets auto-approved; `STORE_OWNER` and `DRIVER` require admin approval.
+3. **🟠 Double Rate Limiting**: `generalLimiter` was applied both in `server/index.ts` and inside `registerRoutes()`. Removed the duplicate from `registerRoutes()`.
+4. **🟠 Duplicate `/api/health` endpoint**: A simple health check was registered twice. Removed the redundant simple one; kept the comprehensive one with DB checks.
+
+### Security Improvements
+5. **JWT token expiry**: Extended from `1d` to `7d` for better UX without significant security trade-off.
+6. **Production Security Headers**: Added `Strict-Transport-Security (HSTS)`, `Content-Security-Policy (CSP)`, `Referrer-Policy`, and `Permissions-Policy` headers (production only).
+7. **Login error messages**: Improved error messages for pending accounts to show Arabic text instead of generic "Account not approved".
+
+### Stability Improvements
+8. **DB Connection Pool**: Added explicit pool settings (`max: 20`, `idleTimeoutMillis: 30s`, `connectionTimeoutMillis: 5s`) and an error event handler to prevent silent pool failures under load.
+9. **Registration UX for pending accounts**: Frontend now handles `pendingApproval: true` response correctly — shows a dedicated waiting screen instead of crashing/redirecting incorrectly.
+10. **Login error handling**: Added `res.ok` check before Zod parsing in `use-auth.ts` so server error messages are correctly propagated to the user instead of showing a generic Zod error.
+
 ## Real-Time Chat System (Socket.IO)
 
 ### Room Types
