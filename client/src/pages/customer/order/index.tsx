@@ -64,7 +64,7 @@ function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; or
     queryKey: ["/api/delivery/suborders", subOrderId, "offers"],
     queryFn: async () => {
       const res = await fetch(`/api/delivery/suborders/${subOrderId}/offers`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem("jwt_token")}` },
       });
       if (!res.ok) return [];
       return res.json();
