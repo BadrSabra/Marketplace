@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { t } from "@/i18n";
 
-const SUPPORT_WHATSAPP = "https://wa.me/201000000000?text=مرحباً%2C%20أريد%20طلب%20سحب%20رصيد%20من%20محفظتي";
+const SUPPORT_WHATSAPP = "https://wa.me/201014938003?text=مرحباً%2C%20أريد%20طلب%20سحب%20رصيد%20من%20محفظتي";
 
 function WalletGuide() {
   return (
