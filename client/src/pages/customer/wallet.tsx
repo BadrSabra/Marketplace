@@ -9,13 +9,122 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Plus, Wallet as WalletIcon, History, Filter, ChevronLeft, ChevronRight, Clock, Upload, ImageIcon, X } from "lucide-react";
+import { Loader2, Plus, Wallet as WalletIcon, History, Filter, ChevronLeft, ChevronRight, Clock, Upload, ImageIcon, X, ArrowDownCircle, MessageCircle, CheckCircle2, Banknote, Info } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { useState, useRef } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { t } from "@/i18n";
+
+const SUPPORT_WHATSAPP = "https://wa.me/201000000000?text=مرحباً%2C%20أريد%20طلب%20سحب%20رصيد%20من%20محفظتي";
+
+function WalletGuide() {
+  return (
+    <div className="grid sm:grid-cols-2 gap-4 p-4 bg-gradient-to-l from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-2xl border border-blue-100 dark:border-blue-900">
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+            <Plus className="h-4 w-4 text-white" />
+          </div>
+          <span className="font-bold text-green-700 dark:text-green-400">كيف تُودع رصيداً؟</span>
+        </div>
+        <ol className="space-y-2 text-sm text-muted-foreground pr-2">
+          <li className="flex items-start gap-2">
+            <span className="w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">١</span>
+            حوّل المبلغ عبر فودافون كاش أو إنستاباي
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">٢</span>
+            ارفع صورة الإيصال في النموذج أدناه
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">٣</span>
+            انتظر موافقة الإدارة (خلال ساعات)
+          </li>
+        </ol>
+      </div>
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center shrink-0">
+            <ArrowDownCircle className="h-4 w-4 text-white" />
+          </div>
+          <span className="font-bold text-amber-700 dark:text-amber-400">كيف تسحب رصيدك؟</span>
+        </div>
+        <ol className="space-y-2 text-sm text-muted-foreground pr-2">
+          <li className="flex items-start gap-2">
+            <span className="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">١</span>
+            تواصل مع الدعم الفني للمنصة
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">٢</span>
+            أرسل بياناتك وقيمة المبلغ المطلوب
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">٣</span>
+            سيتم التحويل خلال 24 ساعة
+          </li>
+        </ol>
+      </div>
+    </div>
+  );
+}
+
+function WithdrawDialog({ open, onClose, balance }: { open: boolean; onClose: () => void; balance: string }) {
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md" dir="rtl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-right text-xl">
+            <ArrowDownCircle className="h-6 w-6 text-amber-500" />
+            طلب سحب رصيد
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-5 pt-2">
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-center">
+            <p className="text-sm text-muted-foreground mb-1">رصيدك الحالي</p>
+            <p className="text-3xl font-black text-amber-600 dark:text-amber-400">{balance} ج.م</p>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm font-bold text-right flex items-center gap-2">
+              <Info className="h-4 w-4 text-primary" />
+              خطوات السحب
+            </p>
+            <div className="space-y-2">
+              {[
+                { icon: MessageCircle, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30", text: "تواصل مع الدعم الفني عبر واتساب" },
+                { icon: Banknote, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30", text: "أخبره بالمبلغ المطلوب وبيانات حسابك" },
+                { icon: CheckCircle2, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-950/30", text: "سيتم تحويل المبلغ خلال 24 ساعة عمل" },
+              ].map((step, i) => (
+                <div key={i} className={`flex items-center gap-3 p-3 rounded-lg ${step.bg}`}>
+                  <step.icon className={`h-5 w-5 shrink-0 ${step.color}`} />
+                  <span className="text-sm">{step.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <a
+            href={SUPPORT_WHATSAPP}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-white font-bold text-base transition-colors"
+            data-testid="link-whatsapp-support"
+          >
+            <MessageCircle className="h-5 w-5" />
+            تواصل مع الدعم عبر واتساب
+          </a>
+
+          <p className="text-xs text-muted-foreground text-center">
+            أوقات الدعم: السبت — الخميس، ٩ص — ١١م
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 const depositSchema = z.object({
   amount: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
@@ -32,6 +141,7 @@ export default function CustomerWallet() {
   const [type, setType] = useState<string>("ALL");
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const limit = 10;
 
@@ -158,8 +268,27 @@ export default function CustomerWallet() {
 
   return (
     <div className="container mx-auto p-6 space-y-6 text-right" dir="rtl">
-      <h1 className="text-3xl font-bold">{t('customer.wallet.title')}</h1>
-      
+      <div className="flex items-center justify-between">
+        <Button
+          onClick={() => setWithdrawOpen(true)}
+          variant="outline"
+          className="gap-2 border-amber-400 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-600 dark:hover:bg-amber-950/30 font-bold"
+          data-testid="button-request-withdrawal"
+        >
+          <ArrowDownCircle className="h-4 w-4" />
+          طلب سحب رصيد
+        </Button>
+        <h1 className="text-3xl font-bold">{t('customer.wallet.title')}</h1>
+      </div>
+
+      <WalletGuide />
+
+      <WithdrawDialog
+        open={withdrawOpen}
+        onClose={() => setWithdrawOpen(false)}
+        balance={balanceData?.balance || "0.00"}
+      />
+
       <div className="grid md:grid-cols-3 gap-6">
         <Card data-testid="card-available-balance">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 flex-row-reverse">
