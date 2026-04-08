@@ -2,6 +2,7 @@ import { db } from "../../db";
 import { products, stores } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { ProductDTO, CreateProductDTO, UpdateProductDTO } from "./products.types";
+import { auditService } from "../../services/auditService";
 
 export class ProductsService {
   private mapToDTO(product: any): ProductDTO {
@@ -49,7 +50,14 @@ export class ProductsService {
       category: data.category,
     }).returning();
 
-    console.log(`[AUDIT-PRODUCT] user=${user.id} action=CREATE product_id=${product.id} store_id=${storeId}`);
+    await auditService.logEvent({
+      actionType: "CREATE_PRODUCT",
+      entityType: "PRODUCT",
+      entityId: product.id,
+      performedByUserId: user.id,
+      performedByRole: user.role,
+      newValue: { name: product.name, price: product.price, storeId },
+    });
     return this.mapToDTO(product);
   }
 
@@ -96,7 +104,15 @@ export class ProductsService {
         .where(eq(products.id, id))
         .returning();
 
-      console.log(`[AUDIT-PRODUCT] user=${user.id} action=UPDATE product_id=${id} store_id=${product.storeId}`);
+      await auditService.logEvent({
+        actionType: "UPDATE_PRODUCT",
+        entityType: "PRODUCT",
+        entityId: id,
+        performedByUserId: user.id,
+        performedByRole: user.role,
+        oldValue: { name: product.name, price: product.price },
+        newValue: { ...data },
+      });
       return this.mapToDTO(updated);
     });
   }
@@ -111,7 +127,14 @@ export class ProductsService {
     }
 
     await db.delete(products).where(eq(products.id, id));
-    console.log(`[AUDIT-PRODUCT] user=${user.id} action=DELETE product_id=${id} store_id=${product.storeId}`);
+    await auditService.logEvent({
+      actionType: "DELETE_PRODUCT",
+      entityType: "PRODUCT",
+      entityId: id,
+      performedByUserId: user.id,
+      performedByRole: user.role,
+      oldValue: { name: product.name, storeId: product.storeId },
+    });
   }
 
   async updateProductImage(id: string, imageUrl: string, user: any): Promise<ProductDTO> {
@@ -128,7 +151,14 @@ export class ProductsService {
       .where(eq(products.id, id))
       .returning();
 
-    console.log(`[AUDIT-PRODUCT] user=${user.id} action=UPDATE_IMAGE product_id=${id} store_id=${product.storeId}`);
+    await auditService.logEvent({
+      actionType: "UPDATE_PRODUCT_IMAGE",
+      entityType: "PRODUCT",
+      entityId: id,
+      performedByUserId: user.id,
+      performedByRole: user.role,
+      newValue: { imageUrl },
+    });
     return this.mapToDTO(updated);
   }
 }

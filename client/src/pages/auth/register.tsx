@@ -11,40 +11,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-
-// Temporary i18n mock until a full provider is setup
-const t = (key: string) => {
-  const translations: any = {
-    "auth.register.title": "إنشاء حساب",
-    "auth.register.subtitle": "انضم إلى سوق ميت جابر",
-    "auth.register.name_label": "الاسم الكامل",
-    "auth.register.name_placeholder": "عبدالرحمن",
-    "auth.register.email_label": "البريد الإلكتروني",
-    "auth.register.email_placeholder": "example@email.com",
-    "auth.register.password_label": "كلمة المرور",
-    "auth.register.password_placeholder": "••••••••",
-    "auth.register.role_label": "أنا...",
-    "auth.register.role_placeholder": "اختر الدور",
-    "auth.register.roles.customer": "عميل",
-    "auth.register.roles.store_owner": "صاحب متجر",
-    "auth.register.roles.driver": "سائق توصيل",
-    "auth.register.store_name_label": "اسم المتجر",
-    "auth.register.store_name_placeholder": "متجري الرائع",
-    "auth.register.store_type_label": "نوع المتجر",
-    "auth.register.store_type_placeholder": "بقالة، إلكترونيات، إلخ.",
-    "auth.register.transport_type_label": "نوع النقل",
-    "auth.register.transport_type_placeholder": "دراجة، دراجة نارية، سيارة",
-    "auth.register.submit": "إنشاء حساب",
-    "auth.register.submitting": "جاري إنشاء الحساب...",
-    "auth.register.has_account": "لديك حساب بالفعل؟",
-    "auth.register.login_link": "تسجيل الدخول",
-    "auth.register.success_title": "مرحباً!",
-    "auth.register.success_desc": "تم إنشاء الحساب بنجاح.",
-    "auth.register.failed_title": "فشل التسجيل",
-    "auth.register.failed_desc": "فشل في إنشاء الحساب"
-  };
-  return translations[key] || key;
-};
+import { t } from "@/i18n";
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({

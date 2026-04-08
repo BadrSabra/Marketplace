@@ -4,27 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
 import { Lock, Mail, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-// Temporary i18n mock until a full provider is setup
-const t = (key: string) => {
-  const translations: any = {
-    "auth.login.title": "بوابة المسؤول",
-    "auth.login.subtitle": "تسجيل الدخول لإدارة متجرك",
-    "auth.login.email_label": "البريد الإلكتروني",
-    "auth.login.email_placeholder": "admin@example.com",
-    "auth.login.password_label": "كلمة المرور",
-    "auth.login.password_placeholder": "••••••••",
-    "auth.login.submit": "تسجيل الدخول",
-    "auth.login.submitting": "جاري تسجيل الدخول...",
-    "auth.login.no_account": "ليس لديك حساب؟",
-    "auth.login.register_link": "إنشاء حساب",
-    "auth.login.success_title": "مرحباً بك مجدداً!",
-    "auth.login.success_desc": "تم تسجيل الدخول بنجاح.",
-    "auth.login.failed_title": "فشل تسجيل الدخول",
-    "auth.login.failed_desc": "بيانات الاعتماد غير صالحة"
-  };
-  return translations[key] || key;
-};
+import { t } from "@/i18n";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");

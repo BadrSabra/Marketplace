@@ -18,14 +18,13 @@ export class NotificationService {
   }
 
   private async handleNotification(event: NotificationEvent) {
-    // RBAC Check / Logging
     try {
-      await auditService.logAction({
+      await auditService.insertAuditLog({
         actionType: `NOTIFICATION_${event.type}`,
         entityType: "NOTIFICATION",
-        entityId: event.userId as any,
-        performedByUserId: event.userId,
-        performedByRole: event.role,
+        entityId: event.userId,
+        userId: event.userId,
+        role: event.role,
         newValue: event.payload,
         metadata: {
           timestamp: event.timestamp,

@@ -125,7 +125,6 @@ export class LedgerService {
   }
 
   async processCommissions(subOrderId: string, force = false): Promise<{ ledger_entry_ids: string[] }> {
-    console.log(`[AUDIT-LEDGER] sub_order_id=${subOrderId} force=${force}`);
 
     return await db.transaction(async (tx) => {
       // 2️⃣ IDEMPOTENCY PROTECTION: Check if already processed

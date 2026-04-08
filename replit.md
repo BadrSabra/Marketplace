@@ -147,3 +147,23 @@ Clicking a notification navigates to the relevant page based on type and user ro
 - `client/src/hooks/use-notifications.ts` — frontend hook (push permission, subscription, real-time)
 - `client/public/sw.js` — service worker (push events, click navigation)
 - `client/src/components/ui/notification-bell.tsx` — UI component with role-based navigation
+
+## Code Quality Audit (April 2026)
+
+### Bugs Fixed
+1. **Hardcoded delivery address**: `delivery.service.ts` returned `'Address placeholder'` as customer address. Fixed to read actual first address from `users.addresses` JSON column via `COALESCE((addresses->>0), 'لا يوجد عنوان محدد')`.
+2. **`notification.service.ts` calling non-existent method**: Called `auditService.logAction()` which doesn't exist on the audit module. Fixed to call `auditService.insertAuditLog()` with the correct parameter shape.
+3. **Seed data running in production**: `seedDatabase()` ran unconditionally on every server start. Fixed: now guarded with `process.env.NODE_ENV !== 'production'`.
+
+### Audit Logging Improvements
+4. **`delivery.service.ts`**: Replaced `console.log([AUDIT-DELIVERY] ...)` with actual `auditService.logEvent()` call writing to the `audit_logs` table.
+5. **`products.service.ts`**: Replaced all four `console.log([AUDIT-PRODUCT] ...)` calls with proper `auditService.logEvent()` calls for CREATE, UPDATE, DELETE, and UPDATE_IMAGE actions.
+6. **`ledger.service.ts`**: Removed redundant `console.log([AUDIT-LEDGER] ...)` (function already has full audit logging inside the transaction).
+7. **`deposits.service.ts`**: Removed redundant `console.log([AUDIT-DEPOSIT] ...)` (function already has full audit logging inside the transaction).
+
+### i18n Unification
+8. **`login.tsx` and `register.tsx`**: Replaced local inline `t()` translation mock functions with the global `t()` imported from `@/i18n`. Eliminated code duplication and the "Temporary i18n mock" comments.
+9. **`ar.ts`**: Added all missing auth translation keys (`auth.login.*` and `auth.register.*`) including nested `roles.*`, store/transport fields, and success/failure messages.
+
+### Dead Code Removal
+10. **`use-notification-stub.ts`**: Deleted unused stub file that contained mock notifications — it was not imported anywhere in the codebase and created confusion about which notification system was active.

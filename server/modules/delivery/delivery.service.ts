@@ -2,6 +2,7 @@ import { db } from "../../db";
 import { subOrders, orders, stores, users, orderItems, products, deliveryOffers } from "@shared/schema";
 import { eq, and, isNull, sql, asc, inArray } from "drizzle-orm";
 import { AvailableTaskDTO, GetAvailableTasksFilters } from "./delivery.types";
+import { auditService } from "../../services/auditService";
 
 export class DeliveryService {
   async getAvailableTasks(driverId: string, filters: GetAvailableTasksFilters): Promise<{ tasks: AvailableTaskDTO[], total: number }> {
@@ -21,7 +22,7 @@ export class DeliveryService {
         store_id: subOrders.storeId,
         store_name: stores.name,
         customer_name: users.name,
-        customer_address: sql<string>`'Address placeholder'`,
+        customer_address: sql<string>`COALESCE((${users.addresses}->>0), 'لا يوجد عنوان محدد')`,
         subtotal: subOrders.subtotal,
         created_at: subOrders.createdAt,
         status: subOrders.status,
@@ -119,7 +120,14 @@ export class DeliveryService {
       };
     }));
 
-    console.log(`[AUDIT-DELIVERY] driver_id=${driverId} action=VIEW_AVAILABLE_TASKS filters=${JSON.stringify(filters)}`);
+    await auditService.logEvent({
+      actionType: "VIEW_AVAILABLE_TASKS",
+      entityType: "DELIVERY_TASK",
+      entityId: driverId,
+      performedByUserId: driverId,
+      performedByRole: "DRIVER",
+      metadata: { filters, totalResults: total },
+    });
 
     return { tasks, total };
   }

@@ -7,7 +7,6 @@ import { emitNotification } from "../notifications/notification.emitter";
 
 export class DepositService {
   async approveDeposit(depositId: string, adminId: string, force = false, notes?: string) {
-    console.log(`[AUDIT-DEPOSIT] deposit_id=${depositId} approved_by=${adminId} force=${force}`);
 
     return await db.transaction(async (tx) => {
       // 1. Fetch and lock deposit

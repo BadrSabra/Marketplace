@@ -749,7 +749,10 @@ export async function registerRoutes(
 
   // Attempt to seed data
   await ensureAdminAccount();
-  seedDatabase();
+  // Only seed test data in development environment
+  if (process.env.NODE_ENV !== "production") {
+    seedDatabase();
+  }
 
   return httpServer;
 }
