@@ -76,7 +76,7 @@ export class OrderService {
           storeId,
           subtotal: subtotal.toFixed(2),
           status: "PENDING",
-          expectedDeliveryFee: "10.00",
+          expectedDeliveryFee: "0.00",
         }).returning();
 
         // Insert order items for this sub-order

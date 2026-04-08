@@ -333,12 +333,20 @@ export default function CustomerOrderDetails() {
   const currentStepIndex = progressSteps.indexOf(effectiveStatus);
   const progressPercentage = Math.max(20, ((currentStepIndex + 1) / progressSteps.length) * 100);
 
-  // Compute total delivery fees from subOrders
   const subOrders = order.subOrders || order.sub_orders || [];
-  const totalDeliveryFees = subOrders.reduce((sum: number, sub: any) => {
+
+  // Only count delivery fees for sub-orders that have an assigned driver
+  // (fee is locked/confirmed when driver offer is accepted)
+  const confirmedDeliveryFees = subOrders.reduce((sum: number, sub: any) => {
+    if (!sub.assignedDriverId) return sum;
     const fee = parseFloat(sub.expectedDeliveryFee || "0");
     return sum + (isNaN(fee) ? 0 : fee);
   }, 0);
+
+  // Whether any active sub-order is still waiting for a driver
+  const hasPendingDelivery = subOrders.some(
+    (sub: any) => !sub.assignedDriverId && sub.status !== "CANCELLED" && sub.status !== "DELIVERED"
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950" dir="rtl">
@@ -490,15 +498,29 @@ export default function CustomerOrderDetails() {
                 <div className="flex justify-between text-sm flex-row-reverse">
                   <span className="text-muted-foreground">رسوم التوصيل</span>
                   <span>
-                    {totalDeliveryFees > 0
-                      ? `${totalDeliveryFees.toFixed(2)} جنيه`
-                      : "في انتظار قبول سائق"}
+                    {hasPendingDelivery && confirmedDeliveryFees === 0 ? (
+                      <span className="text-amber-500 font-medium text-xs">في انتظار عرض السائق</span>
+                    ) : hasPendingDelivery && confirmedDeliveryFees > 0 ? (
+                      <span>
+                        {confirmedDeliveryFees.toFixed(2)} جنيه{" "}
+                        <span className="text-amber-500 text-xs">+ في انتظار باقي العروض</span>
+                      </span>
+                    ) : (
+                      `${confirmedDeliveryFees.toFixed(2)} جنيه`
+                    )}
                   </span>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-bold text-lg flex-row-reverse">
                   <span>الإجمالي</span>
-                  <span>{(parseFloat(order.totalPrice) + totalDeliveryFees).toFixed(2)} جنيه</span>
+                  <span>
+                    {(parseFloat(order.totalPrice) + confirmedDeliveryFees).toFixed(2)} جنيه
+                    {hasPendingDelivery && (
+                      <span className="block text-xs font-normal text-muted-foreground">
+                        (رسوم التوصيل تُضاف عند قبول السائق)
+                      </span>
+                    )}
+                  </span>
                 </div>
                 <Badge variant="outline" className="w-full justify-center mt-2 py-1">
                   مدفوع عبر المحفظة
