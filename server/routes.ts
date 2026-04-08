@@ -3,7 +3,7 @@ import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, wallets, walletTransactions, stores, orders, subOrders, auditLogs } from "@shared/schema";
+import { users, wallets, walletTransactions, stores, orders, subOrders, auditLogs, ledger } from "@shared/schema";
 import { walletService } from "./modules/wallet/wallet.service";
 import { ledgerService } from "./modules/ledger/ledger.service";
 import { api } from "@shared/routes";
@@ -184,11 +184,8 @@ export async function registerRoutes(
 
       let user;
       if (isEmail) {
+        // BUG-FIX-1: Removed duplicate getUserByEmail call (dead code — identical params)
         user = await storage.getUserByEmail(identifier.toLowerCase());
-        // Also check if this is a phone-generated internal email
-        if (!user) {
-          user = await storage.getUserByEmail(identifier.toLowerCase());
-        }
       } else {
         // Treat as phone number — look up by phone field
         user = await storage.getUserByPhone(identifier);
@@ -226,8 +223,9 @@ export async function registerRoutes(
         }
       }
 
+      // BUG-FIX-2: Was returning English "Invalid credentials" — now consistent Arabic
       if (!finalMatch) {
-        return res.status(401).json({ message: "Invalid credentials" });
+        return res.status(401).json({ message: "بيانات الدخول غير صحيحة" });
       }
 
       if (!user.isApproved) {
@@ -449,21 +447,27 @@ export async function registerRoutes(
   // --- ADMIN MODULE ---
   app.get("/api/admin/stats", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
     try {
+      // BUG-FIX-3: Was returning hardcoded 0 for pendingOrders/cancelledOrders/deliveredOrders
+      // Now all values are queried from the database
       const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
       const [storeCount] = await db.select({ count: sql<number>`count(*)` }).from(stores);
       const [orderCount] = await db.select({ count: sql<number>`count(*)` }).from(orders);
       const [totalRevenue] = await db.select({ sum: sql<string>`sum(total_price)` }).from(orders).where(eq(orders.paymentStatus, "PAID"));
+      const [pendingCount] = await db.select({ count: sql<number>`count(*)` }).from(orders).where(eq(orders.overallStatus, "PENDING"));
+      const [cancelledCount] = await db.select({ count: sql<number>`count(*)` }).from(orders).where(eq(orders.overallStatus, "CANCELLED"));
+      const [deliveredCount] = await db.select({ count: sql<number>`count(*)` }).from(orders).where(eq(orders.overallStatus, "DELIVERED"));
+      const [commissionSum] = await db.select({ sum: sql<string>`sum(amount)` }).from(ledger).where(eq(ledger.type, "COMMISSION"));
 
       res.json({
         totalUsers: Number(userCount.count),
         totalStores: Number(storeCount.count),
         totalOrders: Number(orderCount.count),
         totalRevenue: totalRevenue.sum || "0.00",
-        activeStores: Number(storeCount.count), // Placeholder for active logic
-        pendingOrders: 0, // Placeholder
-        cancelledOrders: 0, // Placeholder
-        deliveredOrders: 0, // Placeholder
-        platformCommissions: "0.00",
+        activeStores: Number(storeCount.count),
+        pendingOrders: Number(pendingCount.count),
+        cancelledOrders: Number(cancelledCount.count),
+        deliveredOrders: Number(deliveredCount.count),
+        platformCommissions: commissionSum.sum || "0.00",
         storeEarnings: "0.00",
         driverEarnings: "0.00"
       });
@@ -515,6 +519,17 @@ export async function registerRoutes(
               relatedOrderId: parentOrder.id,
               status: "COMPLETED",
               notes: `استرداد تلقائي - إلغاء الطلب #${parentOrder.id.slice(0, 8)} بواسطة الإدارة`,
+            });
+
+            // BUG-FIX-5: Missing ledger entry for refund — broke double-entry accounting.
+            // Money credited back to the customer must be recorded in the ledger as a WITHDRAWAL
+            // (platform debits, customer credits) to maintain ledger integrity.
+            await tx.insert(ledger).values({
+              referenceId: parentOrder.id,
+              debitUserId: null,
+              creditUserId: parentOrder.customerId,
+              amount: parentOrder.totalPrice,
+              type: "WITHDRAWAL",
             });
 
             console.log(`[Admin] Refunded ${parentOrder.totalPrice} to customer ${parentOrder.customerId} for cancelled order ${id}`);

@@ -1,6 +1,6 @@
 import { db } from "../../db";
 import { subOrders, orders, stores, users, orderItems, products, deliveryOffers } from "@shared/schema";
-import { eq, and, isNull, sql, asc, inArray } from "drizzle-orm";
+import { eq, and, isNull, sql, asc, inArray, SQL } from "drizzle-orm";
 import { AvailableTaskDTO, GetAvailableTasksFilters } from "./delivery.types";
 import { auditService } from "../../services/auditService";
 
@@ -15,7 +15,40 @@ export class DeliveryService {
     const limit = Math.max(1, filters.limit || 20);
     const offset = (page - 1) * limit;
 
-    let baseQuery = db
+    // BUG-FIX-4: Build all filter conditions upfront then apply once.
+    // Previously each `.where()` call replaced the previous one, losing the base
+    // ACCEPTED + unassigned conditions whenever store_id or category was provided.
+    const baseConditions: SQL[] = [
+      eq(subOrders.status, "ACCEPTED"),
+      isNull(subOrders.assignedDriverId),
+    ];
+
+    if (filters.store_id) {
+      baseConditions.push(eq(subOrders.storeId, filters.store_id));
+    }
+
+    if (filters.category) {
+      const subOrdersWithCategory = db
+        .select({ id: orderItems.subOrderId })
+        .from(orderItems)
+        .innerJoin(products, eq(orderItems.productId, products.id))
+        .where(eq(products.category, filters.category));
+
+      baseConditions.push(sql`${subOrders.id} IN ${subOrdersWithCategory}`);
+    }
+
+    const combinedWhere = and(...baseConditions);
+
+    // BUG-FIX-6: Count query now uses the same combined conditions as the data query
+    // so the total accurately reflects the filtered result set
+    const totalResults = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(subOrders)
+      .innerJoin(stores, eq(subOrders.storeId, stores.id))
+      .where(combinedWhere);
+    const total = Number(totalResults[0].count);
+
+    const results = await db
       .select({
         sub_order_id: subOrders.id,
         order_id: subOrders.orderId,
@@ -32,31 +65,7 @@ export class DeliveryService {
       .innerJoin(orders, eq(subOrders.orderId, orders.id))
       .innerJoin(stores, eq(subOrders.storeId, stores.id))
       .innerJoin(users, eq(orders.customerId, users.id))
-      .where(
-        and(
-          eq(subOrders.status, "ACCEPTED"),
-          isNull(subOrders.assignedDriverId)
-        )
-      );
-
-    if (filters.store_id) {
-      baseQuery = (baseQuery as any).where(eq(subOrders.storeId, filters.store_id));
-    }
-
-    if (filters.category) {
-      const subOrdersWithCategory = db
-        .select({ id: orderItems.subOrderId })
-        .from(orderItems)
-        .innerJoin(products, eq(orderItems.productId, products.id))
-        .where(eq(products.category, filters.category));
-      
-      baseQuery = (baseQuery as any).where(sql`${subOrders.id} IN ${subOrdersWithCategory}`);
-    }
-
-    const totalResults = await db.select({ count: sql<number>`count(*)` }).from(subOrders).where(and(eq(subOrders.status, "ACCEPTED"), isNull(subOrders.assignedDriverId)));
-    const total = Number(totalResults[0].count);
-
-    const results = await (baseQuery as any)
+      .where(combinedWhere)
       .orderBy(asc(subOrders.createdAt))
       .limit(limit)
       .offset(offset);

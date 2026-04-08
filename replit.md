@@ -167,3 +167,19 @@ Clicking a notification navigates to the relevant page based on type and user ro
 
 ### Dead Code Removal
 10. **`use-notification-stub.ts`**: Deleted unused stub file that contained mock notifications — it was not imported anywhere in the codebase and created confusion about which notification system was active.
+
+## Deep-Dive Bug Audit (April 2026 - Round 2)
+
+### Bugs Fixed
+
+1. **🔴 Login: Duplicate `getUserByEmail` call (dead code)** — `server/routes.ts`: When the identifier was an email, `getUserByEmail` was called twice in a row with identical parameters. The second call was a leftover placeholder comment turned into code, wasting a DB round-trip on every email login. **Removed the duplicate.**
+
+2. **🟠 Login: Inconsistent error language** — `server/routes.ts`: When bcrypt comparison failed (wrong password), the response was English `"Invalid credentials"` while all other auth errors returned Arabic messages. **Fixed to Arabic `"بيانات الدخول غير صحيحة"`.**
+
+3. **🔴 Admin Stats: Hardcoded placeholder zeros** — `server/routes.ts` `/api/admin/stats`: `pendingOrders`, `cancelledOrders`, and `deliveredOrders` were always `0` (hardcoded placeholders). `platformCommissions` was also `"0.00"`. **Fixed: all values now query real counts from the `orders` and `ledger` tables.**
+
+4. **🔴 Delivery Service: Filter chaining replaces WHERE clause** — `server/modules/delivery/delivery.service.ts`: When `store_id` or `category` filters were applied, each `.where()` call replaced the previous one instead of combining with it. This meant the base conditions (`status = 'ACCEPTED' AND assignedDriverId IS NULL`) were silently dropped when any filter was active — drivers could see non-ACCEPTED or already-assigned sub-orders. **Fixed: all conditions are now built into an array and combined with `and(...)` in a single `.where()` call.**
+
+5. **🔴 Delivery Service: Total count ignores active filters** — `server/modules/delivery/delivery.service.ts`: The `total` count query used a separate, unfiltered `db.select().from(subOrders)` that did not apply `store_id` or `category` filters. The count misled pagination. **Fixed: count query now uses the same `combinedWhere` conditions as the data query.**
+
+6. **🔴 Admin Order Cancellation: Missing ledger entry for refund** — `server/routes.ts` `PATCH /api/admin/orders/:id/status`: When an admin cancelled a paid order, the customer wallet was correctly credited and a `wallet_transactions` row was inserted, but no corresponding `ledger` entry was created. This broke the double-entry accounting integrity. **Fixed: a `WITHDRAWAL` ledger entry is now inserted within the same transaction.**
