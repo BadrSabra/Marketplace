@@ -139,7 +139,19 @@ export class DeliveryOfferService {
       // Q: لماذا نحوّل offer.offeredFee إلى string قبل استخدامه مع money؟
       // A: Drizzle قد يُعيد الحقل كـ string أو number حسب إعداد الـ postgres driver.
       //    تحويله إلى string صريح يضمن التوافق مع money utility في كلا الحالتين.
+      // Q: لماذا نُعرّف deliveryFee و deliveryFeeStr كلاهما؟
+      // A: deliveryFeeStr يُستخدم مع money utility (تتطلب string).
+      //    deliveryFee يُستخدم في الإشعارات وسجلات التدقيق (قيمة مقروءة للإنسان).
+      //    قبل هذا الإصلاح كان deliveryFeeStr فقط هو المعرَّف، فكان deliveryFee
+      //    يُحلّ إلى `undefined` مما يُسبب إشعارات "بمبلغ undefined جنيه" وبيانات
+      //    تدقيق تالفة. الإصلاح: تعريف صريح لكلا المتغيرين.
+      //
+      // ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+      //    إذا كان offer.offeredFee يُعيد قيمة غير رقمية من DB (تلف بيانات)،
+      //    فإن money.format(deliveryFeeStr) ستُطلق استثناءً. هذا سلوك صحيح
+      //    (fail-fast) بدلاً من تخزين undefined صامتاً في الإشعارات.
       const deliveryFeeStr = offer.offeredFee.toString();
+      const deliveryFee = money.format(deliveryFeeStr);
 
       // Deduct delivery fee from customer wallet
       const [customerWallet] = await tx
@@ -380,7 +392,17 @@ export class DeliveryOfferService {
       //    offer.counterOfferedFee قد يكون string أو number حسب إعداد الـ driver.
       //    تحويله لـ string صريح ثم استخدام money يضمن الدقة في كلا الحالتين.
       if (!offer.counterOfferedFee) throw new Error("COUNTER_FEE_MISSING");
+      // Q: لماذا نُعرّف agreedFee و agreedFeeStr كلاهما هنا؟
+      // A: نفس مشكلة customerAcceptOffer — كان agreedFeeStr فقط هو المعرَّف،
+      //    فكان agreedFee يُحلّ إلى `undefined` في سجلات التدقيق والإشعارات
+      //    مما يُسبب "بمبلغ undefined جنيه" في رسائل السائق والعميل.
+      //    الإصلاح: تعريف agreedFee صراحةً من money.format بعد التحقق من القيمة.
+      //
+      // ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+      //    money.format ستُطلق استثناءً إذا كانت counterOfferedFee بيانات تالفة.
+      //    هذا يعني فشلاً صريحاً بدلاً من تخزين undefined صامتاً — سلوك أكثر أماناً.
       const agreedFeeStr = offer.counterOfferedFee.toString();
+      const agreedFee = money.format(agreedFeeStr);
 
       // Deduct agreed counter fee from customer wallet
       const [customerWallet] = await tx
