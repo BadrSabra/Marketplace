@@ -282,6 +282,127 @@ export class DeliveryOfferService {
     });
   }
 
+  /**
+   * Driver accepts the customer's counter-offer:
+   * 1. Deduct the agreed counter fee from customer wallet
+   * 2. Assign driver to sub-order → IN_TRANSIT
+   * 3. Reject other offers
+   * 4. Generate OTP
+   */
+  async driverAcceptCounterOffer(offerId: string, driverId: string) {
+    return await db.transaction(async (tx) => {
+      // Offer must be in COUNTERED state and belong to this driver
+      const [offer] = await tx.select().from(deliveryOffers).where(eq(deliveryOffers.id, offerId)).for("update");
+      if (!offer || offer.status !== "COUNTERED") throw new Error("OFFER_NOT_COUNTERED");
+      if (offer.driverId !== driverId) throw new Error("UNAUTHORIZED");
+      if (!offer.counterOfferedFee) throw new Error("COUNTER_FEE_MISSING");
+
+      const [subOrder] = await tx.select().from(subOrders).where(eq(subOrders.id, offer.subOrderId)).for("update");
+      if (!subOrder || subOrder.status !== "ACCEPTED") throw new Error("SUBORDER_NOT_AVAILABLE");
+      if (subOrder.assignedDriverId) throw new Error("ALREADY_ASSIGNED");
+
+      const [parentOrder] = await tx.select().from(orders).where(eq(orders.id, subOrder.orderId));
+      if (!parentOrder) throw new Error("ORDER_NOT_FOUND");
+
+      const agreedFee = parseFloat(offer.counterOfferedFee);
+
+      // Deduct agreed counter fee from customer wallet
+      const [customerWallet] = await tx
+        .select()
+        .from(wallets)
+        .where(eq(wallets.userId, parentOrder.customerId))
+        .for("update");
+
+      if (!customerWallet) throw new Error("WALLET_NOT_FOUND");
+
+      const currentBalance = parseFloat(customerWallet.balance);
+      if (currentBalance < agreedFee) throw new Error("INSUFFICIENT_BALANCE");
+
+      const newBalance = (currentBalance - agreedFee).toFixed(2);
+      await tx.update(wallets)
+        .set({ balance: newBalance, updatedAt: new Date() })
+        .where(eq(wallets.id, customerWallet.id));
+
+      await tx.insert(walletTransactions).values({
+        walletId: customerWallet.id,
+        type: "WITHDRAWAL",
+        amount: agreedFee.toFixed(2),
+        relatedOrderId: parentOrder.id,
+        status: "COMPLETED",
+        notes: `رسوم توصيل - عرض مضاد مقبول #${offerId.slice(0, 8)}`,
+      });
+
+      await tx.insert(ledger).values({
+        referenceId: parentOrder.id,
+        debitUserId: parentOrder.customerId,
+        creditUserId: null,
+        amount: agreedFee.toFixed(2),
+        type: "WITHDRAWAL",
+      });
+
+      // Assign driver at agreed counter fee → IN_TRANSIT
+      const [updatedSubOrder] = await tx
+        .update(subOrders)
+        .set({
+          assignedDriverId: driverId,
+          expectedDeliveryFee: agreedFee.toFixed(2),
+          status: "IN_TRANSIT",
+          updatedAt: new Date(),
+        })
+        .where(eq(subOrders.id, offer.subOrderId))
+        .returning();
+
+      // Accept this offer, reject all others for this sub-order
+      await tx.update(deliveryOffers)
+        .set({ status: "ACCEPTED", updatedAt: new Date() })
+        .where(eq(deliveryOffers.id, offerId));
+
+      await tx.update(deliveryOffers)
+        .set({ status: "REJECTED", updatedAt: new Date() })
+        .where(and(
+          eq(deliveryOffers.subOrderId, offer.subOrderId),
+          ne(deliveryOffers.id, offerId)
+        ));
+
+      await auditService.logEvent({
+        actionType: "DELIVERY_OFFER_COUNTER_ACCEPTED_BY_DRIVER",
+        entityType: "delivery_offer",
+        entityId: offerId,
+        performedByUserId: driverId,
+        performedByRole: "DRIVER",
+        newValue: { status: "ACCEPTED", agreedFee, subOrderId: offer.subOrderId }
+      });
+
+      // Notify customer
+      notifyUser(
+        parentOrder.customerId,
+        "OFFER_ACCEPTED",
+        "السائق قبل عرضك المضاد",
+        `وافق السائق على رسوم التوصيل بمبلغ ${agreedFee} جنيه وسيتوجه إليك الآن`,
+        { offerId, subOrderId: offer.subOrderId, agreedFee }
+      ).catch(console.error);
+
+      return updatedSubOrder;
+    }).then(async (updatedSubOrder) => {
+      await deliveryOtpService.generateOtp(updatedSubOrder.orderId, updatedSubOrder.id);
+
+      try {
+        const [parentOrder] = await db.select().from(orders).where(eq(orders.id, updatedSubOrder.orderId));
+        if (parentOrder && updatedSubOrder.assignedDriverId) {
+          const existingRoom = await chatService.findRoomByReference("ORDER_DRIVER", updatedSubOrder.id);
+          if (!existingRoom) {
+            await chatService.createRoom("ORDER_DRIVER", [parentOrder.customerId, updatedSubOrder.assignedDriverId], {
+              referenceId: updatedSubOrder.id,
+              title: "تنسيق التوصيل",
+            });
+          }
+        }
+      } catch {}
+
+      return updatedSubOrder;
+    });
+  }
+
   // Legacy: driver self-accepts (kept for backward compatibility but no longer used for customer flow)
   async acceptTask(subOrderId: string, driverId: string) {
     return await db.transaction(async (tx) => {

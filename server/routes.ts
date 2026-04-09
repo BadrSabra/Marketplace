@@ -66,6 +66,7 @@ export async function registerRoutes(
   app.post("/api/delivery/offers/:offerId/accept", authenticate, authorizeRole(["CUSTOMER"]), deliveryOfferController.customerAcceptOffer.bind(deliveryOfferController));
   app.post("/api/delivery/offers/:offerId/reject", authenticate, authorizeRole(["CUSTOMER"]), deliveryOfferController.customerRejectOffer.bind(deliveryOfferController));
   app.post("/api/delivery/offers/:offerId/counter", authenticate, authorizeRole(["CUSTOMER"]), deliveryOfferController.customerCounterOffer.bind(deliveryOfferController));
+  app.post("/api/delivery/offers/:offerId/accept-counter", authenticate, authorizeRole(["DRIVER"]), deliveryOfferController.driverAcceptCounterOffer.bind(deliveryOfferController));
   
   // Notifications
   app.use("/api/notifications", notificationRouter);

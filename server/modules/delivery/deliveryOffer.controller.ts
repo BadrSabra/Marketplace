@@ -109,6 +109,39 @@ export class DeliveryOfferController {
     }
   }
 
+  async driverAcceptCounterOffer(req: Request, res: Response) {
+    try {
+      const offerId = req.params.offerId as string;
+      const driverId = (req as any).user.id as string;
+      const result = await deliveryOfferService.driverAcceptCounterOffer(offerId, driverId);
+      res.json(result);
+    } catch (err: any) {
+      if (err.message === "OFFER_NOT_COUNTERED") {
+        return res.status(400).json({ error: "هذا العرض ليس في حالة عرض مضاد" });
+      }
+      if (err.message === "UNAUTHORIZED") {
+        return res.status(403).json({ error: "غير مصرح" });
+      }
+      if (err.message === "COUNTER_FEE_MISSING") {
+        return res.status(400).json({ error: "لا يوجد سعر مضاد محدد" });
+      }
+      if (err.message === "SUBORDER_NOT_AVAILABLE") {
+        return res.status(400).json({ error: "الطلب الفرعي لم يعد متاحاً" });
+      }
+      if (err.message === "ALREADY_ASSIGNED") {
+        return res.status(409).json({ error: "تم تعيين سائق لهذا الطلب بالفعل" });
+      }
+      if (err.message === "INSUFFICIENT_BALANCE") {
+        return res.status(402).json({ error: "رصيد محفظة العميل غير كافٍ لرسوم التوصيل" });
+      }
+      if (err.message === "WALLET_NOT_FOUND") {
+        return res.status(404).json({ error: "محفظة العميل غير موجودة" });
+      }
+      console.error("Error accepting counter offer:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
   async acceptTask(req: Request, res: Response) {
     try {
       const subOrderId = req.params.id as string;

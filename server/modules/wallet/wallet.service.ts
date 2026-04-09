@@ -366,6 +366,16 @@ export class WalletService {
         await tx.update(wallets)
           .set({ balance: refundedBalance, updatedAt: new Date() })
           .where(eq(wallets.id, wallet.id));
+
+        // BUG-FIX: Missing ledger reversal entry when withdrawal is rejected.
+        // The original withdrawal debited the user; rejecting it must credit them back.
+        await tx.insert(ledger).values({
+          referenceId: request.id,
+          debitUserId: null,
+          creditUserId: request.userId,
+          amount: request.amount,
+          type: "DEPOSIT",
+        });
       }
 
       const [updatedRequest] = await tx.update(withdrawalRequests)
@@ -405,8 +415,9 @@ export class WalletService {
     if (deductAmount === 0) return;
 
     await db.transaction(async (tx) => {
-      const wallet = await this.getOrCreateWallet(userId);
-      const [lockedWallet] = await tx.select().from(wallets).where(eq(wallets.id, wallet.id)).for("update");
+      // BUG-FIX: Was calling this.getOrCreateWallet() outside tx (uses global db),
+      // then locking with tx separately — breaking atomicity. Now using tx directly.
+      const [lockedWallet] = await tx.select().from(wallets).where(eq(wallets.userId, userId)).for("update");
       
       if (!lockedWallet) {
         throw new Error("NOT_FOUND: Wallet not found");
