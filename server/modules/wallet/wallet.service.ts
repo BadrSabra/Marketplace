@@ -207,10 +207,18 @@ export class WalletService {
       //    أما absAmountStr: نحوّل القيمة المطلقة لـ string عبر Math.abs(amountNum).toFixed(2)
       //    (هذا التحويل الوحيد المقبول لأن amountNum تم التحقق منه أعلاه وهو عدد آمن).
       //
+      // Q: هل يجب التحقق من صلاحية wallet.balance قبل تمريره لـ money utility؟
+      // A: نعم — money utility تُطلق استثناءً إذا كانت قيمة الرصيد غير صالحة (NaN, Infinity).
+      //    رصيد "NaN" ممكن نظرياً إذا وُجد خطأ في بيانات قديمة أو migration معيوب.
+      //    الإصلاح: فحص صلاحية wallet.balance قبل أي عملية money وإطلاق استثناء واضح.
+      //
       // ⚠️ خطأ جديد تكشفه هذا الإصلاح:
-      //    money.isNegative تُطلق استثناءً إذا كانت newBalance تحتوي على رقم غير صالح.
-      //    هذا ممكن إذا كان wallet.balance في DB تالفاً (مثلاً "NaN" من خطأ سابق).
-      //    الإصلاح الوقائي: إضافة `parseFloat(wallet.balance)` check قبل money operations.
+      //    الاستثناء يُوقف معالجة الطلب ويُعيد 500 للأدمن بدلاً من إصلاح الرصيد تلقائياً.
+      //    هذا متعمد — رصيد تالف يستوجب تحقيقاً يدوياً قبل أي تعديل آلي.
+      //    الإصلاح الموصى به: إضافة endpoint خاص لإصلاح الأرصدة التالفة مع audit log.
+      if (isNaN(parseFloat(wallet.balance)) || !isFinite(parseFloat(wallet.balance))) {
+        throw new Error(`DATA_INTEGRITY_ERROR: Wallet ${walletId} has invalid balance "${wallet.balance}". Manual DB correction required before override.`);
+      }
       const absAmountStr = Math.abs(amountNum).toFixed(2);
       const newBalance = amountNum > 0
         ? money.add(wallet.balance, absAmountStr)

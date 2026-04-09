@@ -1,10 +1,24 @@
-import { useState } from "react";
-import { useLocation, Link } from "wouter";
+import { useState, useEffect } from "react";
+import { useLocation, Link, useSearch } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
 import { Lock, Mail, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { t } from "@/i18n";
+
+// Q: لماذا تقرأ صفحة تسجيل الدخول query parameters؟
+// A: عند انتهاء صلاحية الجلسة أو اكتشاف توكن غير صالح، يُعيد api.ts التوجيه إلى
+//    /login?reason=session_expired أو /login?reason=invalid_token.
+//    بدون قراءة هذا الـ parameter، يصل المستخدم لصفحة الدخول دون معرفة السبب،
+//    مما يُسبب ارتباكاً ("لماذا خرجت من حسابي فجأة؟").
+//    الإصلاح: قراءة reason وعرض toast مناسب عند تحميل الصفحة.
+//
+// ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+//    useEffect مع [reason] يُنفَّذ عند كل تغيير في reason.
+//    إذا أعاد المستخدم التنقل لـ /login?reason=session_expired من صفحة أخرى،
+//    سيرى الـ toast مجدداً — وهو سلوك متوقع وغير مزعج.
+//    لكن إذا كانت صفحة الـ login تستخدم React Query أو state معقد، قد يُسبب
+//    re-render زائد عند تغيير الـ URL. في هذا المكوّن البسيط لا توجد مشكلة.
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -12,6 +26,34 @@ export default function LoginPage() {
   const [, setLocation] = useLocation();
   const { login, isLoggingIn } = useAuth();
   const { toast } = useToast();
+  const search = useSearch();
+
+  // Q: لماذا نستخدم useEffect بدلاً من عرض الرسالة مباشرةً في JSX؟
+  // A: toast يُطلق side effect (عرض إشعار) ولا يمكن استدعاؤه أثناء الـ render.
+  //    useEffect يضمن تنفيذه بعد اكتمال الـ render الأول، وهو النمط الصحيح
+  //    لـ one-time toast عند تحميل الصفحة.
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const reason = params.get("reason");
+    if (reason === "session_expired") {
+      toast({
+        title: "انتهت صلاحية الجلسة",
+        description: "يرجى تسجيل الدخول مجدداً للمتابعة.",
+        variant: "destructive",
+      });
+    } else if (reason === "invalid_token") {
+      toast({
+        title: "رمز دخول غير صالح",
+        description: "تم تسجيل خروجك تلقائياً. يرجى تسجيل الدخول مجدداً.",
+        variant: "destructive",
+      });
+    }
+  // Q: لماذا لا نُدرج toast في مصفوفة التبعيات رغم استخدامه داخل useEffect؟
+  // A: toast من useToast مستقر (stable reference) ولا يتغير بين الـ renders.
+  //    إدراجه سيُسبب تحذير lint لكنه لن يُغير السلوك الفعلي. eslint-disable
+  //    هنا مقبول لأن الغرض من هذا الـ effect هو التنفيذ مرة واحدة فقط.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

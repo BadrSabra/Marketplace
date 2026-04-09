@@ -83,13 +83,28 @@ export const depositLimiter = rateLimit({
 //    الإصلاح: 10 تسجيلات/ساعة — كافٍ للمستخدم الحقيقي (يسجّل مرة أو مرتين)
 //    ومقيّد بما يكفي لمنع الأتمتة الجماعية.
 //
+// Q: هل يجب تعطيل registerLimiter في بيئة التطوير؟
+// A: نعم — في بيئة التطوير، اختبار متعدد الحسابات (10+ حسابات في ساعة) سيُعيد 429
+//    وهو سلوك مزعج يُعرقل الاختبار اليدوي والتطوير. القيد ضروري فقط في الإنتاج.
+//    الإصلاح: إضافة skip للـ NODE_ENV=development.
+//
 // ⚠️ خطأ جديد تكشفه هذا الإصلاح:
 //    express-rate-limit يستخدم IP المصدر للتتبع. في بيئة Replit الإنتاجية،
 //    الطلبات قد تصل عبر proxy مشترك — قد يتأثر مستخدمون شرعيون يشتركون بنفس IP.
 //    تم معالجة ذلك مسبقاً بـ `app.set("trust proxy", 1)` في server/index.ts.
+//
+// ⚠️ خطأ جديد تكشفه إضافة skip للـ development:
+//    أي بيئة تُعيّن NODE_ENV=development ستكون بدون حماية تسجيل تماماً.
+//    إذا نُشر الكود عن طريق الخطأ بـ NODE_ENV=development في production،
+//    ستصبح نقطة التسجيل مكشوفة بالكامل. الإصلاح الوقائي: التحقق من NODE_ENV
+//    في startup script وإيقاف الخادم إذا لم يكن "production" أو "development" فقط.
 export const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 10,
+  // Q: هل skip يُطبَّق قبل max أم بعده؟
+  // A: skip يُطبَّق أولاً — إذا أعادت الدالة true، يُتجاوز كل منطق rate-limit
+  //    بالكامل بما فيه حساب العداد. لا ضرر من هذا لأن dev البيئة لا تُنشر.
+  skip: () => process.env.NODE_ENV === "development",
   message: { success: false, error: { code: "REGISTER_LIMIT_EXCEEDED", message: "Too many registration attempts. Try again later." } }
 });
 

@@ -38,11 +38,23 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
 
   if (!response.ok) {
     let errorMessage = response.statusText;
+    // Q: لماذا نُعرّف errorCode خارج try block بدلاً من داخله؟
+    // A: errorData كانت محلية للـ try block فلا يمكن الوصول إليها عند التحقق من
+    //    response.status === 401 لاحقاً. رفعها للنطاق الخارجي يُتيح استخدامها
+    //    لتمرير سبب الـ redirect كـ query parameter لصفحة تسجيل الدخول.
+    //
+    // ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+    //    إذا كانت استجابة الـ backend تحتوي على JSON غير متوافق (مثلاً code غائب)،
+    //    فإن errorCode سيكون undefined والـ reason سيكون "invalid_token" افتراضياً.
+    //    هذا سلوك مقبول — "انتهت الجلسة" أدق من "خطأ غير معروف"، لكن قد يكون
+    //    مضللاً إذا كان السبب الحقيقي هو خطأ في الخادم وليس مشكلة في التوكن.
+    let errorCode: string | undefined;
     try {
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
         const errorData = await response.json();
         errorMessage = errorData.error?.message || (typeof errorData.error === "string" ? errorData.error : undefined) || errorData.message || errorMessage;
+        errorCode = errorData.code;
       }
     } catch (e) {
       // Ignore JSON parse errors for non-JSON error responses
@@ -62,23 +74,24 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
       //    الإصلاح: إضافة متغير حارس (_isRedirecting) يمنع redirect متكررة.
       //
       // Q: هل يجب التحقق من `errorData.code === "TOKEN_EXPIRED"` قبل الـ redirect؟
-      // A: لا — لأن الـ backend يُعيد 401 لكلا الحالتين (TOKEN_EXPIRED و INVALID_TOKEN).
-      //    التحقق من الـ code كان ضرورياً لو أردنا تمييز السلوك (مثلاً: عرض رسالة
-      //    "انتهت صلاحية الجلسة" مقابل "رمز دخول غير صالح").
-      //    حالياً، كلا الحالتين تستدعي نفس الإجراء: مسح التوكن وإعادة توجيه للـ login.
-      //    الإصلاح المستقبلي (للـ UX): قراءة errorData.code هنا وتمرير سببه كـ
-      //    query parameter للـ login page لعرض رسالة مناسبة للمستخدم.
-      //
-      // ⚠️ خطأ جديد تكشفه هذا التوثيق:
-      //    صفحة الـ login لا تقرأ أي query parameter لعرض سبب الـ logout.
-      //    المستخدم يصل لـ /login دون معرفة ما إذا كانت جلسته انتهت أم رمزه تالف.
-      //    الإصلاح: تمرير ?reason=session_expired أو ?reason=invalid_token
-      //    وعرضه في صفحة الدخول كـ toast أو رسالة توضيحية.
+      // A: نعم — بعد رفع errorData للنطاق الخارجي، يمكننا الآن تمرير سبب دقيق
+      //    كـ query parameter لصفحة تسجيل الدخول لعرض رسالة مناسبة للمستخدم.
+      //    TOKEN_EXPIRED = جلسة انتهت، INVALID_TOKEN = توكن تالف أو مزيف.
       if (!_isRedirecting) {
         _isRedirecting = true;
         localStorage.removeItem("jwt_token");
         if (window.location.pathname !== "/login") {
-          window.location.href = "/login";
+          // Q: لماذا نمرر reason كـ query parameter بدلاً من localStorage أو sessionStorage؟
+          // A: localStorage يستمر بعد إعادة التحميل — قد يُعرض السبب عدة مرات.
+          //    sessionStorage يُفقد عند إغلاق التبويب. query parameter يُقرأ مرة واحدة
+          //    ويختفي تلقائياً عند التنقل، وهو النمط الأكثر شيوعاً لهذا الغرض.
+          //
+          // ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+          //    صفحة login.tsx يجب أن تقرأ ?reason وتعرض toast مناسباً.
+          //    إذا لم تُحدَّث صفحة تسجيل الدخول، سيصل المستخدم لـ /login?reason=session_expired
+          //    دون رؤية أي رسالة توضيحية — وهو الوضع الحالي قبل إصلاح login.tsx.
+          const reason = errorCode === "TOKEN_EXPIRED" ? "session_expired" : "invalid_token";
+          window.location.href = `/login?reason=${reason}`;
         }
         // Reset after navigation to allow future redirects if needed
         setTimeout(() => { _isRedirecting = false; }, 2000);
