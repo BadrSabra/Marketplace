@@ -94,6 +94,7 @@ export class ProductsController {
     } catch (err: any) {
       if (err.message === "NOT_FOUND") return res.status(404).json({ error: "Product not found" });
       if (err.message === "UNAUTHORIZED_OWNERSHIP") return res.status(403).json({ error: "Unauthorized store ownership" });
+      if (err.message === "HAS_ACTIVE_ORDERS") return res.status(409).json({ error: "لا يمكن حذف هذا المنتج لأنه مرتبط بطلبات موجودة. يمكنك تصفير المخزون بدلاً من الحذف." });
       res.status(500).json({ error: "Internal server error" });
     }
   }

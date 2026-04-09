@@ -308,6 +308,7 @@ export const ar = {
         update_success: "تم تحديث المنتج بنجاح",
         update_error: "فشل تحديث المنتج",
         delete_success: "تم حذف المنتج بنجاح",
+        delete_error: "فشل حذف المنتج",
       },
     },
     earnings: {

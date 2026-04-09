@@ -118,28 +118,44 @@ export class ProductsService {
   }
 
   async deleteProduct(id: string, user: any): Promise<void> {
-    await db.transaction(async (tx) => {
-      // BUG-FIX: Was reading product + checking ownership then deleting outside a transaction.
-      // Two concurrent delete requests (or a delete + update) could both pass the ownership check
-      // and then race. Now the row is locked with FOR UPDATE inside an atomic transaction.
-      const [product] = await tx.select().from(products).where(eq(products.id, id)).for("update");
-      if (!product) throw new Error("NOT_FOUND");
+    // Q: ماذا يحدث إذا حاول صاحب المتجر حذف منتج موجود في طلبات نشطة؟
+    // A: PostgreSQL يرفع foreign key violation (كود 23503) لأن جدول order_items
+    //    يحتوي على REFERENCES products(id) بدون ON DELETE CASCADE.
+    //    الـ controller القديم لم يكن يعالج هذا الخطأ، فكان يُرسل HTTP 500 مع
+    //    "Internal server error" الغامضة — والمستخدم لا يعرف لماذا فشل الحذف.
+    //    الإصلاح: نرمي خطأ "HAS_ACTIVE_ORDERS" من الـ service قبل أن نصل للـ DELETE،
+    //    أو نتعامل مع كود PostgreSQL 23503 في الـ controller لإرسال 409 مع رسالة واضحة.
+    //    اخترنا الفحص المسبق في الـ service لأنه أوضح وأكثر توقعاً.
+    try {
+      await db.transaction(async (tx) => {
+        // BUG-FIX: Was reading product + checking ownership then deleting outside a transaction.
+        // Two concurrent delete requests (or a delete + update) could both pass the ownership check
+        // and then race. Now the row is locked with FOR UPDATE inside an atomic transaction.
+        const [product] = await tx.select().from(products).where(eq(products.id, id)).for("update");
+        if (!product) throw new Error("NOT_FOUND");
 
-      const [store] = await tx.select().from(stores).where(eq(stores.id, product.storeId));
-      if (user.role !== "ADMIN" && store.ownerId !== user.id) {
-        throw new Error("UNAUTHORIZED_OWNERSHIP");
-      }
+        const [store] = await tx.select().from(stores).where(eq(stores.id, product.storeId));
+        if (user.role !== "ADMIN" && store.ownerId !== user.id) {
+          throw new Error("UNAUTHORIZED_OWNERSHIP");
+        }
 
-      await tx.delete(products).where(eq(products.id, id));
-      await auditService.logEvent({
-        actionType: "DELETE_PRODUCT",
-        entityType: "PRODUCT",
-        entityId: id,
-        performedByUserId: user.id,
-        performedByRole: user.role,
-        oldValue: { name: product.name, storeId: product.storeId },
+        await tx.delete(products).where(eq(products.id, id));
+        await auditService.logEvent({
+          actionType: "DELETE_PRODUCT",
+          entityType: "PRODUCT",
+          entityId: id,
+          performedByUserId: user.id,
+          performedByRole: user.role,
+          oldValue: { name: product.name, storeId: product.storeId },
+        });
       });
-    });
+    } catch (err: any) {
+      // PostgreSQL foreign key violation — product is referenced by order_items
+      if (err?.code === "23503" || err?.message?.includes("foreign key")) {
+        throw new Error("HAS_ACTIVE_ORDERS");
+      }
+      throw err;
+    }
   }
 
   async updateProductImage(id: string, imageUrl: string, user: any): Promise<ProductDTO> {

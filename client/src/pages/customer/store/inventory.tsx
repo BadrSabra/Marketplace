@@ -221,6 +221,17 @@ export default function StoreInventory() {
       queryClient.invalidateQueries({ queryKey: [`/api/products?store_id=${myStore?.id}`] });
       toast({ title: t('store.inventory.toasts.delete_success') });
     },
+    onError: (error: any) => {
+      const msg: string = error?.message || "";
+      const isLinkedToOrders = msg.includes("409") || msg.includes("مرتبط بطلبات");
+      toast({
+        title: t('store.inventory.toasts.delete_error'),
+        description: isLinkedToOrders
+          ? "لا يمكن حذف هذا المنتج لأنه مرتبط بطلبات موجودة. يمكنك تصفير المخزون بدلاً من الحذف."
+          : error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const onSubmit = (values: ProductFormValues) => {
