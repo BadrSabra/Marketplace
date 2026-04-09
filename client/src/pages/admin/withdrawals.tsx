@@ -1,6 +1,6 @@
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,32 +19,12 @@ export default function AdminWithdrawalsPage() {
 
   const { data: withdrawals, isLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/withdrawals/pending"],
-    queryFn: async () => {
-      const token = localStorage.getItem("jwt_token");
-      const res = await fetch("/api/admin/withdrawals/pending", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) throw new Error("فشل تحميل طلبات السحب");
-      return res.json();
-    },
     refetchInterval: 30000,
   });
 
   const approveMutation = useMutation({
     mutationFn: async (id: string) => {
-      const token = localStorage.getItem("jwt_token");
-      const res = await fetch(`/api/admin/withdrawals/${id}/approve`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "فشلت الموافقة");
-      }
+      const res = await apiRequest("POST", `/api/admin/withdrawals/${id}/approve`, {});
       return res.json();
     },
     onSuccess: () => {
@@ -58,19 +38,7 @@ export default function AdminWithdrawalsPage() {
 
   const rejectMutation = useMutation({
     mutationFn: async ({ id, note }: { id: string; note: string }) => {
-      const token = localStorage.getItem("jwt_token");
-      const res = await fetch(`/api/admin/withdrawals/${id}/reject`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ note }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "فشل الرفض");
-      }
+      const res = await apiRequest("POST", `/api/admin/withdrawals/${id}/reject`, { note });
       return res.json();
     },
     onSuccess: () => {

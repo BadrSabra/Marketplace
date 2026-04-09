@@ -19,6 +19,8 @@ import {
   Package,
   Loader2,
   Store as StoreIcon,
+  MapPin,
+  AlertTriangle,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -35,12 +37,24 @@ export default function CartPage() {
     return acc;
   }, {});
 
+  const userAddresses = (user as any)?.addresses as string[] | undefined;
+  const hasAddress = userAddresses && userAddresses.length > 0;
+
   const handlePlaceOrder = async () => {
     if (!user) {
       setLocation("/login");
       return;
     }
     if (items.length === 0) return;
+
+    if (!hasAddress) {
+      toast({
+        title: "لا يوجد عنوان توصيل",
+        description: "يرجى إضافة عنوان توصيل في صفحة الملف الشخصي أولاً قبل تقديم الطلب.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsPlacingOrder(true);
     try {
@@ -200,6 +214,24 @@ export default function CartPage() {
                 <div className="flex justify-between font-black text-lg">
                   <span className="text-primary">{totalPrice.toFixed(2)} ج.م</span>
                   <span>إجمالي المنتجات</span>
+                </div>
+                <div className={`flex items-start gap-2 p-3 rounded-xl text-sm ${hasAddress ? "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400" : "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400"}`}>
+                  {hasAddress ? (
+                    <>
+                      <MapPin className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span className="text-right">{userAddresses![0]}</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span className="text-right">
+                        لا يوجد عنوان توصيل.{" "}
+                        <Link href="/customer/profile" className="underline font-semibold">
+                          أضف عنواناً من ملفك الشخصي
+                        </Link>
+                      </span>
+                    </>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground text-center">
                   سيُخصم مبلغ المنتجات من محفظتك الآن، ورسوم التوصيل تُحدَّد بعد موافقة السائق

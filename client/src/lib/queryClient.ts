@@ -5,7 +5,7 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
  * Authorization header object. Returns an empty object if no token exists.
  * This is the single source of truth for auth headers in this file.
  */
-function getAuthHeaders(): Record<string, string> {
+export function getAuthHeaders(): Record<string, string> {
   const token = localStorage.getItem("jwt_token");
   return token ? { Authorization: `Bearer ${token}` } : {};
 }

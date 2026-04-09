@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { User, Phone, Truck, Save, Camera, FileText, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, getAuthHeaders } from "@/lib/queryClient";
 
 export default function DriverProfilePage() {
   const { user } = useAuth();
@@ -57,10 +57,9 @@ export default function DriverProfilePage() {
     try {
       const formData = new FormData();
       formData.append("avatar", file);
-      const token = localStorage.getItem("jwt_token");
       const res = await fetch("/api/profile/avatar", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(),
         body: formData,
       });
       if (!res.ok) throw new Error("فشل رفع الصورة");
@@ -82,10 +81,9 @@ export default function DriverProfilePage() {
     try {
       const formData = new FormData();
       formData.append("avatar", file);
-      const token = localStorage.getItem("jwt_token");
       const res = await fetch("/api/profile/license", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(),
         body: formData,
       });
       if (!res.ok) throw new Error("فشل رفع الملف");

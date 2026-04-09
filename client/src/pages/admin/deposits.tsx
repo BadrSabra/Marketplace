@@ -17,32 +17,12 @@ export default function AdminDepositsPage() {
 
   const { data: deposits, isLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/deposits/pending"],
-    queryFn: async () => {
-      const token = localStorage.getItem("jwt_token");
-      const res = await fetch("/api/admin/deposits/pending", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) throw new Error("فشل تحميل طلبات الإيداع");
-      return res.json();
-    },
     refetchInterval: 30000,
   });
 
   const approveMutation = useMutation({
     mutationFn: async (id: string) => {
-      const token = localStorage.getItem("jwt_token");
-      const res = await fetch(`/api/admin/deposits/${id}/approve`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "فشلت الموافقة");
-      }
+      const res = await apiRequest("POST", `/api/admin/deposits/${id}/approve`, {});
       return res.json();
     },
     onSuccess: () => {
@@ -56,19 +36,7 @@ export default function AdminDepositsPage() {
 
   const rejectMutation = useMutation({
     mutationFn: async (id: string) => {
-      const token = localStorage.getItem("jwt_token");
-      const res = await fetch(`/api/admin/deposits/${id}/reject`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "فشل رفض الطلب");
-      }
+      const res = await apiRequest("POST", `/api/admin/deposits/${id}/reject`, {});
       return res.json();
     },
     onSuccess: () => {
@@ -82,7 +50,7 @@ export default function AdminDepositsPage() {
 
   return (
     <AdminLayout>
-      <div className="mb-8">
+      <div className="mb-8" dir="rtl">
         <h1 className="text-3xl font-bold text-foreground">طلبات الإيداع</h1>
         <p className="text-muted-foreground mt-2">مراجعة إيصالات الدفع والموافقة على إيداعات العملاء.</p>
       </div>
