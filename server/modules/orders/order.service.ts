@@ -50,14 +50,10 @@ export class OrderService {
         .set({ balance: (balance - totalPrice).toFixed(2) })
         .where(eq(wallets.id, wallet.id));
 
-      await tx.insert(walletTransactions).values({
-        walletId: wallet.id,
-        type: "WITHDRAWAL",
-        amount: totalPrice.toFixed(2),
-        status: "COMPLETED",
-      });
-
-      // 4. Create parent order
+      // 4. Create parent order BEFORE recording the wallet transaction so we can
+      // BUG-FIX: walletTransactions was inserted before the order existed, so relatedOrderId
+      // was always NULL — making it impossible to trace any payment back to its order in
+      // transaction history or audit reports. Create the order first, then reference its ID.
       const [order] = await tx.insert(orders).values({
         customerId,
         totalPrice: totalPrice.toFixed(2),
@@ -65,9 +61,17 @@ export class OrderService {
         paymentStatus: "PAID",
       }).returning();
 
-      // BUG-FIX: Missing ledger entry for order payment — every wallet debit must have
-      // a matching double-entry ledger record. Without this, all customer order payments
-      // were completely invisible in the ledger, breaking financial reporting and auditing.
+      await tx.insert(walletTransactions).values({
+        walletId: wallet.id,
+        type: "WITHDRAWAL",
+        amount: totalPrice.toFixed(2),
+        relatedOrderId: order.id,
+        status: "COMPLETED",
+        notes: `دفع طلب #${order.id.slice(0, 8)}`,
+      });
+
+      // Missing ledger entry for order payment — every wallet debit must have
+      // a matching double-entry ledger record.
       await tx.insert(ledger).values({
         referenceId: order.id,
         debitUserId: customerId,
@@ -340,6 +344,11 @@ export class OrderService {
       if (order.customerId !== userId) throw new Error("Unauthorized");
       if (subOrder.status === "DELIVERED") throw new Error("Cannot cancel delivered sub-order");
       if (subOrder.status === "CANCELLED") throw new Error("Sub-order already cancelled");
+      // BUG-FIX: Was missing a guard for IN_TRANSIT status. The state machine
+      // (allowedTransitions) only allows IN_TRANSIT → DELIVERED, never → CANCELLED.
+      // Without this check, a customer could cancel a sub-order while the driver is
+      // already on the way, receive a full refund, and leave the driver uncompensated.
+      if (subOrder.status === "IN_TRANSIT") throw new Error("Cannot cancel sub-order that is already in transit");
 
       await tx.update(subOrders).set({ status: "CANCELLED", updatedAt: new Date() }).where(eq(subOrders.id, subOrderId));
 

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Package, MapPin, Phone, Clock, CheckCircle, Truck } from "lucide-react";
+import { Loader2, Package, MapPin, Phone, Clock, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useState, useEffect } from "react";
@@ -54,16 +54,6 @@ export default function ActiveDelivery() {
     },
   });
 
-  const statusMutation = useMutation({
-    mutationFn: async (newStatus: string) => {
-      const res = await apiRequest("PATCH", `/api/suborders/${task?.id}/status`, { status: newStatus });
-      return res.json();
-    },
-    onSuccess: (_, status) => {
-      toast({ title: t('driver.active_delivery.toasts.status_success_title'), description: t('driver.active_delivery.toasts.status_success_desc', { status: t(`store.orders.statuses.${status}`) }) });
-      queryClient.invalidateQueries({ queryKey: ["/api/suborders/active"] });
-    },
-  });
 
   if (isLoading) {
     return (
@@ -194,15 +184,6 @@ export default function ActiveDelivery() {
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 flex-row-reverse">
-            {task.status === "ASSIGNED" && (
-              <Button
-                className="w-full gap-2 flex-row-reverse"
-                onClick={() => statusMutation.mutate("PICKED_UP")}
-                disabled={statusMutation.isPending}
-              >
-                <Truck className="h-4 w-4" /> {t('driver.active_delivery.actions.mark_picked_up')}
-              </Button>
-            )}
             <Button variant="secondary" className="w-full gap-2 flex-row-reverse" asChild>
               <a href={`tel:${task.customerPhone}`}>
                 <Phone className="h-4 w-4" /> {t('driver.active_delivery.actions.call_customer')}

@@ -213,7 +213,10 @@ export class DeliveryOfferService {
    */
   async customerRejectOffer(offerId: string, customerId: string) {
     return await db.transaction(async (tx) => {
-      const [offer] = await tx.select().from(deliveryOffers).where(eq(deliveryOffers.id, offerId));
+      // BUG-FIX: Was fetching the offer without FOR UPDATE, creating a TOCTOU race condition.
+      // A concurrent accept and reject could both pass the status === "PENDING" check and both
+      // proceed, leading to an inconsistent state (offer both accepted and rejected).
+      const [offer] = await tx.select().from(deliveryOffers).where(eq(deliveryOffers.id, offerId)).for("update");
       if (!offer || offer.status !== "PENDING") throw new Error("OFFER_NOT_AVAILABLE");
 
       const [subOrder] = await tx.select().from(subOrders).where(eq(subOrders.id, offer.subOrderId));

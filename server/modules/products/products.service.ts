@@ -118,22 +118,27 @@ export class ProductsService {
   }
 
   async deleteProduct(id: string, user: any): Promise<void> {
-    const [product] = await db.select().from(products).where(eq(products.id, id));
-    if (!product) throw new Error("NOT_FOUND");
+    await db.transaction(async (tx) => {
+      // BUG-FIX: Was reading product + checking ownership then deleting outside a transaction.
+      // Two concurrent delete requests (or a delete + update) could both pass the ownership check
+      // and then race. Now the row is locked with FOR UPDATE inside an atomic transaction.
+      const [product] = await tx.select().from(products).where(eq(products.id, id)).for("update");
+      if (!product) throw new Error("NOT_FOUND");
 
-    const [store] = await db.select().from(stores).where(eq(stores.id, product.storeId));
-    if (user.role !== "ADMIN" && store.ownerId !== user.id) {
-      throw new Error("UNAUTHORIZED_OWNERSHIP");
-    }
+      const [store] = await tx.select().from(stores).where(eq(stores.id, product.storeId));
+      if (user.role !== "ADMIN" && store.ownerId !== user.id) {
+        throw new Error("UNAUTHORIZED_OWNERSHIP");
+      }
 
-    await db.delete(products).where(eq(products.id, id));
-    await auditService.logEvent({
-      actionType: "DELETE_PRODUCT",
-      entityType: "PRODUCT",
-      entityId: id,
-      performedByUserId: user.id,
-      performedByRole: user.role,
-      oldValue: { name: product.name, storeId: product.storeId },
+      await tx.delete(products).where(eq(products.id, id));
+      await auditService.logEvent({
+        actionType: "DELETE_PRODUCT",
+        entityType: "PRODUCT",
+        entityId: id,
+        performedByUserId: user.id,
+        performedByRole: user.role,
+        oldValue: { name: product.name, storeId: product.storeId },
+      });
     });
   }
 
