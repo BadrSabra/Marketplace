@@ -216,8 +216,14 @@ export class DeliveryOfferService {
       // BUG-FIX: Was fetching the offer without FOR UPDATE, creating a TOCTOU race condition.
       // A concurrent accept and reject could both pass the status === "PENDING" check and both
       // proceed, leading to an inconsistent state (offer both accepted and rejected).
+      // Q: هل يجب السماح برفض العروض في حالة COUNTERED أيضاً؟
+      // A: نعم. عندما يقدّم العميل عرضاً مضاداً (COUNTERED)، يصبح العرض في حالة COUNTERED.
+      //    إذا أراد العميل لاحقاً الرجوع عن هذا العرض (أو لم يرد السائق)، لم يكن بإمكانه
+      //    ذلك — الشرط السابق `offer.status !== "PENDING"` يرفض محاولة الرفض فوراً، مما
+      //    يترك العروض في حالة COUNTERED معلّقة إلى الأبد دون أي مسار للخروج منها.
+      //    الإصلاح: السماح بالرفض لحالتَي PENDING و COUNTERED معاً.
       const [offer] = await tx.select().from(deliveryOffers).where(eq(deliveryOffers.id, offerId)).for("update");
-      if (!offer || offer.status !== "PENDING") throw new Error("OFFER_NOT_AVAILABLE");
+      if (!offer || !["PENDING", "COUNTERED"].includes(offer.status)) throw new Error("OFFER_NOT_AVAILABLE");
 
       const [subOrder] = await tx.select().from(subOrders).where(eq(subOrders.id, offer.subOrderId));
       const [parentOrder] = await tx.select().from(orders).where(eq(orders.id, subOrder.orderId));

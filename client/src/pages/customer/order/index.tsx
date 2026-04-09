@@ -205,11 +205,28 @@ function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; or
                   </div>
                 </div>
                 {isCountered && (
-                  <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
-                    <Clock className="h-3 w-3 shrink-0" />
-                    <span className="text-xs">
-                      أرسلت عرضاً مضاداً بـ <strong>{parseFloat(offer.counterOfferedFee).toFixed(2)} جنيه</strong> — في انتظار رد السائق
-                    </span>
+                  // Q: عندما يكون العرض في حالة COUNTERED، هل يجب أن يستطيع العميل رفضه؟
+                  // A: نعم. الواجهة كانت تخفي جميع الأزرار للعروض في حالة COUNTERED، مما
+                  //    يجعل العميل عاجزاً عن التراجع عن عرضه المضاد أو رفض السائق كلياً.
+                  //    تُكمل هذه الإصلاح إصلاح الخادم الذي يسمح الآن بـ PATCH /reject
+                  //    على العروض في حالتَي PENDING وCOUNTERED على حدٍّ سواء.
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                      <Clock className="h-3 w-3 shrink-0" />
+                      <span className="text-xs">
+                        أرسلت عرضاً مضاداً بـ <strong>{parseFloat(offer.counterOfferedFee).toFixed(2)} جنيه</strong> — في انتظار رد السائق
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => rejectMutation.mutate(offer.id)}
+                      disabled={isBusy}
+                      data-testid={`button-reject-countered-${offer.id}`}
+                    >
+                      <XCircle className="h-3 w-3 ml-1" />
+                      إلغاء العرض المضاد ورفض السائق
+                    </Button>
                   </div>
                 )}
               </div>
