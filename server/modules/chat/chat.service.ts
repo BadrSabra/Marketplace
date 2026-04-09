@@ -161,6 +161,18 @@ export class ChatService {
       type,
     }).returning();
 
+    // BUG-FIX: Previously always queried the sender by the passed `senderId`, even when
+    // type === "SYSTEM" and the DB stores senderId as NULL. This caused system messages to
+    // incorrectly return the triggering user's name/role instead of the system identity label.
+    if (type === "SYSTEM") {
+      return {
+        ...msg,
+        senderName: "النظام",
+        senderRole: "SYSTEM",
+        senderAvatar: null,
+      };
+    }
+
     const senderInfo = await pool.query<{ name: string; role: string; avatar_url: string | null }>(
       `SELECT name, role, avatar_url FROM users WHERE id = $1`, [senderId]
     );

@@ -450,7 +450,20 @@ export async function registerRoutes(
         return res.status(400).json({ message: "No file uploaded" });
       }
       try {
+        const actor = (req as any).user;
         const id = req.params.id as string;
+
+        // BUG-FIX (security): No ownership check existed — a STORE_OWNER could upload an image
+        // for any store they don't own by guessing/knowing another store's UUID.
+        // Only the owning STORE_OWNER or an ADMIN may update a store's image.
+        if (actor.role !== "ADMIN") {
+          const [targetStore] = await db.select().from(stores).where(eq(stores.id, id));
+          if (!targetStore) return res.status(404).json({ message: "Store not found" });
+          if (targetStore.ownerId !== actor.id) {
+            return res.status(403).json({ message: "Forbidden: you do not own this store" });
+          }
+        }
+
         const imageUrl = `/uploads/stores/${req.file.filename}`;
         const [updated] = await db
           .update(stores)

@@ -59,12 +59,23 @@ router.post("/admin/deposits/:id/reject", authenticate, authorizeRole(["ADMIN"])
   try {
     const id = req.params.id as string;
 
-    // Fetch user info before updating
-    const [txBefore] = await db
-      .select({ userId: wallets.userId, amount: walletTransactions.amount })
+    // Fetch the transaction regardless of status so we can distinguish 404 from 409.
+    // BUG-FIX: Previously returned 404 for both "not found" and "already processed" because
+    // the WHERE clause included `status = PENDING`, so a non-PENDING row also yielded null.
+    const [existing] = await db
+      .select({ userId: wallets.userId, amount: walletTransactions.amount, status: walletTransactions.status })
       .from(walletTransactions)
       .innerJoin(wallets, eq(walletTransactions.walletId, wallets.id))
-      .where(and(eq(walletTransactions.id, id), eq(walletTransactions.status, "PENDING")));
+      .where(eq(walletTransactions.id, id));
+
+    if (!existing) {
+      return res.status(404).json({ message: "Deposit not found" });
+    }
+    if (existing.status !== "PENDING") {
+      return res.status(409).json({ message: "Deposit already approved or rejected" });
+    }
+
+    const txBefore = existing;
 
     const [updated] = await db
       .update(walletTransactions)
@@ -73,7 +84,8 @@ router.post("/admin/deposits/:id/reject", authenticate, authorizeRole(["ADMIN"])
       .returning();
 
     if (!updated) {
-      return res.status(404).json({ message: "Deposit not found or already processed" });
+      // Race condition: another request processed it between our check and update
+      return res.status(409).json({ message: "Deposit already approved or rejected" });
     }
 
     if (txBefore) {
