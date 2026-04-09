@@ -255,9 +255,15 @@ export default function CustomerTransactions() {
                         {["DEPOSIT", "REFUND"].includes(t_row.type) ? "+" : "-"}
                         {Math.abs(parseFloat(t_row.amount)).toFixed(2)} ج.م
                       </TableCell>
+                      {/* Q: هل يجب عرض حالة المعاملة بالعربية أم بالإنجليزية الخام؟
+                          A: بالعربية — المنصة عربية بالكامل. `t_row.status` يُعرض "COMPLETED"
+                             و"PENDING" بالإنجليزية وهو غير متسق مع بقية الواجهة. */}
                       <TableCell className="text-right">
                         <Badge variant="secondary" className={getStatusColor(t_row.status)}>
-                          {t_row.status}
+                          {t_row.status === "COMPLETED" ? "مكتمل"
+                            : t_row.status === "PENDING" ? "في الانتظار"
+                            : t_row.status === "FAILED" ? "فشل"
+                            : t_row.status}
                         </Badge>
                       </TableCell>
                       <TableCell className="max-w-[200px] truncate text-right">

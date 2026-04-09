@@ -1,6 +1,10 @@
 import { db } from "../../db";
 import { deliveryOffers, subOrders, wallets, walletTransactions, orders, users, ledger } from "@shared/schema";
-import { eq, and, ne } from "drizzle-orm";
+// Q: هل يجب استيراد sql من drizzle-orm ديناميكياً داخل دالة getOffersForSubOrder؟
+// A: لا — sql دالة مساعدة ثابتة من drizzle-orm لا تتغير بين الاستدعاءات.
+//    استيرادها ديناميكياً داخل الدالة يُضيف Promise overhead في كل استدعاء
+//    دون أي فائدة تقنية. الإصلاح: إضافتها للاستيراد الثابت في بداية الملف.
+import { eq, and, ne, sql } from "drizzle-orm";
 import { auditService } from "../../services/auditService";
 import { deliveryOtpService } from "./deliveryOtp.service";
 import { chatService } from "../chat/chat.service";
@@ -76,7 +80,6 @@ export class DeliveryOfferService {
    * Includes PENDING and COUNTERED offers
    */
   async getOffersForSubOrder(subOrderId: string) {
-    const { sql: sqlExpr } = await import("drizzle-orm");
     const offers = await db
       .select({
         id: deliveryOffers.id,
@@ -94,7 +97,7 @@ export class DeliveryOfferService {
       .innerJoin(users, eq(deliveryOffers.driverId, users.id))
       .where(and(
         eq(deliveryOffers.subOrderId, subOrderId),
-        sqlExpr`${deliveryOffers.status} IN ('PENDING', 'COUNTERED')`
+        sql`${deliveryOffers.status} IN ('PENDING', 'COUNTERED')`
       ));
     return offers;
   }

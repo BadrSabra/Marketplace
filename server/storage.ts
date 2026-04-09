@@ -1,5 +1,10 @@
 import { db } from "./db";
-import { users, wallets, stores } from "@shared/schema";
+// Q: هل يجب استيراد products ديناميكياً داخل كل دالة بـ await import()؟
+// A: لا — Node.js يُخزّن الوحدات في الذاكرة بعد أول استيراد (module caching)، لذا
+//    كل await import() داخل كل دالة يُضيف تحميلاً زائداً (overhead) لا مبرر له:
+//    Promise allocation، await، destructuring — في كل استدعاء. الإصلاح: نقل
+//    الاستيراد إلى مستوى الوحدة ليُنفَّذ مرة واحدة عند تحميل الـ module.
+import { users, wallets, stores, products, subOrders, orderItems, deliveryOffers, deliveryOtps } from "@shared/schema";
 import type { User, InsertUser, Wallet, InsertWallet } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 
@@ -82,29 +87,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProducts(): Promise<any[]> {
-    const { products } = await import("@shared/schema");
     return await db.select().from(products);
   }
 
   async getProductsByStoreId(storeId: string): Promise<any[]> {
-    const { products } = await import("@shared/schema");
     return await db.select().from(products).where(eq(products.storeId, storeId));
   }
 
   async getProduct(id: string): Promise<any | undefined> {
-    const { products } = await import("@shared/schema");
     const [product] = await db.select().from(products).where(eq(products.id, id));
     return product;
   }
 
   async createProduct(insertProduct: any): Promise<any> {
-    const { products } = await import("@shared/schema");
     const [product] = await db.insert(products).values(insertProduct).returning();
     return product;
   }
 
   async updateProduct(id: string, updateProduct: any): Promise<any> {
-    const { products } = await import("@shared/schema");
     const [product] = await db.update(products)
       .set({ ...updateProduct, updatedAt: new Date() })
       .where(eq(products.id, id))
@@ -113,12 +113,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteProduct(id: string): Promise<void> {
-    const { products } = await import("@shared/schema");
     await db.delete(products).where(eq(products.id, id));
   }
 
   async updateProductStock(id: string, stock: number): Promise<any> {
-    const { products } = await import("@shared/schema");
     const [product] = await db.update(products)
       .set({ stock, updatedAt: new Date() })
       .where(eq(products.id, id))
@@ -127,9 +125,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteStore(id: string): Promise<any> {
-    const schema = await import("@shared/schema");
-    const { subOrders, products, stores, orderItems, deliveryOffers, deliveryOtps, users } = schema;
-    
     return await db.transaction(async (tx) => {
       const [store] = await tx.select().from(stores).where(eq(stores.id, id));
       if (!store) throw new Error("Store not found");

@@ -1,5 +1,10 @@
 import { Request, Response } from "express";
 import { db } from "../../db";
+// Q: هل يجب استيراد wallets و ledger ديناميكياً داخل getHealth؟
+// A: لا — هذه وحدات ثابتة من @shared/schema لا تتغير. استيرادها
+//    بـ await import() في كل طلب health check يُضيف Promise overhead
+//    بلا مبرر. الإصلاح: نقلها للاستيراد الثابت في بداية الملف.
+import { wallets, ledger } from "@shared/schema";
 import { sql } from "drizzle-orm";
 import os from "os";
 import { auditService } from "../../services/auditService";
@@ -64,7 +69,6 @@ export const healthController = {
     //    الإصلاح: استخدام استعلامين منفصلين (credit فقط، debit فقط) واحتساب الصافي.
     let ledgerConsistency: any = { consistent: true };
     try {
-      const { wallets, ledger } = await import("@shared/schema");
       const walletSum = await db.select({ total: sql<string>`sum(balance)` }).from(wallets);
       const [ledgerCredits] = await db
         .select({ sum: sql<string>`sum(amount)` })
