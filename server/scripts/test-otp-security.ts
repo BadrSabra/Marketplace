@@ -23,7 +23,7 @@ async function testOtpSecurity() {
     const [subOrder] = await db.insert(subOrders).values({
       orderId: order.id,
       storeId: store.id,
-      status: "READY",
+      status: "PENDING",
       subtotal: "100.00",
     }).returning();
 

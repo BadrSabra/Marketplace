@@ -32,11 +32,11 @@ const typeIcons: Record<string, string> = {
 function getNotificationRoute(type: string, role: string): string {
   switch (type) {
     case "NEW_ORDER":
-      if (role === "STORE_OWNER") return "/customer/store/orders";
+      if (role === "STORE_OWNER") return "/store/dashboard/orders";
       if (role === "DRIVER") return "/driver/tasks";
       return "/customer/orders";
     case "ORDER_STATUS_UPDATE":
-      if (role === "STORE_OWNER") return "/customer/store/orders";
+      if (role === "STORE_OWNER") return "/store/dashboard/orders";
       if (role === "DRIVER") return "/driver/active-delivery";
       return "/customer/orders";
     case "NEW_OFFER":

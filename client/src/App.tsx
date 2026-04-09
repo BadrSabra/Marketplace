@@ -77,6 +77,8 @@ import OrdersPage from "@/pages/admin/orders";
 import AdminAudit from "@/pages/admin/audit";
 import AdminDeposits from "@/pages/admin/deposits";
 import AdminWithdrawals from "@/pages/admin/withdrawals";
+import AdminFinance from "@/pages/admin/finance";
+import AdminApprovals from "@/pages/admin/approvals";
 import DriverNavbar from "@/components/driver/DriverNavbar";
 import CartPage from "@/pages/customer/cart";
 import ChatListPage from "@/pages/chat/index";
@@ -223,6 +225,12 @@ function Router() {
       </Route>
       <Route path="/admin/withdrawals">
         {() => <ProtectedRoute component={AdminWithdrawals} roles={["ADMIN"]} />}
+      </Route>
+      <Route path="/admin/finance">
+        {() => <ProtectedRoute component={AdminFinance} roles={["ADMIN"]} />}
+      </Route>
+      <Route path="/admin/approvals">
+        {() => <ProtectedRoute component={AdminApprovals} roles={["ADMIN"]} />}
       </Route>
       <Route path="/admin/audit">
         {() => <ProtectedRoute component={AdminAudit} roles={["ADMIN"]} />}

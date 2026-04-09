@@ -12,7 +12,9 @@ import {
   ShieldAlert,
   Wallet,
   ArrowDownLeft,
-  MessageCircle
+  MessageCircle,
+  BarChart3,
+  UserCheck
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -30,6 +32,8 @@ function cn(...inputs: ClassValue[]) {
 // authenticated user. All admin nav items now point to the correct admin-scoped routes.
 const NAV_ITEMS = [
   { href: "/", label: "لوحة التحكم", icon: LayoutDashboard },
+  { href: "/admin/finance", label: "المالية", icon: BarChart3 },
+  { href: "/admin/approvals", label: "طلبات الموافقة", icon: UserCheck },
   { href: "/admin/deposits", label: "طلبات الإيداع", icon: Wallet },
   { href: "/admin/withdrawals", label: "طلبات السحب", icon: ArrowDownLeft },
   { href: "/admin/audit", label: "سجلات التدقيق", icon: ShieldAlert },
@@ -103,7 +107,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-xl transition-colors"
           >
             <LogOut className="w-4 h-4" />
-            Sign Out
+            تسجيل الخروج
           </button>
         </div>
       </aside>
@@ -151,7 +155,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                 className="w-full flex items-center gap-3 px-4 py-3 text-destructive hover:bg-destructive/10 rounded-xl"
               >
                 <LogOut className="w-5 h-5" />
-                Sign Out
+                تسجيل الخروج
               </button>
             </motion.div>
           )}

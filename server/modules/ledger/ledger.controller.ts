@@ -108,7 +108,7 @@ router.get("/admin/ledger/:id", authenticate, authorizeRole(["ADMIN"]), async (r
 
 router.post("/process-commission/:subOrderId", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
   try {
-    const { subOrderId } = req.params;
+    const subOrderId = String(req.params.subOrderId);
     const { force } = req.body;
     
     const result = await ledgerService.processCommissions(subOrderId, !!force);
