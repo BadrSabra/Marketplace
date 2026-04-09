@@ -183,7 +183,7 @@ export default function StoreEarnings() {
                     <SelectItem value="ALL">{t('customer.wallet.all_types')}</SelectItem>
                     <SelectItem value="COMMISSION">{t('customer.wallet.types.COMMISSION')}</SelectItem>
                     <SelectItem value="DEPOSIT">{t('customer.wallet.types.DEPOSIT')}</SelectItem>
-                    <SelectItem value="WITHDRAWAL">{t('customer.wallet.types.DEPOSIT')}</SelectItem>
+                    <SelectItem value="WITHDRAWAL">{t('customer.wallet.types.WITHDRAWAL')}</SelectItem>
                     <SelectItem value="REFUND">{t('customer.wallet.types.REFUND')}</SelectItem>
                   </SelectContent>
                 </Select>

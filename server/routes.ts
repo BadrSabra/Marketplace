@@ -55,10 +55,10 @@ export async function registerRoutes(
     app.use("/api", ledgerRouter);
   
     // Delivery
-    app.get("/api/delivery/available-tasks", authenticate, deliveryController.getAvailableTasks);
+    app.get("/api/delivery/available-tasks", authenticate, authorizeRole(["DRIVER"]), deliveryController.getAvailableTasks);
     app.get("/api/suborders/active", authenticate, authorizeRole(["DRIVER"]), subOrderController.getActiveDelivery);
     app.post("/api/delivery/otp/generate/:id", authenticate, authorizeRole(["DRIVER"]), deliveryOtpController.generateOtp.bind(deliveryOtpController));
-    app.post("/api/delivery/otp/verify/:id", authenticate, otpLimiter, deliveryOtpController.verify.bind(deliveryOtpController));
+    app.post("/api/delivery/otp/verify/:id", authenticate, authorizeRole(["DRIVER"]), otpLimiter, deliveryOtpController.verify.bind(deliveryOtpController));
   app.post("/api/delivery/suborders/:id/offer", authenticate, authorizeRole(["DRIVER"]), deliveryOfferController.submitOffer);
   app.patch("/api/delivery/suborders/:id/accept", authenticate, authorizeRole(["DRIVER"]), deliveryOfferController.acceptTask);
   // Customer: view and act on delivery offers
@@ -341,6 +341,30 @@ export async function registerRoutes(
         res.json({ avatarUrl, user: cleanUser });
       } catch (e: any) {
         res.status(500).json({ message: e.message || "Failed to save avatar" });
+      }
+    });
+  });
+
+  app.post("/api/profile/license", authenticate, authorizeRole(["DRIVER"]), (req, res) => {
+    avatarUpload.single("avatar")(req, res, async (err: any) => {
+      if (err) {
+        return res.status(400).json({ message: err.message || "Upload failed" });
+      }
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      try {
+        const userId = (req as any).user.id;
+        const driversLicenseUrl = `/uploads/avatars/${req.file.filename}`;
+        const [updatedUser] = await db
+          .update(users)
+          .set({ driversLicenseUrl, updatedAt: new Date() })
+          .where(eq(users.id, userId))
+          .returning();
+        const { password, ...cleanUser } = updatedUser;
+        res.json({ driversLicenseUrl, user: cleanUser });
+      } catch (e: any) {
+        res.status(500).json({ message: e.message || "Failed to save license" });
       }
     });
   });

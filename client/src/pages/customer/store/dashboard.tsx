@@ -174,7 +174,7 @@ export default function StoreDashboard() {
               <Wallet className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold" data-testid="stat-wallet-balance">${walletBalance}</div>
+              <div className="text-2xl font-bold" data-testid="stat-wallet-balance">{walletBalance} ج.م</div>
               <p className="text-xs text-muted-foreground mt-1">{t('store.earnings.balance_note')}</p>
             </CardContent>
           </Card>

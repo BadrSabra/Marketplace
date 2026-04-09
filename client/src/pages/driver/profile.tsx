@@ -83,14 +83,14 @@ export default function DriverProfilePage() {
       const formData = new FormData();
       formData.append("avatar", file);
       const token = localStorage.getItem("jwt_token");
-      const res = await fetch("/api/profile/avatar", {
+      const res = await fetch("/api/profile/license", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
       if (!res.ok) throw new Error("فشل رفع الملف");
       const data = await res.json();
-      form.setValue("driversLicenseUrl", data.avatarUrl);
+      form.setValue("driversLicenseUrl", data.driversLicenseUrl);
       toast({ title: "تم رفع الرخصة بنجاح" });
     } catch (error: any) {
       toast({ title: "فشل رفع الرخصة", description: error.message, variant: "destructive" });

@@ -101,7 +101,7 @@ export function StoreLayout({ children }: { children: ReactNode }) {
           <div className="px-4 py-3 mb-4 rounded-xl bg-card border border-border/50 shadow-sm text-right">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">{t('store.dashboard.wallet_balance')}</p>
             <p className="text-lg font-bold text-primary">
-              {isWalletLoading ? <Spinner size="sm" /> : `$${parseFloat(wallet?.balance || "0").toFixed(2)}`}
+              {isWalletLoading ? <Spinner size="sm" /> : `${parseFloat(wallet?.balance || "0").toFixed(2)} ج.م`}
             </p>
           </div>
 
@@ -135,7 +135,7 @@ export function StoreLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-4 flex-row-reverse">
             <div className="text-right hidden sm:block">
               <p className="text-[10px] uppercase text-muted-foreground font-bold">{t('store.dashboard.wallet_balance')}</p>
-              <p className="text-sm font-bold text-primary">${parseFloat(wallet?.balance || "0").toFixed(2)}</p>
+              <p className="text-sm font-bold text-primary">{parseFloat(wallet?.balance || "0").toFixed(2)} ج.م</p>
             </div>
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -174,7 +174,7 @@ export function StoreLayout({ children }: { children: ReactNode }) {
               <div className="pt-4 mt-2 border-t border-border">
                 <div className="flex justify-between items-center px-4 py-3 bg-secondary/30 rounded-xl mb-2 flex-row-reverse">
                   <span className="text-sm font-medium">{t('store.dashboard.wallet_balance')}</span>
-                  <span className="font-bold text-primary">${parseFloat(wallet?.balance || "0").toFixed(2)}</span>
+                  <span className="font-bold text-primary">{parseFloat(wallet?.balance || "0").toFixed(2)} ج.م</span>
                 </div>
                 <button 
                   onClick={() => { logout(); setIsMobileMenuOpen(false); }}

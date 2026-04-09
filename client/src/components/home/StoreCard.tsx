@@ -12,9 +12,9 @@ export default function StoreCard({ store }: { store: any }) {
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-all border-2 group" data-testid={`card-store-${store.id}`}>
       <div className="h-40 md:h-48 bg-slate-100 dark:bg-slate-800 flex items-center justify-center relative overflow-hidden">
-        {store.logoUrl ? (
+        {store.imageUrl ? (
           <img 
-            src={store.logoUrl} 
+            src={store.imageUrl} 
             alt={store.name} 
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
