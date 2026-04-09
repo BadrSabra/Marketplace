@@ -50,8 +50,8 @@ export default function OrdersPage() {
   const { data: orders, isLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/orders"],
     queryFn: async () => {
+      // apiFetch throws on non-OK — no if(!res.ok) guard needed here
       const res = await apiFetch("/api/admin/orders");
-      if (!res.ok) return [];
       return res.json();
     },
     refetchInterval: 30000,

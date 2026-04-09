@@ -37,11 +37,8 @@ export default function DriverWalletPage() {
 
   const withdrawMutation = useMutation({
     mutationFn: async (amount: string) => {
+      // apiRequest throws on non-OK — no if(!res.ok) guard needed here
       const res = await apiRequest("POST", "/api/wallet/withdraw", { amount });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: "حدث خطأ" }));
-        throw new Error(err.message || "فشل السحب");
-      }
       return res.json();
     },
     onSuccess: () => {

@@ -21,8 +21,8 @@ export default function Dashboard() {
   const { data: adminOrders, isLoading: loadingOrders } = useQuery<any[]>({
     queryKey: ["/api/admin/orders"],
     queryFn: async () => {
+      // apiFetch throws on non-OK — no if(!res.ok) guard needed here
       const res = await apiFetch("/api/admin/orders");
-      if (!res.ok) return [];
       return res.json();
     },
   });
@@ -31,7 +31,6 @@ export default function Dashboard() {
     queryKey: ["/api/admin/stats"],
     queryFn: async () => {
       const res = await apiFetch("/api/admin/stats");
-      if (!res.ok) return null;
       return res.json();
     }
   });
@@ -40,7 +39,6 @@ export default function Dashboard() {
     queryKey: ["/api/ledger/transactions"],
     queryFn: async () => {
       const res = await apiFetch("/api/ledger/transactions");
-      if (!res.ok) return { transactions: [], total: 0 };
       return res.json();
     },
   });

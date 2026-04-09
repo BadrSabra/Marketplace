@@ -12,8 +12,20 @@ import { Label } from "@/components/ui/label";
 import type { ActiveDelivery, AvailableTask } from "@/lib/api/driver";
 
 export default function DriverTasksPage() {
-  const { data: tasks, isLoading: tasksLoading, error: tasksError } = useDriverTasks();
-  const { data: offers, isLoading: offersLoading, error: offersError } = useAvailableOffers();
+  // Q: لماذا نستخدم refetch بدلاً من window.location.reload() في تطبيق React؟
+  // A: window.location.reload() يُعيد تحميل الصفحة كاملاً ويفقد كامل حالة React
+  //    (كل المكونات المُركَّبة، الـ useState، الـ context). هذا يُسبب:
+  //    1. وميض الصفحة وتجربة مستخدم سيئة
+  //    2. فقدان بيانات نماذج مفتوحة (مثل نموذج تقديم العرض)
+  //    3. استهلاك غير ضروري لـ JavaScript bundle
+  //    refetch() من TanStack Query تُعيد جلب البيانات فقط دون إعادة تحميل الصفحة.
+  const { data: tasks, isLoading: tasksLoading, error: tasksError, refetch: refetchTasks } = useDriverTasks();
+  const { data: offers, isLoading: offersLoading, error: offersError, refetch: refetchOffers } = useAvailableOffers();
+
+  const handleRetry = () => {
+    refetchTasks();
+    refetchOffers();
+  };
 
   if (tasksLoading || offersLoading) {
     return <TasksSkeleton />;
@@ -24,7 +36,7 @@ export default function DriverTasksPage() {
       <div className="container mx-auto p-4 space-y-8">
         <Card className="bg-destructive/10 text-destructive p-6 border-destructive text-center">
           <p className="font-bold">حدث خطأ أثناء تحميل المهام أو العروض</p>
-          <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>إعادة المحاولة</Button>
+          <Button variant="outline" className="mt-4" onClick={handleRetry}>إعادة المحاولة</Button>
         </Card>
       </div>
     );
@@ -67,7 +79,7 @@ export default function DriverTasksPage() {
           {!offers || offers.length === 0 ? (
             <Card className="col-span-full p-8 text-center text-muted-foreground">
               لا توجد طلبات متاحة حالياً
-              <Button variant="ghost" onClick={() => window.location.reload()}>التحديث</Button>
+              <Button variant="ghost" onClick={() => refetchOffers()}>التحديث</Button>
             </Card>
           ) : (
             offers.map(offer => <OfferCard key={offer.sub_order_id} offer={offer} />)
@@ -137,7 +149,12 @@ function OfferCard({ offer }: { offer: AvailableTask }) {
   const [isOfferOpen, setIsOfferOpen] = useState(false);
   const [feeInput, setFeeInput] = useState("");
 
-  const alreadyOffered = offer.driver_offer_status === "PENDING";
+  // Q: هل يكفي التحقق من PENDING فقط لمنع السائق من تقديم عرض ثانٍ؟
+  // A: لا — في حالة نادرة (تأخر شبكة أو cache قديم) قد يرى السائق طلباً
+  //    قَبِل فيه العميل عرضه (status=ACCEPTED) قبل أن تتحدث قائمة العروض.
+  //    في هذه الحالة كان يظهر زر "تقديم عرض" بينما العرض قُبل بالفعل،
+  //    فإذا ضغط السائق يحصل على خطأ محيّر. الإصلاح: شمل ACCEPTED أيضاً.
+  const alreadyOffered = offer.driver_offer_status === "PENDING" || offer.driver_offer_status === "ACCEPTED";
   const offerRejected = offer.driver_offer_status === "REJECTED";
   const offerCountered = offer.driver_offer_status === "COUNTERED";
 

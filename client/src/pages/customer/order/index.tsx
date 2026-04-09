@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient, getAuthHeaders } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import { apiFetch } from "@/lib/api";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -63,10 +63,10 @@ function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; or
   const { data: offers, isLoading } = useQuery<any[]>({
     queryKey: ["/api/delivery/suborders", subOrderId, "offers"],
     queryFn: async () => {
-      const res = await fetch(`/api/delivery/suborders/${subOrderId}/offers`, {
-        headers: getAuthHeaders(),
-      });
-      if (!res.ok) return [];
+      // BUG-FIX: Was using raw fetch() with manual getAuthHeaders() + silent `if (!res.ok) return []`
+      // which bypassed the 401→redirect-to-login logic in apiFetch and masked API errors as empty list.
+      // apiFetch handles auth headers, throws on non-OK, and redirects to /login on 401.
+      const res = await apiFetch(`/api/delivery/suborders/${subOrderId}/offers`);
       return res.json();
     },
     refetchInterval: 15000,

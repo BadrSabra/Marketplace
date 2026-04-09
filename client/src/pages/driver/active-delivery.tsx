@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,22 +9,22 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { t } from "@/i18n";
+// Q: لماذا حُذف useQuery المحلي واستُبدل بـ useDriverTasks؟
+// A: كان هذا الملف يستخدم queryKey: ["/api/suborders/active"] مع queryFn
+//    الافتراضية (raw API call → كائن مفرد أو null)، بينما useDriverTasks()
+//    يستخدم نفس الـ queryKey مع queryFn مُخصصة تُغلّف النتيجة في مصفوفة
+//    ([data]). عند التنقل من صفحة المهام إلى هذه الصفحة، كانت TanStack Query
+//    تُعيد البيانات المُخزّنة مؤقتاً (مصفوفة ActiveDelivery[]) لكن الكود هنا
+//    يتعامل معها كـ ActiveTask (كائن مفرد) → تحطم task.id و task.orderId وغيرها
+//    لأن task كانت مصفوفة وليست كائناً.
+//    الإصلاح: استخدام useDriverTasks() حصراً حتى يكون الـ cache دائماً متسقاً.
+import { useDriverTasks } from "@/hooks/use-driver";
+import type { ActiveDelivery as ActiveTask } from "@/lib/api/driver";
 
 const DELIVERY_WINDOW_SECONDS = 1800;
 
-interface ActiveTask {
-  id: string;
-  orderId: string;
-  status: string;
-  subtotal: string;
-  customerName: string;
-  customerPhone: string;
-  updatedAt: string;
-  items: { productName: string; quantity: number }[];
-  hasOtp?: boolean;
-}
-
-function calcTimeLeft(updatedAt: string): number {
+function calcTimeLeft(updatedAt: string | undefined): number {
+  if (!updatedAt) return DELIVERY_WINDOW_SECONDS;
   const elapsed = Math.floor((Date.now() - new Date(updatedAt).getTime()) / 1000);
   return Math.max(0, DELIVERY_WINDOW_SECONDS - elapsed);
 }
@@ -34,10 +34,11 @@ export default function ActiveDelivery() {
   const [timeLeft, setTimeLeft] = useState(DELIVERY_WINDOW_SECONDS);
   const [otpInput, setOtpInput] = useState("");
 
-  const { data: task, isLoading, error } = useQuery<ActiveTask>({
-    queryKey: ["/api/suborders/active"],
-    refetchInterval: 10000,
-  });
+  // Q: لماذا نأخذ أول عنصر من المصفوفة؟
+  // A: الـ API يعيد مهمة توصيل واحدة فقط (LIMIT 1 في الـ query البرمجية).
+  //    السائق يمكن أن يكون مسنداً لطلب واحد فقط في وقت واحد.
+  const { data: tasks, isLoading, error } = useDriverTasks();
+  const task: ActiveTask | null = tasks?.[0] ?? null;
 
   useEffect(() => {
     if (!task) return;

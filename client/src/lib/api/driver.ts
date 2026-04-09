@@ -25,6 +25,13 @@ export type ActiveDelivery = {
   subtotal: string;
   customerName: string;
   customerPhone: string;
+  // Q: لماذا أُضيف updatedAt هنا؟
+  // A: الـ API يُعيد هذا الحقل فعلاً (انظر suborder.service.ts → select updatedAt).
+  //    كان غائباً من التعريف فيما active-delivery.tsx يستخدمه لحساب العداد التنازلي.
+  //    غيابه من النوع يعني أن TypeScript لا يُبلّغ عن خطأ لكن في وقت التشغيل تعمل
+  //    الدالة calcTimeLeft(undefined) وتُرجع NaN ثم يُحسب Math.max(0, NaN) = 0،
+  //    مما يُظهر العداد على "0:00" عند تحميل الصفحة.
+  updatedAt?: string;
   items: { productName: string; quantity: number }[];
   storeName?: string;
   hasOtp?: boolean;
