@@ -565,6 +565,20 @@ export class OrderService {
       if (!subOrder) throw new Error("SubOrder not found");
 
       const [order] = await tx.select().from(orders).where(eq(orders.id, subOrder.orderId));
+
+      // Q: هل يجب التحقق من وجود `order` قبل الوصول إلى `order.customerId`؟
+      // A: نعم — الكود السابق افترض أن FK constraint تضمن وجود الطلب الأب دائماً.
+      //    لكن في حالة تلف البيانات أو حذف صف من orders يدوياً من DB،
+      //    يكون `order` = undefined، وعندها `order.customerId` يُطلق TypeError:
+      //    "Cannot read properties of undefined (reading 'customerId')"
+      //    يُسرّب الـ stack trace في الاستجابة بدلاً من رسالة خطأ واضحة.
+      //    الإصلاح: فحص وجود `order` أولاً برسالة خطأ مناسبة، ثم التحقق من الملكية.
+      //
+      // ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+      //    الـ route handler في routes.ts يُعيد رسالة err.message مباشرةً للعميل.
+      //    رسالة "ORDER_NOT_FOUND" ستصل للعميل بدلاً من 404 مناسبة —
+      //    routes.ts يحتاج لمعالجة هذا الخطأ تحديداً وإعادة 404.
+      if (!order) throw new Error("ORDER_NOT_FOUND");
       if (order.customerId !== userId) throw new Error("Unauthorized");
       if (subOrder.status === "DELIVERED") throw new Error("Cannot cancel delivered sub-order");
       if (subOrder.status === "CANCELLED") throw new Error("Sub-order already cancelled");

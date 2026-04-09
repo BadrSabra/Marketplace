@@ -435,8 +435,22 @@ export async function registerRoutes(
     });
   });
 
+  // Q: لماذا يستخدم هذا المسار avatarUpload بدلاً من multer مخصص لرخصة القيادة؟
+  // A: كان هذا خطأً هيكلياً — avatarUpload يُخزَّن الملفات في /uploads/avatars/
+  //    مما يُسبب اختلاط ملفات الرخص مع الصور الشخصية في نفس المجلد.
+  //    بالإضافة لذلك: عنوان URL المُخزَّن في DB كان /uploads/avatars/...
+  //    وهو مسار مُضلِّل يُصعّب تمييز الرخص عن الصور في الأدوات الإدارية.
+  //    الإصلاح: استخدام licenseUpload المخصص الذي يُخزَّن في /uploads/licenses/
+  //    ويدعم PDF بالإضافة لصيغ الصور، بحد أقصى 10MB.
+  //
+  // ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+  //    مسار رفع الملف (field name) تغيَّر من "avatar" إلى "license".
+  //    أي عميل frontend لا يزال يُرسل الملف بـ field name = "avatar" سيحصل على
+  //    خطأ "No file uploaded". يجب تحديث DriverProfile في client/src/pages/driver/profile.tsx
+  //    لاستخدام name="license" في FormData. راجع التعليق في profile.tsx.
   app.post("/api/profile/license", authenticate, authorizeRole(["DRIVER"]), (req, res) => {
-    avatarUpload.single("avatar")(req, res, async (err: any) => {
+    const { licenseUpload } = require("./modules/avatar/license.upload");
+    licenseUpload.single("license")(req, res, async (err: any) => {
       if (err) {
         return res.status(400).json({ message: err.message || "Upload failed" });
       }
@@ -445,7 +459,7 @@ export async function registerRoutes(
       }
       try {
         const userId = (req as any).user.id;
-        const driversLicenseUrl = `/uploads/avatars/${req.file.filename}`;
+        const driversLicenseUrl = `/uploads/licenses/${req.file.filename}`;
         const [updatedUser] = await db
           .update(users)
           .set({ driversLicenseUrl, updatedAt: new Date() })

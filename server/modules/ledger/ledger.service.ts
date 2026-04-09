@@ -214,7 +214,24 @@ export class LedgerService {
       // A: انظر التعليق في أعلى الملف — money utility تتجنب أخطاء IEEE 754 الكامنة في
       //    parseFloat + arithmetic + toFixed عند حساب النسب المئوية على مبالغ حدودية.
       const subtotalStr = subOrder.subtotal.toString();
-      const deliveryFeeStr = subOrder.expectedDeliveryFee.toString();
+
+      // Q: ماذا يحدث إذا كانت قيمة `subOrder.expectedDeliveryFee` تساوي null في DB؟
+      // A: `null.toString()` يُطلق TypeError في runtime:
+      //    "Cannot read properties of null (reading 'toString')"
+      //    مما يُسبب فشل processCommissions بالكامل دون معالجة صحيحة.
+      //    الـ schema يُعرّف الحقل بـ .notNull().default("0.00")، لكن صفوفاً قديمة
+      //    أُدخلت قبل تطبيق القيد قد تحمل null في الإنتاج.
+      //    الإصلاح: إضافة || "0.00" كقيمة احتياطية للتعامل مع الحالتين بأمان.
+      //
+      // ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+      //    إذا كان expectedDeliveryFee = null بسبب خطأ منطقي (لم يُحدَّث عند قبول العرض
+      //    في customerAcceptOffer)، فإن الاحتياط بـ "0.00" يجعل العمولة تُحسب بدون
+      //    رسوم توصيل — السائق سيحصل على "0.00" بدلاً من قيمته الفعلية، والطلب يُعلَّم
+      //    ALREADY_PROCESSED دون أي تنبيه. يجب إضافة console.warn عند تفعيل الاحتياط.
+      if (subOrder.expectedDeliveryFee === null || subOrder.expectedDeliveryFee === undefined) {
+        console.warn(`[processCommissions] expectedDeliveryFee is null for subOrder ${subOrderId} — defaulting to 0.00. Check customerAcceptOffer for missing fee update.`);
+      }
+      const deliveryFeeStr = (subOrder.expectedDeliveryFee || "0.00").toString();
 
       if (money.isNegative(subtotalStr) || money.isNegative(deliveryFeeStr)) {
         throw new Error("INVALID_AMOUNTS");

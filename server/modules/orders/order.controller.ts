@@ -161,6 +161,14 @@ export class OrderController {
       if (msg === "SubOrder not found") {
         return res.status(404).json({ message: "الطلب الفرعي غير موجود" });
       }
+      // Q: لماذا نُعالج ORDER_NOT_FOUND بـ 500 بدلاً من 404؟
+      // A: وجود sub-order بدون order أب يعني تلفاً في البيانات (FK constraint انتُهك) —
+      //    هذا خطأ داخلي في النظام لا يجب أن يُوجَّه المستخدم للتعامل معه كـ 404.
+      //    إعادة 404 قد تُوهم العميل بأن الطلب لم يوجد أصلاً، بينما الحقيقة أن البيانات
+      //    تالفة وتحتاج تدخلاً من المشغّل. 500 مع رسالة محايدة هو الاستجابة الصحيحة.
+      if (msg === "ORDER_NOT_FOUND") {
+        return res.status(500).json({ message: "خطأ داخلي: بيانات الطلب غير مكتملة" });
+      }
       if (msg === "Unauthorized") {
         return res.status(403).json({ message: "غير مصرح بإلغاء هذا الطلب" });
       }

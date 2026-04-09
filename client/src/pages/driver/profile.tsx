@@ -80,7 +80,13 @@ export default function DriverProfilePage() {
     setIsUploadingLicense(true);
     try {
       const formData = new FormData();
-      formData.append("avatar", file);
+      // Q: لماذا تغيّر field name من "avatar" إلى "license"؟
+      // A: الـ backend يستخدم الآن licenseUpload.single("license") بدلاً من
+      //    avatarUpload.single("avatar"). multer يُطابق الـ field name بدقة —
+      //    إرسال "avatar" لـ multer مُضبوط على "license" يُسبّب req.file = undefined،
+      //    والـ backend يُرجع 400 "No file uploaded" دون أي رسالة توضيحية.
+      //    الإصلاح: تغيير field name ليتطابق مع الـ backend.
+      formData.append("license", file);
       const res = await fetch("/api/profile/license", {
         method: "POST",
         headers: getAuthHeaders(),
