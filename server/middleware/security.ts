@@ -10,13 +10,26 @@ export const securityMiddleware = [
     res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
     if (process.env.NODE_ENV === "production") {
       res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+      // Q: هل يجب إبقاء 'unsafe-inline' و'unsafe-eval' في سياسة CSP للإنتاج؟
+      // A: لا — هذا خطأ أمني فادح:
+      //    • 'unsafe-eval' يسمح بتنفيذ eval() وdynamicScript() وما شابه،
+      //      مما يُبطل الحماية الأساسية من هجمات XSS بالكامل.
+      //    • 'unsafe-inline' للسكريبت يسمح بتشغيل أي سكريبت مضمّن في HTML،
+      //      وهو نمط الهجوم الرئيسي لـ XSS.
+      //    تطبيق Vite في وضع الإنتاج يُخرج حزم JS مُجمَّعة كملفات ثابتة مُعشَّشة
+      //    (hashed bundles) لا تحتاج 'unsafe-eval' أو 'unsafe-inline'.
+      //    React نفسه لا يستخدم eval() في الإنتاج.
+      //    الإصلاح: حذف 'unsafe-eval' من script-src بالكامل.
+      //    'unsafe-inline' تُبقى في style-src فقط لأن Tailwind وRadix UI
+      //    يُنشئان أحياناً styles مضمَّنة (inline styles) في HTML.
       res.setHeader("Content-Security-Policy",
         "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+        "script-src 'self'; " +
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data: blob: https:; " +
-        "connect-src 'self' wss: ws:; " +
-        "font-src 'self' data:;"
+        "connect-src 'self' wss: ws: https:; " +
+        "font-src 'self' data:; " +
+        "worker-src 'self' blob:;"
       );
     }
     next();

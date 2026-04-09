@@ -2,10 +2,20 @@ import { Router } from "express";
 import { authenticate, authorizeRole } from "../../middleware/auth";
 import { walletService } from "../wallet/wallet.service";
 import { notifyUser } from "../notifications/push.service";
+import { notificationService } from "../notifications/notification.service";
 import { auditService } from "../../services/auditService";
 import { db } from "../../db";
 import { walletTransactions, wallets, users } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
+
+// Q: هل يجب إرسال بريد إلكتروني عند رفض الإيداع كما يحدث عند الموافقة؟
+// A: نعم — مسار الموافقة (approve) يستدعي notificationService.notifyDepositApproved()
+//    لإرسال بريد إلكتروني للمستخدم. أما مسار الرفض (reject) فكان يكتفي بإشعار Push
+//    فقط دون أي بريد إلكتروني — تناقص في تجربة المستخدم.
+//    المستخدم الذي ينتظر ردًا على إيداعه قد لا يفتح التطبيق باستمرار، لذا البريد
+//    الإلكتروني هو خط الاتصال الموثوق الذي يضمن وصول إشعار الرفض إليه.
+//    الإصلاح: استيراد notificationService وإضافة استدعاء notifyDepositRejected()
+//    في مسار الرفض بعد تحديث حالة المعاملة في قاعدة البيانات.
 
 const router = Router();
 
@@ -62,10 +72,15 @@ router.post("/admin/deposits/:id/reject", authenticate, authorizeRole(["ADMIN"])
     // Fetch the transaction regardless of status so we can distinguish 404 from 409.
     // BUG-FIX: Previously returned 404 for both "not found" and "already processed" because
     // the WHERE clause included `status = PENDING`, so a non-PENDING row also yielded null.
+    // Q: هل يجب جلب بريد المستخدم الإلكتروني في نفس الاستعلام؟
+    // A: نعم — نحتاج البريد الإلكتروني لإرسال إشعار رفض الإيداع بالبريد.
+    //    إضافة JOIN مع جدول users في هذا الاستعلام يتجنب استعلاماً إضافياً
+    //    وهو أكثر كفاءة من استعلامين منفصلين.
     const [existing] = await db
-      .select({ userId: wallets.userId, amount: walletTransactions.amount, status: walletTransactions.status })
+      .select({ userId: wallets.userId, amount: walletTransactions.amount, status: walletTransactions.status, email: users.email })
       .from(walletTransactions)
       .innerJoin(wallets, eq(walletTransactions.walletId, wallets.id))
+      .innerJoin(users, eq(wallets.userId, users.id))
       .where(eq(walletTransactions.id, id));
 
     if (!existing) {
@@ -96,6 +111,14 @@ router.post("/admin/deposits/:id/reject", authenticate, authorizeRole(["ADMIN"])
         `تم رفض طلب الإيداع بمبلغ ${txBefore.amount} جنيه. يرجى التواصل مع الدعم`,
         { amount: txBefore.amount }
       ).catch(console.error);
+
+      // Q: هل يجب إرسال بريد إلكتروني عند رفض الإيداع؟
+      // A: نعم — انظر تعليق الاستيراد أعلى الملف للتفصيل.
+      //    البريد يُرسَل بشكل غير متزامن (catch يمتص الأخطاء) لضمان أن
+      //    فشل إرسال البريد لا يُعيد خطأ 500 للأدمن بعد نجاح تحديث قاعدة البيانات.
+      if (txBefore.email) {
+        notificationService.notifyDepositRejected(txBefore.email, txBefore.amount).catch(console.error);
+      }
 
       // BUG-FIX: Deposit rejection had no audit log. Every financial administrative action
       // must be recorded for compliance and traceability. Approval had an audit log via
