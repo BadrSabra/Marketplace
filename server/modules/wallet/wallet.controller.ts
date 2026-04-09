@@ -98,7 +98,16 @@ export class WalletController {
       const request = await walletService.approveWithdrawal(id, adminId);
       res.json(request);
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      // BUG-FIX: Was returning 400 for ALL errors, masking real server failures as
+      // client errors. Now maps known client errors to 400/404, everything else to 500.
+      const msg: string = error.message || "";
+      if (msg.includes("INVALID:") || msg.includes("already processed")) {
+        return res.status(409).json({ message: msg });
+      }
+      if (msg.includes("NOT_FOUND")) {
+        return res.status(404).json({ message: msg });
+      }
+      res.status(500).json({ message: msg });
     }
   }
 
@@ -110,7 +119,15 @@ export class WalletController {
       const request = await walletService.rejectWithdrawal(id, adminId, note);
       res.json(request);
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      // BUG-FIX: Same as approveWithdrawal — was 400 for all errors.
+      const msg: string = error.message || "";
+      if (msg.includes("INVALID:") || msg.includes("already processed")) {
+        return res.status(409).json({ message: msg });
+      }
+      if (msg.includes("NOT_FOUND")) {
+        return res.status(404).json({ message: msg });
+      }
+      res.status(500).json({ message: msg });
     }
   }
 

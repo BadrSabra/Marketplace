@@ -763,32 +763,9 @@ export async function registerRoutes(
     }
   });
 
-  // --- LEDGER MODULE ---
-  app.get("/api/ledger/transactions", authenticate, async (req, res) => {
-    try {
-      const userId = (req as any).user.id;
-      const { type, status, date_from, date_to, limit, offset, sort_by, sort_order, search } = req.query;
-
-      const result = await ledgerService.getTransactions({
-        user_id: userId,
-        type: type as string,
-        status: status as string,
-        date_from: date_from as string,
-        date_to: date_to as string,
-        limit: limit ? parseInt(limit as string) : 50,
-        offset: offset ? parseInt(offset as string) : 0,
-        sort_by: sort_by as string,
-        sort_order: sort_order as ("asc" | "desc"),
-        // BUG-FIX: Search is now passed to the DB layer (not filtered in-memory after pagination)
-        search: search as string,
-      });
-
-      console.log(`Fetched ${result.transactions.length} transactions for user ${userId}`);
-      res.json(result);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+  // NOTE: GET /api/ledger/transactions is handled by ledgerRouter (mounted above via
+  // `app.use("/api", ledgerRouter)`) in server/modules/ledger/ledger.controller.ts.
+  // No duplicate handler needed here — Express routes to the first match, which is the router.
 
   app.get("/api/wallet", authenticate, async (req, res) => {
     try {

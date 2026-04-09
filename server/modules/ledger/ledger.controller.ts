@@ -31,14 +31,10 @@ router.get("/ledger/transactions", authenticate, async (req, res) => {
     }
 
     const result = await ledgerService.getTransactions(filters);
-    
-    // Search by related order ID is handled in service/controller logic
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase();
-      result.transactions = result.transactions.filter(t => 
-        t.related_order_id?.toLowerCase().includes(searchTerm)
-      );
-    }
+
+    // NOTE: The search filter is pushed down to the DB WHERE clause in ledger.service.ts.
+    // No in-memory filtering is needed here — doing so after pagination would silently drop
+    // matching records that landed on a different page, and the total count would be wrong.
 
     await auditService.logEvent({
       actionType: "LEDGER_LIST_ACCESS",
