@@ -245,7 +245,13 @@ export class DeliveryOfferService {
       const [offer] = await tx.select().from(deliveryOffers).where(eq(deliveryOffers.id, offerId)).for("update");
       if (!offer || !["PENDING", "COUNTERED"].includes(offer.status)) throw new Error("OFFER_NOT_AVAILABLE");
 
+      // Q: هل يجب التحقق من وجود subOrder قبل الوصول لـ subOrder.orderId؟
+      // A: نعم — في سيناريو نادر (بيانات تالفة أو حذف يدوي)، قد تكون deliveryOffers
+      //    تشير لـ subOrderId غير موجود. الوصول لـ subOrder.orderId بدون فحص يُطلق
+      //    TypeError: Cannot read properties of undefined يصل للمستخدم كـ 500 غير مفهوم.
+      //    الإصلاح: إضافة فحص وإطلاق UNAUTHORIZED (بما أنه يتعذر التحقق من الملكية).
       const [subOrder] = await tx.select().from(subOrders).where(eq(subOrders.id, offer.subOrderId));
+      if (!subOrder) throw new Error("UNAUTHORIZED");
       const [parentOrder] = await tx.select().from(orders).where(eq(orders.id, subOrder.orderId));
       if (!parentOrder || parentOrder.customerId !== customerId) throw new Error("UNAUTHORIZED");
 
@@ -285,7 +291,11 @@ export class DeliveryOfferService {
 
       if (counterFee >= parseFloat(offer.offeredFee)) throw new Error("COUNTER_MUST_BE_LOWER");
 
+      // Q: هل يجب التحقق من وجود subOrder قبل الوصول لـ subOrder.orderId في customerCounterOffer؟
+      // A: نعم — نفس مشكلة customerRejectOffer: غياب الفحص يُطلق TypeError إذا كان
+      //    الطلب الفرعي محذوفاً. الإصلاح: فحص subOrder قبل استخدامه مع UNAUTHORIZED.
       const [subOrder] = await tx.select().from(subOrders).where(eq(subOrders.id, offer.subOrderId));
+      if (!subOrder) throw new Error("UNAUTHORIZED");
       const [parentOrder] = await tx.select().from(orders).where(eq(orders.id, subOrder.orderId));
       if (!parentOrder || parentOrder.customerId !== customerId) throw new Error("UNAUTHORIZED");
 

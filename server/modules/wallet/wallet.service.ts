@@ -155,7 +155,19 @@ export class WalletService {
   }
 
   async adminOverride(walletId: string, amount: string, reason: string, actorId: string): Promise<string> {
+    // Q: هل يجب التحقق من NaN في adminOverride على مستوى الـ service؟
+    // A: من الناحية المثالية نعم، لكن الـ controller (wallet.controller.ts) يتحقق بالفعل
+    //    من `isNaN(parseFloat(amount))` قبل استدعاء هذه الدالة. الطبقة المزدوجة
+    //    (Controller + Service) هي مبدأ Defense in Depth لكنها ليست حرجة هنا لأن
+    //    المسار الوحيد لـ adminOverride يمر عبر walletController.adminOverride.
+    //    ملاحظة: إذا استُدعيت هذه الدالة مستقبلاً من كود آخر بدون المرور بالـ controller،
+    //    فإن `parseFloat(NaN)` سيكون NaN و `NaN < 0` = false و `NaN === 0` = false
+    //    مما سيُسبب تخزين "NaN" كرصيد — بيانات تالفة في الـ DB.
+    //    الإصلاح الدفاعي الموصى به: إضافة `if (isNaN(amountNum)) throw` هنا.
     const amountNum = parseFloat(amount);
+    if (isNaN(amountNum)) {
+      throw new Error("BAD_REQUEST: Amount must be a valid number");
+    }
     if (amountNum === 0) {
       throw new Error("BAD_REQUEST: Override amount cannot be zero");
     }

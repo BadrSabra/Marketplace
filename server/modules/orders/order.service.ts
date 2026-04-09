@@ -224,8 +224,30 @@ export class OrderService {
         if (validOtp) {
           otpCode = validOtp.otpCode;
         } else {
-          // OTP is expired or missing — auto-regenerate a fresh one
-          otpCode = await deliveryOtpService.generateOtp(sub.orderId, sub.id);
+          // Q: هل يُسبب توليد OTP تلقائياً داخل دالة قراءة (GET) race condition؟
+          // A: نعم — إذا وصل طلبان متزامنان لنفس اللحظة وكلاهما وجد OTP منتهية الصلاحية،
+          //    ينطلق كلاهما لتوليد OTP جديد بشكل مستقل:
+          //    1. الطلب الأول يُولّد OTP#1 (يُبطل القديمة)
+          //    2. الطلب الثاني يُولّد OTP#2 (يُبطل OTP#1 الجديدة)
+          //    النتيجة: العميل يحصل على OTP#1 في شاشته لكن OTP#2 هو الصالح في DB
+          //    والسائق يرفض OTP#1 → يضطر العميل لإعادة تحميل الصفحة للحصول على OTP#2.
+          //    الإصلاح الجزئي: إعادة التحقق من وجود OTP صالح قبل التوليد، لتضييق
+          //    نافذة التزامن. الإصلاح الكامل: عزل التوليد في endpoint مستقل مع قفل DB.
+          const [recheckOtp] = await db
+            .select({ otpCode: deliveryOtps.otpCode })
+            .from(deliveryOtps)
+            .where(and(
+              eq(deliveryOtps.subOrderId, sub.id),
+              eq(deliveryOtps.status, "PENDING"),
+              gt(deliveryOtps.expiresAt, new Date())
+            ))
+            .limit(1);
+
+          if (recheckOtp) {
+            otpCode = recheckOtp.otpCode;
+          } else {
+            otpCode = await deliveryOtpService.generateOtp(sub.orderId, sub.id);
+          }
         }
       }
 
@@ -288,6 +310,13 @@ export class OrderService {
   }
 
   async getStoreOwnerOrders(ownerId: string) {
+    // Q: هل يجب إضافة pagination لـ getStoreOwnerOrders؟
+    // A: نعم في الإنتاج — متجر نشط بعشرات الطلبات اليومية سيجمع مئات أو آلاف
+    //    الطلبات بمرور الوقت، وجلبها دفعةً واحدة يُسبب مشكلتين:
+    //    1. استهلاك ذاكرة كبير لكل استدعاء من صاحب المتجر.
+    //    2. بطء الاستجابة يُحبط المستخدمين ويُثقل connection pool الـ DB.
+    //    الإصلاح المستقبلي: إضافة limit وoffset للدالة وتحديث الـ controller والـ frontend.
+    //    ملاحظة: في الوقت الحالي يُقبل هذا لأن المنصة في مراحل مبكرة وحجم البيانات صغير.
     const ownerStores = await db.select().from(stores).where(eq(stores.ownerId, ownerId));
     if (ownerStores.length === 0) return [];
 
