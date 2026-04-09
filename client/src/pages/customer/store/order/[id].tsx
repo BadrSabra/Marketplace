@@ -345,7 +345,7 @@ export default function StoreOrderDetails() {
                     <ArrowDownToLine className="h-4 w-4" />
                     {walletBalance > 0 ? `سحب رصيد (${walletBalance.toFixed(2)} جنيه)` : "لا يوجد رصيد للسحب"}
                   </Button>
-                  <Link href="/store/dashboard/earnings">
+                  <Link href="/store/earnings">
                     <Button variant="ghost" size="sm" className="w-full gap-2 text-xs text-muted-foreground">
                       <ExternalLink className="h-3 w-3" />
                       عرض كشف الأرباح التفصيلي

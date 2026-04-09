@@ -62,52 +62,53 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-background flex text-foreground">
+    <div className="min-h-screen bg-background flex text-foreground" dir="rtl">
       {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex flex-col w-64 bg-card border-r border-border/50 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10">
-        <div className="p-6">
+      <aside className="hidden md:flex flex-col w-64 bg-card border-l border-border/50 shadow-[-4px_0_24px_rgba(0,0,0,0.02)] z-10">
+        <div className="p-6 text-right">
           <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">
-            MarketAdmin
+            ميت جابر
           </h1>
+          <p className="text-xs text-muted-foreground mt-0.5 font-medium">لوحة الإدارة</p>
         </div>
         
         <nav className="flex-1 px-4 space-y-1 mt-6">
           {NAV_ITEMS.map((item) => {
-            const isActive = location === item.href;
+            const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
             return (
               <Link 
                 key={item.href} 
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group font-medium",
+                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group font-medium flex-row-reverse",
                   isActive 
                     ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" 
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 )}
               >
                 <item.icon className={cn("w-5 h-5", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-primary")} />
-                {item.label}
+                <span className="flex-1 text-right">{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="p-4 mt-auto border-t border-border/50">
-          <div className="flex items-center gap-3 px-4 py-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+        <div className="p-4 mt-auto border-t border-border/50 bg-secondary/20">
+          <div className="flex items-center gap-3 px-2 py-3 mb-2 flex-row-reverse">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold border border-primary/20">
               {user.name.charAt(0).toUpperCase()}
             </div>
-            <div className="overflow-hidden">
+            <div className="overflow-hidden text-right">
               <p className="text-sm font-semibold truncate">{user.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{user.role}</p>
+              <p className="text-xs text-muted-foreground truncate">مدير النظام</p>
             </div>
           </div>
           <button 
             onClick={() => logout()}
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-xl transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-xl transition-colors flex-row-reverse"
           >
             <LogOut className="w-4 h-4" />
-            تسجيل الخروج
+            <span className="flex-1 text-right">تسجيل الخروج</span>
           </button>
         </div>
       </aside>
@@ -115,8 +116,11 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile Header */}
-        <header className="md:hidden flex items-center justify-between p-4 bg-card border-b border-border z-20">
-          <h1 className="text-xl font-bold">MarketAdmin</h1>
+        <header className="md:hidden flex items-center justify-between p-4 bg-card border-b border-border z-20 flex-row-reverse">
+          <div className="text-right">
+            <h1 className="text-xl font-bold">ميت جابر</h1>
+            <p className="text-[10px] text-muted-foreground">لوحة الإدارة</p>
+          </div>
           <button 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="p-2 bg-secondary rounded-lg text-foreground"
@@ -140,22 +144,22 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                   href={item.href}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all",
-                    location === item.href 
+                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all flex-row-reverse",
+                    location === item.href || (item.href !== "/" && location.startsWith(item.href))
                       ? "bg-primary text-primary-foreground" 
                       : "text-muted-foreground hover:bg-secondary"
                   )}
                 >
                   <item.icon className="w-5 h-5" />
-                  {item.label}
+                  <span className="flex-1 text-right">{item.label}</span>
                 </Link>
               ))}
               <button 
                 onClick={() => { logout(); setIsMobileMenuOpen(false); }}
-                className="w-full flex items-center gap-3 px-4 py-3 text-destructive hover:bg-destructive/10 rounded-xl"
+                className="w-full flex items-center gap-3 px-4 py-3 text-destructive hover:bg-destructive/10 rounded-xl flex-row-reverse"
               >
                 <LogOut className="w-5 h-5" />
-                تسجيل الخروج
+                <span className="flex-1 text-right">تسجيل الخروج</span>
               </button>
             </motion.div>
           )}

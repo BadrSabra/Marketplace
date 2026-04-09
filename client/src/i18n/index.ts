@@ -21,6 +21,10 @@ function getNestedValue(obj: DeepRecord, path: string): string {
   return typeof current === "string" ? current : path;
 }
 
-export function t(key: string): string {
-  return getNestedValue(ar as unknown as DeepRecord, key);
+export function t(key: string, vars?: Record<string, string | number>): string {
+  const raw = getNestedValue(ar as unknown as DeepRecord, key);
+  if (!vars || raw === key) return raw;
+  return raw.replace(/\{(\w+)\}/g, (_, k) =>
+    vars[k] !== undefined ? String(vars[k]) : `{${k}}`
+  );
 }

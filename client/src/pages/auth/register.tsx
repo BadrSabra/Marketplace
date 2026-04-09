@@ -89,7 +89,7 @@ export default function RegisterPage() {
             <h2 className="text-2xl font-bold text-foreground">طلبك قيد المراجعة</h2>
             <p className="text-muted-foreground leading-relaxed">تم تسجيل حسابك بنجاح. سيتم مراجعته من قِبل الإدارة وإعلامك عند الموافقة.</p>
             <button
-              onClick={() => setLocation("/auth/login")}
+              onClick={() => setLocation("/login")}
               className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-all"
             >
               العودة لتسجيل الدخول
@@ -308,7 +308,7 @@ export default function RegisterPage() {
 
               <p className="text-center text-sm text-muted-foreground">
                 {t("auth.register.has_account")}{" "}
-                <Link href="/auth/login" className="text-primary font-semibold hover:underline">
+                <Link href="/login" className="text-primary font-semibold hover:underline">
                   {t("auth.register.login_link")}
                 </Link>
               </p>

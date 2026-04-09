@@ -287,3 +287,23 @@ Clicking a notification navigates to the relevant page based on type and user ro
 46. **🔴 Public store listing exposes stores owned by unapproved users** — `server/modules/public/public.controller.ts`: `getStores()` and `getStore()` queried the `stores` table with no join to `users`. The `users` table has `isApproved` (approved store owners vs. pending), but the public endpoint never checked it. Any customer browsing the main store discovery page (`/api/public/stores`) would see stores from unapproved owners — the very stores that admin hasn't reviewed yet. **Fixed: added `.innerJoin(users, eq(stores.ownerId, users.id)).where(eq(users.isApproved, true))` to both `getStores` and `getStore` to enforce the approval gate.**
 
 47. **🔴 Store orders filter shows `READY` and `PICKED_UP` — both invalid sub-order statuses** — `client/src/pages/customer/store/orders.tsx` lines 159-160 and 67-73: The filter dropdown offered `READY` and `PICKED_UP` as selectable options, and the badge style map contained those same keys. The sub-orders table uses `orderStatusEnum` (`PENDING, ACCEPTED, IN_TRANSIT, DELIVERED, CANCELLED`) — `READY` and `PICKED_UP` do not exist in this enum and can never appear in any row. Selecting either filter always returned an empty list, and the badge for the real status `IN_TRANSIT` had no styling (fell through to unstyled). **Fixed: replaced `READY`/`PICKED_UP` with `IN_TRANSIT` in both the filter SelectItems and the badge variants map, and replaced the translation keys accordingly (`store.orders.statuses.READY`/`PICKED_UP` → `IN_TRANSIT`).**
+
+## Admin UI & i18n Audit (April 2026 - Round 9)
+
+### Bugs Fixed
+
+48. **🔴 Missing 200+ Arabic translation keys** — `client/src/i18n/ar.ts`: Only ~40 auth keys were defined but 200+ keys were actively used across all store, customer, and driver pages. All pages using `t()` were showing the raw key path (e.g., `store.inventory.title`) as text in the UI instead of Arabic. **Fixed: added comprehensive translations for all missing keys including `store.dashboard.*`, `store.orders.*`, `store.inventory.*` (including form fields), `store.earnings.*`, `store.order_details.*`, `customer.wallet.*`, `customer.transactions.*`, `driver.dashboard.*`, `driver.earnings.*`, `driver.active_delivery.*`.**
+
+49. **🟠 i18n function didn't support variable interpolation** — `client/src/i18n/index.ts`: The `t()` function only accepted a key string and had no way to inject dynamic values (e.g., `{time}` or `{page}`). Pages calling `t('driver.active_delivery.estimated_delivery', { time: ... })` ignored the second arg entirely. **Fixed: updated `t()` to accept an optional `Record<string, string|number>` second parameter and perform `{variable}` string replacement.**
+
+50. **🔴 Admin layout displayed "MarketAdmin" (English) as platform name** — `client/src/components/layout/admin-layout.tsx`: Both the desktop sidebar header and mobile header showed the hardcoded English text "MarketAdmin". **Fixed: replaced with Arabic "ميت جابر" with subtitle "لوحة الإدارة".**
+
+51. **🟠 Admin layout was not RTL** — `client/src/components/layout/admin-layout.tsx`: The root `div` had no `dir="rtl"` attribute. The sidebar was on the left side (LTR layout) and nav links had LTR flex direction. **Fixed: added `dir="rtl"` to root container, changed border/shadow from `border-r` to `border-l`, added `flex-row-reverse` to all nav links and user profile section for proper Arabic RTL layout.**
+
+52. **🟠 Admin sidebar active state didn't detect sub-routes** — `client/src/components/layout/admin-layout.tsx`: Active detection used strict equality `location === item.href`. Navigating to `/admin/deposits` would NOT highlight the "طلبات الإيداع" nav item. **Fixed: added `|| (item.href !== '/' && location.startsWith(item.href))` for sub-route detection (same pattern as store-layout).**
+
+53. **🟠 Admin sidebar user info section showed `user.role` (English enum)** — `client/src/components/layout/admin-layout.tsx`: The user role display showed raw enum value `"ADMIN"` (English). **Fixed: replaced with Arabic "مدير النظام".**
+
+54. **🟠 Notification bell routing fixes** — `client/src/components/ui/notification-bell.tsx`: `NEW_ORDER` for STORE_OWNER pointed to `/customer/store/orders` (wrong path); admin `WALLET_UPDATE`/`DEPOSIT`/`WITHDRAWAL` pointed to generic `/wallet`. **Fixed: STORE_OWNER order notifications → `/store/dashboard/orders`; admin wallet notifications → `/admin/finance`.**
+
+55. **🟠 TypeScript error in `ledger.controller.ts`** — `server/modules/ledger/ledger.controller.ts`: `req.query.type` typed as `string | string[]` was passed directly to a function expecting `string`. **Fixed: cast to `string`.**
