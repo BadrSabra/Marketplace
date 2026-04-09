@@ -23,6 +23,16 @@ import { orderController } from "./modules/orders/order.controller";
 const JWT_SECRET = process.env.JWT_SECRET!;
 
 import { deliveryController } from "./modules/delivery/delivery.controller";
+// Q: لماذا نستورد money utility في routes.ts؟
+// A: مسار إلغاء الطلب بالكامل (PATCH /api/admin/orders/:id/status → CANCELLED)
+//    يحسب مبلغ الاسترداد مباشرةً في routes.ts بـ parseFloat + arithmetic.
+//    الإصلاح: استبدال parseFloat reduce بـ money.add للتناسق مع باقي الحسابات المالية.
+//
+// ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+//    s.deliveryFee في snapshot قد يكون حقلاً من join بين sub_orders وجدول آخر.
+//    إذا أعاد null أو undefined، فإن money.add(sum, null) ستُطلق استثناءً.
+//    الإصلاح الدفاعي: استخدام (s.deliveryFee || "0.00").toString() قبل التمرير لـ money.
+import { money } from "./utils/money";
 import depositRouter from "./modules/deposits/deposits.controller";
 import ledgerRouter from "./modules/ledger/ledger.controller";
 // Q: لماذا أُزيل auditMiddleware من app.use()؟
@@ -34,7 +44,7 @@ import ledgerRouter from "./modules/ledger/ledger.controller";
 import { deliveryOfferController } from "./modules/delivery/deliveryOffer.controller";
 import { deliveryOtpController } from "./modules/delivery/deliveryOtp.controller";
 
-import { loginLimiter, orderLimiter, depositLimiter } from "./middleware/security";
+import { loginLimiter, orderLimiter, depositLimiter, registerLimiter, withdrawLimiter } from "./middleware/security";
 import { chatController } from "./modules/chat/chat.controller";
 import { deployController } from "./modules/deploy/deploy.controller";
 import notificationRouter from "./modules/notifications/notification.routes";
@@ -99,7 +109,15 @@ export async function registerRoutes(
   // Deposits
   app.use("/api", depositRouter);
   // --- AUTH MODULE ---
-  app.post(api.auth.register.path, async (req, res, next) => {
+  // BUG-FIX: register endpoint لم يكن له rate limit خاص — كان يعتمد فقط على
+  // generalLimiter (1000/15 دقيقة) وهو غير كافٍ لمنع إنشاء حسابات جماعية بالبوت.
+  // الإصلاح: تطبيق registerLimiter (10/ساعة) لتقييد التسجيل الجماعي الآلي.
+  //
+  // ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+  //    في بيئة التطوير، اختبار متعدد الحسابات (10+ حسابات في ساعة) سيُعيد 429.
+  //    الإصلاح الدفاعي: registerLimiter له skip للـ NODE_ENV=development.
+  //    ملاحظة: في production فقط يكون التقييد ضرورياً وفعّالاً.
+  app.post(api.auth.register.path, registerLimiter, async (req, res, next) => {
     try {
       const input = api.auth.register.input.parse(req.body);
 
@@ -702,11 +720,18 @@ export async function registerRoutes(
           // inside the transaction, causing the query to return nothing and refundAmount = 0.
           const activeSubOrders = activeSubOrdersSnapshot;
 
-          const refundAmount = activeSubOrders.reduce((sum, s) => {
-            return sum + parseFloat(s.subtotal) + (s.deliveryFee ? parseFloat(s.deliveryFee) : 0);
-          }, 0);
+          // Q: لماذا نستخدم money.add في reduce بدلاً من `sum + parseFloat(s.subtotal)`؟
+          // A: refundAmount يتراكم عبر reduce لكل طلب فرعي نشط.
+          //    بـ parseFloat + arithmetic، يتراكم خطأ IEEE 754 مع كل عنصر.
+          //    مع money.add: كل عملية على مستوى القروش — لا تراكم للخطأ.
+          //    الدفاع: (s.deliveryFee || "0.00") يعالج حالة null في expectedDeliveryFee.
+          const refundAmountStr = activeSubOrders.reduce((sum, s) => {
+            const subtotalStr = s.subtotal.toString();
+            const deliveryFeeStr = (s.deliveryFee || "0.00").toString();
+            return money.add(money.add(sum, subtotalStr), deliveryFeeStr);
+          }, "0.00");
 
-          if (refundAmount <= 0) {
+          if (money.isNonPositive(refundAmountStr)) {
             // All sub-orders were already cancelled and refunded individually — nothing to refund
             console.log(`[Admin] No refund needed for order ${id} — all sub-orders were already cancelled and refunded`);
           } else {
@@ -724,7 +749,7 @@ export async function registerRoutes(
               throw new Error("WALLET_NOT_FOUND: Cannot refund order — customer wallet missing");
             }
 
-            const newBalance = (parseFloat(customerWallet.balance) + refundAmount).toFixed(2);
+            const newBalance = money.add(customerWallet.balance, refundAmountStr);
             await tx
               .update(wallets)
               .set({ balance: newBalance, updatedAt: new Date() })
@@ -733,7 +758,7 @@ export async function registerRoutes(
             await tx.insert(walletTransactions).values({
               walletId: customerWallet.id,
               type: "REFUND",
-              amount: refundAmount.toFixed(2),
+              amount: refundAmountStr,
               relatedOrderId: parentOrder.id,
               status: "COMPLETED",
               notes: `استرداد تلقائي - إلغاء الطلب #${parentOrder.id.slice(0, 8)} بواسطة الإدارة`,
@@ -746,11 +771,11 @@ export async function registerRoutes(
               referenceId: parentOrder.id,
               debitUserId: null,
               creditUserId: parentOrder.customerId,
-              amount: refundAmount.toFixed(2),
+              amount: refundAmountStr,
               type: "REFUND",
             });
 
-            console.log(`[Admin] Refunded ${refundAmount.toFixed(2)} to customer ${parentOrder.customerId} for cancelled order ${id}`);
+            console.log(`[Admin] Refunded ${refundAmountStr} to customer ${parentOrder.customerId} for cancelled order ${id}`);
           }
         }
       });
@@ -992,7 +1017,10 @@ export async function registerRoutes(
   //    سجلات المحاسبة ويفتح بابًا لطلبات زائفة. الإصلاح: إضافة
   //    authorizeRole(["CUSTOMER"]) لقصر الإيداع على العملاء فقط.
   app.post("/api/wallet/deposit", authenticate, authorizeRole(["CUSTOMER"]), depositLimiter, walletController.deposit);
-  app.post("/api/wallet/withdraw", authenticate, authorizeRole(["DRIVER", "STORE_OWNER"]), walletController.withdraw.bind(walletController));
+  // BUG-FIX: withdraw endpoint لم يكن له rate limit خاص — كان يعتمد فقط على
+  // generalLimiter (1000/15 دقيقة) وهو غير كافٍ لمنع فيضان طلبات السحب.
+  // الإصلاح: تطبيق withdrawLimiter (5/24 ساعة) لتقييد طلبات السحب المتكررة.
+  app.post("/api/wallet/withdraw", authenticate, authorizeRole(["DRIVER", "STORE_OWNER"]), withdrawLimiter, walletController.withdraw.bind(walletController));
 
   // Admin withdrawal requests
   app.get("/api/admin/withdrawals/pending", authenticate, authorizeRole(["ADMIN"]), walletController.getPendingWithdrawals.bind(walletController));

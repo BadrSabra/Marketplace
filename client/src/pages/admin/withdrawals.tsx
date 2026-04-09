@@ -180,13 +180,23 @@ export default function AdminWithdrawalsPage() {
               سيتم رفض الطلب وإعادة المبلغ تلقائياً إلى محفظة السائق.
             </p>
             <div className="space-y-2">
-              <label className="text-sm font-medium">سبب الرفض (اختياري)</label>
+              {/* BUG-FIX: Was "اختياري" لكن الـ backend يتطلب note بـ 3 أحرف على الأقل.
+                  الإصلاح: تغيير التسمية لـ "مطلوب" وإضافة validation في الـ UI
+                  لمنع الإرسال إذا كان note أقل من 3 أحرف. */}
+              <label className="text-sm font-medium">
+                سبب الرفض <span className="text-destructive">*</span>
+                <span className="text-muted-foreground text-xs mr-1">(3 أحرف على الأقل)</span>
+              </label>
               <Textarea
                 placeholder="أدخل سبب الرفض هنا..."
                 value={rejectNote}
                 onChange={(e) => setRejectNote(e.target.value)}
                 data-testid="textarea-reject-note"
+                maxLength={500}
               />
+              {rejectNote.trim().length > 0 && rejectNote.trim().length < 3 && (
+                <p className="text-xs text-destructive">يجب أن يكون السبب 3 أحرف على الأقل</p>
+              )}
             </div>
           </div>
           <DialogFooter className="gap-2">
@@ -196,7 +206,7 @@ export default function AdminWithdrawalsPage() {
             <Button
               variant="destructive"
               onClick={handleReject}
-              disabled={rejectMutation.isPending}
+              disabled={rejectMutation.isPending || rejectNote.trim().length < 3}
               data-testid="button-confirm-reject"
               className="gap-2"
             >

@@ -61,10 +61,19 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
       //       history entries زائدة وسلوكاً غير محدد في بعض المتصفحات)
       //    الإصلاح: إضافة متغير حارس (_isRedirecting) يمنع redirect متكررة.
       //
-      // ⚠️ خطأ جديد تكشفه هذه الإصلاح:
-      //    صفحات كانت تعتمد على تكرار 401 لإعادة تعيين حالة داخلية
-      //    ستجد أن callback ما بعد redirect لا يُنفَّذ — خطأ مخفي لأن
-      //    التعدد كان يُغطي الحالة الأولى بالحالات التالية.
+      // Q: هل يجب التحقق من `errorData.code === "TOKEN_EXPIRED"` قبل الـ redirect؟
+      // A: لا — لأن الـ backend يُعيد 401 لكلا الحالتين (TOKEN_EXPIRED و INVALID_TOKEN).
+      //    التحقق من الـ code كان ضرورياً لو أردنا تمييز السلوك (مثلاً: عرض رسالة
+      //    "انتهت صلاحية الجلسة" مقابل "رمز دخول غير صالح").
+      //    حالياً، كلا الحالتين تستدعي نفس الإجراء: مسح التوكن وإعادة توجيه للـ login.
+      //    الإصلاح المستقبلي (للـ UX): قراءة errorData.code هنا وتمرير سببه كـ
+      //    query parameter للـ login page لعرض رسالة مناسبة للمستخدم.
+      //
+      // ⚠️ خطأ جديد تكشفه هذا التوثيق:
+      //    صفحة الـ login لا تقرأ أي query parameter لعرض سبب الـ logout.
+      //    المستخدم يصل لـ /login دون معرفة ما إذا كانت جلسته انتهت أم رمزه تالف.
+      //    الإصلاح: تمرير ?reason=session_expired أو ?reason=invalid_token
+      //    وعرضه في صفحة الدخول كـ toast أو رسالة توضيحية.
       if (!_isRedirecting) {
         _isRedirecting = true;
         localStorage.removeItem("jwt_token");

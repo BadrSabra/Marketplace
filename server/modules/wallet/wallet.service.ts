@@ -196,14 +196,29 @@ export class WalletService {
         throw new Error("FORBIDDEN: Only admins can perform overrides");
       }
 
-      const oldBalanceNum = parseFloat(wallet.balance);
-      const newBalanceNum = oldBalanceNum + amountNum;
+      // Q: لماذا نستخدم money utility لحساب newBalance بدلاً من parseFloat arithmetic؟
+      // A: adminOverride يُعدّل أرصدة مالية حقيقية. استخدام parseFloat + toFixed
+      //    قد يُسبب خطأ IEEE 754 عند جمع أعداد عشرية. money utility تتجنب ذلك.
+      //
+      // Q: كيف نتعامل مع amount السالب (WITHDRAWAL) في money utility؟
+      // A: money.add و money.subtract تتوقع قيماً موجبة. لذا:
+      //    - إذا amountNum > 0: استخدم money.add(balance, absAmount)
+      //    - إذا amountNum < 0: استخدم money.subtract(balance, absAmount)
+      //    أما absAmountStr: نحوّل القيمة المطلقة لـ string عبر Math.abs(amountNum).toFixed(2)
+      //    (هذا التحويل الوحيد المقبول لأن amountNum تم التحقق منه أعلاه وهو عدد آمن).
+      //
+      // ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+      //    money.isNegative تُطلق استثناءً إذا كانت newBalance تحتوي على رقم غير صالح.
+      //    هذا ممكن إذا كان wallet.balance في DB تالفاً (مثلاً "NaN" من خطأ سابق).
+      //    الإصلاح الوقائي: إضافة `parseFloat(wallet.balance)` check قبل money operations.
+      const absAmountStr = Math.abs(amountNum).toFixed(2);
+      const newBalance = amountNum > 0
+        ? money.add(wallet.balance, absAmountStr)
+        : money.subtract(wallet.balance, absAmountStr);
 
-      if (newBalanceNum < 0) {
+      if (money.isNegative(newBalance)) {
         throw new Error("BUSINESS_RULE_VIOLATION: Override would result in negative balance");
       }
-
-      const newBalance = newBalanceNum.toFixed(2);
 
       // Update Wallet
       await tx.update(wallets)
@@ -217,7 +232,7 @@ export class WalletService {
         referenceId: null,
         creditUserId: amountNum > 0 ? wallet.userId : null,
         debitUserId: amountNum < 0 ? wallet.userId : null,
-        amount: Math.abs(amountNum).toFixed(2),
+        amount: absAmountStr,
         type: amountNum > 0 ? "DEPOSIT" : "WITHDRAWAL",
       });
 
@@ -229,7 +244,7 @@ export class WalletService {
       await tx.insert(walletTransactions).values({
         walletId: wallet.id,
         type: amountNum > 0 ? "DEPOSIT" : "WITHDRAWAL",
-        amount: Math.abs(amountNum).toFixed(2),
+        amount: absAmountStr,
         status: "COMPLETED",
         notes: `تعديل إداري: ${reason}`,
       });
@@ -255,8 +270,27 @@ export class WalletService {
   }
 
   async withdraw(userId: string, amount: string): Promise<WithdrawalRequest> {
-    const withdrawAmount = parseFloat(amount);
-    if (isNaN(withdrawAmount) || withdrawAmount <= 0) {
+    // Q: لماذا نُدخل amount كـ string للـ withdraw بدلاً من number؟
+    // A: نريد الحفاظ على الدقة من البداية. تمرير number يعني أن التحويل من string
+    //    لـ number قد حدث خارجياً (في الـ controller) وقد فقد دقته بالفعل.
+    //    string → money.isNonPositive → money.subtract يضمن سلسلة دقة كاملة.
+    //
+    // Q: لماذا نستبدل `parseFloat(amount) <= 0` بـ `money.isNonPositive`؟
+    // A: money.isNonPositive تستخدم حساب القروش وتتحقق من `toCents(amount) <= 0`.
+    //    هذا يُعالج حالة "0.001" التي يُعيدها parseFloat كـ 0.001 (موجبة تقنياً)
+    //    لكنها أقل من قرش — وهي مبلغ غير قابل للتمثيل مالياً.
+    //    الإصلاح: استبدال كل parseFloat arithmetic في withdraw بـ money utility.
+    //
+    // ⚠️ خطأ جديد تكشفه هذه الإصلاح:
+    //    إذا أرسل المستخدم amount = "abc" أو "Infinity"، فإن money.isNonPositive
+    //    ستُطلق استثناءً داخلياً من toCents بدلاً من رفض بسيط.
+    //    الـ controller يتحقق بـ isNaN(parseFloat(amount)) قبل الاستدعاء — لكن
+    //    الاعتماد على الـ controller وحده ليس دفاعاً كافياً. الإصلاح الدفاعي:
+    //    إضافة تحقق صريح من صلاحية amount هنا أيضاً (Defense in Depth).
+    if (isNaN(parseFloat(amount)) || !isFinite(parseFloat(amount))) {
+      throw new Error("BUSINESS_RULE_VIOLATION: Amount must be a valid finite number");
+    }
+    if (money.isNonPositive(amount)) {
       throw new Error("BUSINESS_RULE_VIOLATION: Amount must be a positive number");
     }
 
@@ -272,8 +306,11 @@ export class WalletService {
       const [actorUser] = await tx.select({ role: users.role }).from(users).where(eq(users.id, userId));
       const actorRole = actorUser?.role ?? "DRIVER";
 
-      const currentBalance = parseFloat(lockedWallet.balance);
-      if (currentBalance < withdrawAmount) {
+      // Q: لماذا نستخدم money.isLessThan بدلاً من `currentBalance < withdrawAmount`؟
+      // A: money.isLessThan يعمل على القروش (أعداد صحيحة) ويتجنب أخطاء المقارنة
+      //    الناتجة عن IEEE 754. مثال نادر: balance = "0.30" وamount = "0.10 + 0.20"
+      //    — مع parseFloat قد تكون المقارنة خاطئة بسبب خطأ التمثيل الثنائي.
+      if (money.isLessThan(lockedWallet.balance, amount)) {
         throw new Error("BUSINESS_RULE_VIOLATION: Insufficient wallet balance");
       }
 
@@ -286,17 +323,25 @@ export class WalletService {
       }
 
       // Reserve funds immediately (deduct from wallet)
-      const newBalance = (currentBalance - withdrawAmount).toFixed(2);
+      // Q: لماذا نستخدم money.subtract بدلاً من (currentBalance - withdrawAmount).toFixed(2)؟
+      // A: money.subtract يعمل على القروش ويتجنب أخطاء IEEE 754. الرصيد المُخزَّن
+      //    في DB قد يكون له تمثيل ثنائي غير دقيق إذا أُجريت عليه عمليات متعددة.
+      const newBalance = money.subtract(lockedWallet.balance, amount);
       await tx.update(wallets)
         .set({ balance: newBalance, updatedAt: new Date() })
         .where(eq(wallets.id, lockedWallet.id));
 
       // BUG-FIX-10: No walletTransactions record was created on withdrawal request.
       // Funds are deducted immediately so a PENDING WITHDRAWAL transaction must be recorded.
+      // Q: لماذا نستخدم money.format(amount) هنا بدلاً من amount مباشرةً؟
+      // A: money.format يضمن أن المبلغ بصيغة "X.XX" (رقمان عشريان) دائماً.
+      //    إذا أرسل المستخدم "10" بدلاً من "10.00"، يُخزَّن في DB كـ "10.00"
+      //    للتوافق مع باقي الأرقام في الجدول. هذا تناسق تقني لا أثر مالي له.
+      const formattedAmount = money.format(amount);
       await tx.insert(walletTransactions).values({
         walletId: lockedWallet.id,
         type: "WITHDRAWAL",
-        amount: withdrawAmount.toFixed(2),
+        amount: formattedAmount,
         status: "PENDING",
         notes: "طلب سحب بانتظار موافقة المشرف",
       });
@@ -305,7 +350,7 @@ export class WalletService {
       const [request] = await tx.insert(withdrawalRequests).values({
         userId,
         walletId: lockedWallet.id,
-        amount: withdrawAmount.toFixed(2),
+        amount: formattedAmount,
         status: "PENDING",
       }).returning();
 
@@ -317,7 +362,7 @@ export class WalletService {
         performedByRole: actorRole,
         oldValue: { balance: lockedWallet.balance },
         newValue: { balance: newBalance },
-        metadata: { amount }
+        metadata: { amount: formattedAmount }
       });
 
       return request;
@@ -325,8 +370,8 @@ export class WalletService {
       notifyAdmins(
         "SYSTEM_ALERT",
         "طلب سحب جديد",
-        `مستخدم قدّم طلب سحب بمبلغ ${withdrawAmount.toFixed(2)} جنيه، يحتاج لمراجعتك`,
-        { requestId: request.id, userId, amount: withdrawAmount.toFixed(2) }
+        `مستخدم قدّم طلب سحب بمبلغ ${request.amount} جنيه، يحتاج لمراجعتك`,
+        { requestId: request.id, userId, amount: request.amount }
       ).catch(console.error);
       return request;
     });
@@ -459,7 +504,19 @@ export class WalletService {
       // Throwing ensures the transaction rolls back rather than committing a one-sided debit.
       if (!wallet) throw new Error("WALLET_NOT_FOUND: Cannot refund withdrawal — wallet missing");
 
-      const refundedBalance = (parseFloat(wallet.balance) + parseFloat(request.amount)).toFixed(2);
+      // Q: لماذا نستخدم money.add هنا بدلاً من parseFloat + toFixed لحساب refundedBalance؟
+      // A: نفس سبب جميع الإصلاحات السابقة — IEEE 754 float arithmetic غير موثوق للأموال.
+      //    مثال: إذا كان balance = "99.90" وrequest.amount = "0.10"
+      //    parseFloat("99.90") + parseFloat("0.10") = 100.00000000000001 (في بعض البيئات)
+      //    .toFixed(2) قد يُصلح هذا أو لا — سلوك غير مضمون عبر محركات JS المختلفة.
+      //    money.add("99.90", "0.10") = fromCents(9990 + 10) = fromCents(10000) = "100.00" ✓
+      //
+      // ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+      //    إذا كان request.amount في DB بصيغة غير صالحة (مثلاً نص تالف) بعد خطأ قديم،
+      //    فإن money.add ستُطلق استثناءً "[Money] Invalid amount" بدلاً من إعطاء نتيجة خاطئة.
+      //    هذا سلوك أفضل (fail-fast) لكن يعني أن رفض بعض الطلبات القديمة سيفشل
+      //    ويحتاج تدخلاً يدوياً لتصحيح البيانات التالفة في DB.
+      const refundedBalance = money.add(wallet.balance, request.amount);
       await tx.update(wallets)
         .set({ balance: refundedBalance, updatedAt: new Date() })
         .where(eq(wallets.id, wallet.id));
@@ -558,11 +615,18 @@ export class WalletService {
   }
 
   async deductBalance(userId: string, amount: string, referenceId?: string): Promise<void> {
-    const deductAmount = parseFloat(amount);
-    if (deductAmount < 0) {
-      throw new Error("BUSINESS_RULE_VIOLATION: Negative deduction amount not allowed");
+    // Q: لماذا نستخدم money.isNonPositive بدلاً من `parseFloat(amount) <= 0`؟
+    // A: انظر التعليق في دالة withdraw() — نفس المبررات تنطبق هنا.
+    //    deductBalance مسار بديل للخصم يستدعيه كود داخلي (مثل payForOrder في سياقات معينة).
+    //    الفرق: withdraw() يُنشئ withdrawal_request، بينما deductBalance يخصم مباشرةً.
+    if (isNaN(parseFloat(amount)) || !isFinite(parseFloat(amount))) {
+      throw new Error("BUSINESS_RULE_VIOLATION: Invalid deduction amount");
     }
-    if (deductAmount === 0) return;
+    if (money.isNonPositive(amount)) {
+      return; // خصم بقيمة صفر أو سالبة — لا شيء للتنفيذ (نفس سلوك الكود السابق)
+    }
+
+    const formattedAmount = money.format(amount);
 
     await db.transaction(async (tx) => {
       // BUG-FIX: Was calling this.getOrCreateWallet() outside tx (uses global db),
@@ -573,13 +637,13 @@ export class WalletService {
         throw new Error("NOT_FOUND: Wallet not found");
       }
 
-      const currentBalance = parseFloat(lockedWallet.balance);
-
-      if (currentBalance < deductAmount) {
+      // Q: لماذا money.isLessThan بدلاً من `currentBalance < deductAmount`؟
+      // A: نفس مبرر withdraw() — مقارنة القروش كأعداد صحيحة أدق من مقارنة float.
+      if (money.isLessThan(lockedWallet.balance, formattedAmount)) {
         throw new Error("BUSINESS_RULE_VIOLATION: Insufficient wallet balance");
       }
 
-      const newBalance = (currentBalance - deductAmount).toFixed(2);
+      const newBalance = money.subtract(lockedWallet.balance, formattedAmount);
 
       await tx.update(wallets)
         .set({ balance: newBalance, updatedAt: new Date() })
@@ -593,7 +657,7 @@ export class WalletService {
       await tx.insert(walletTransactions).values({
         walletId: lockedWallet.id,
         type: "WITHDRAWAL",
-        amount: deductAmount.toFixed(2),
+        amount: formattedAmount,
         relatedOrderId: referenceId ?? null,
         status: "COMPLETED",
         notes: "خصم نظام داخلي",

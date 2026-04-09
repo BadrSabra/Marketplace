@@ -9,6 +9,18 @@ import { auditService } from "../../services/auditService";
 import { deliveryOtpService } from "./deliveryOtp.service";
 import { chatService } from "../chat/chat.service";
 import { notifyUser } from "../notifications/push.service";
+// Q: لماذا نضيف money utility لـ deliveryOffer.service.ts؟
+// A: عند قبول العرض، تُخصم رسوم التوصيل من محفظة العميل مباشرةً.
+//    الكود الحالي يستخدم parseFloat + arithmetic + toFixed وهو عرضة لأخطاء IEEE 754.
+//    الإصلاح: استبدال parseFloat arithmetic بـ money.isLessThan و money.subtract.
+//
+// ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+//    عند counterOffer: يُقارَن counterFee بـ offer.offeredFee بـ `>=` (على numbers).
+//    بعد الإصلاح، يجب استخدام money.isGreaterThan أو money.equals للمقارنة.
+//    الكود الحالي `if (counterFee >= parseFloat(offer.offeredFee))` خاطئ مزدوجاً:
+//    1. counterFee number من Zod، offeredFee string من DB — مقارنة مختلطة الأنواع
+//    2. IEEE 754 — مقارنة float غير موثوقة عند القيم الحدية
+import { money } from "../../utils/money";
 
 export class DeliveryOfferService {
   async createOffer(subOrderId: string, driverId: string, data: { proposedFee: number; notes?: string }) {
@@ -124,7 +136,10 @@ export class DeliveryOfferService {
       const [parentOrder] = await tx.select().from(orders).where(eq(orders.id, subOrder.orderId));
       if (!parentOrder || parentOrder.customerId !== customerId) throw new Error("UNAUTHORIZED");
 
-      const deliveryFee = parseFloat(offer.offeredFee);
+      // Q: لماذا نحوّل offer.offeredFee إلى string قبل استخدامه مع money؟
+      // A: Drizzle قد يُعيد الحقل كـ string أو number حسب إعداد الـ postgres driver.
+      //    تحويله إلى string صريح يضمن التوافق مع money utility في كلا الحالتين.
+      const deliveryFeeStr = offer.offeredFee.toString();
 
       // Deduct delivery fee from customer wallet
       const [customerWallet] = await tx
@@ -135,10 +150,12 @@ export class DeliveryOfferService {
 
       if (!customerWallet) throw new Error("WALLET_NOT_FOUND");
 
-      const currentBalance = parseFloat(customerWallet.balance);
-      if (currentBalance < deliveryFee) throw new Error("INSUFFICIENT_BALANCE");
+      // Q: لماذا money.isLessThan بدلاً من currentBalance < deliveryFee؟
+      // A: deliveryFeeStr هو الآن string — لا يمكن مقارنتها بـ parseFloat بدون فقدان الدقة.
+      //    money.isLessThan تُحوّل الاثنين لقروش وتُقارنهما بدقة كاملة.
+      if (money.isLessThan(customerWallet.balance, deliveryFeeStr)) throw new Error("INSUFFICIENT_BALANCE");
 
-      const newBalance = (currentBalance - deliveryFee).toFixed(2);
+      const newBalance = money.subtract(customerWallet.balance, deliveryFeeStr);
       await tx.update(wallets)
         .set({ balance: newBalance, updatedAt: new Date() })
         .where(eq(wallets.id, customerWallet.id));
@@ -147,7 +164,7 @@ export class DeliveryOfferService {
       await tx.insert(walletTransactions).values({
         walletId: customerWallet.id,
         type: "WITHDRAWAL",
-        amount: deliveryFee.toFixed(2),
+        amount: deliveryFeeStr,
         relatedOrderId: parentOrder.id,
         status: "COMPLETED",
         notes: `رسوم توصيل - عرض السائق #${offerId.slice(0, 8)}`,
@@ -159,16 +176,17 @@ export class DeliveryOfferService {
         referenceId: parentOrder.id,
         debitUserId: customerId,
         creditUserId: null,
-        amount: deliveryFee.toFixed(2),
+        amount: deliveryFeeStr,
         type: "WITHDRAWAL",
       });
 
       // Update sub-order: assign driver, update expectedDeliveryFee, set IN_TRANSIT
+      const formattedDeliveryFee = money.format(deliveryFeeStr);
       const [updatedSubOrder] = await tx
         .update(subOrders)
         .set({
           assignedDriverId: offer.driverId,
-          expectedDeliveryFee: deliveryFee.toFixed(2),
+          expectedDeliveryFee: formattedDeliveryFee,
           status: "IN_TRANSIT",
           updatedAt: new Date(),
         })
@@ -289,7 +307,12 @@ export class DeliveryOfferService {
       const [offer] = await tx.select().from(deliveryOffers).where(eq(deliveryOffers.id, offerId)).for("update");
       if (!offer || offer.status !== "PENDING") throw new Error("OFFER_NOT_AVAILABLE");
 
-      if (counterFee >= parseFloat(offer.offeredFee)) throw new Error("COUNTER_MUST_BE_LOWER");
+      // Q: لماذا نستخدم money.isLessThan بدلاً من `counterFee >= parseFloat(offer.offeredFee)`؟
+      // A: counterFee هو number من Zod، و offer.offeredFee هو string من DB.
+      //    المقارنة المباشرة تعتمد على coercion ضمني قد يُخطئ عند القيم الحدية.
+      //    money.isLessThan تُحوّل الاثنين لقروش وتُقارنهما كأعداد صحيحة — أدق وأوضح.
+      //    الشرط: counterFee يجب أن يكون أصغر من offer.offeredFee (NOT less than = الرفض).
+      if (!money.isLessThan(counterFee, offer.offeredFee)) throw new Error("COUNTER_MUST_BE_LOWER");
 
       // Q: هل يجب التحقق من وجود subOrder قبل الوصول لـ subOrder.orderId في customerCounterOffer؟
       // A: نعم — نفس مشكلة customerRejectOffer: غياب الفحص يُطلق TypeError إذا كان
@@ -352,7 +375,12 @@ export class DeliveryOfferService {
       const [parentOrder] = await tx.select().from(orders).where(eq(orders.id, subOrder.orderId));
       if (!parentOrder) throw new Error("ORDER_NOT_FOUND");
 
-      const agreedFee = parseFloat(offer.counterOfferedFee);
+      // Q: لماذا نستخدم money utility لحساب خصم الـ counter offer المقبول؟
+      // A: نفس مبرر acceptOffer — خصم رسوم التوصيل من محفظة العميل عملية مالية حرجة.
+      //    offer.counterOfferedFee قد يكون string أو number حسب إعداد الـ driver.
+      //    تحويله لـ string صريح ثم استخدام money يضمن الدقة في كلا الحالتين.
+      if (!offer.counterOfferedFee) throw new Error("COUNTER_FEE_MISSING");
+      const agreedFeeStr = offer.counterOfferedFee.toString();
 
       // Deduct agreed counter fee from customer wallet
       const [customerWallet] = await tx
@@ -363,10 +391,9 @@ export class DeliveryOfferService {
 
       if (!customerWallet) throw new Error("WALLET_NOT_FOUND");
 
-      const currentBalance = parseFloat(customerWallet.balance);
-      if (currentBalance < agreedFee) throw new Error("INSUFFICIENT_BALANCE");
+      if (money.isLessThan(customerWallet.balance, agreedFeeStr)) throw new Error("INSUFFICIENT_BALANCE");
 
-      const newBalance = (currentBalance - agreedFee).toFixed(2);
+      const newBalance = money.subtract(customerWallet.balance, agreedFeeStr);
       await tx.update(wallets)
         .set({ balance: newBalance, updatedAt: new Date() })
         .where(eq(wallets.id, customerWallet.id));
@@ -374,7 +401,7 @@ export class DeliveryOfferService {
       await tx.insert(walletTransactions).values({
         walletId: customerWallet.id,
         type: "WITHDRAWAL",
-        amount: agreedFee.toFixed(2),
+        amount: agreedFeeStr,
         relatedOrderId: parentOrder.id,
         status: "COMPLETED",
         notes: `رسوم توصيل - عرض مضاد مقبول #${offerId.slice(0, 8)}`,
@@ -384,16 +411,17 @@ export class DeliveryOfferService {
         referenceId: parentOrder.id,
         debitUserId: parentOrder.customerId,
         creditUserId: null,
-        amount: agreedFee.toFixed(2),
+        amount: agreedFeeStr,
         type: "WITHDRAWAL",
       });
 
+      const formattedAgreedFee = money.format(agreedFeeStr);
       // Assign driver at agreed counter fee → IN_TRANSIT
       const [updatedSubOrder] = await tx
         .update(subOrders)
         .set({
           assignedDriverId: driverId,
-          expectedDeliveryFee: agreedFee.toFixed(2),
+          expectedDeliveryFee: formattedAgreedFee,
           status: "IN_TRANSIT",
           updatedAt: new Date(),
         })

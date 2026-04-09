@@ -6,6 +6,17 @@ import { auditService } from "../../services/auditService";
 import { allowedTransitions, type SubOrderStatus } from "./suborder.types";
 import { notifyUser, notifyAllDrivers } from "../notifications/push.service";
 import { ledgerService } from "../ledger/ledger.service";
+// Q: هل يجب استخدام money utility في suborder.service.ts لحسابات الاسترداد؟
+// A: نعم — الاسترداد يجمع subtotal + deliveryFee ثم يُضاف للرصيد الحالي.
+//    استخدام parseFloat + arithmetic + toFixed يعرّض الحسابات لأخطاء IEEE 754.
+//    الإصلاح: استخدام money.add لضمان دقة حسابات الاسترداد.
+//
+// ⚠️ خطأ جديد تكشفه هذه الإصلاح:
+//    إذا كان expectedDeliveryFee فارغاً (null) في DB (وهو ممكن لطلبات قديمة قبل الإصلاح)،
+//    فإن money.add(subtotal, null) سيُطلق استثناءً "Invalid amount: null".
+//    الكود القديم كان يُحوّل null لـ 0 عبر `parseFloat(null) = NaN → || 0`.
+//    الإصلاح الدفاعي: استخدام subOrder.expectedDeliveryFee || "0.00" قبل التمرير لـ money.
+import { money } from "../../utils/money";
 
 export class SubOrderService {
 
@@ -114,10 +125,13 @@ export class SubOrderService {
         if (!customerWallet) throw new Error("WALLET_NOT_FOUND: Cannot refund cancelled sub-order — customer wallet missing");
 
         {
-          const refundAmount = parseFloat(subOrder.subtotal);
-          const deliveryFeeRefund = subOrder.expectedDeliveryFee ? parseFloat(subOrder.expectedDeliveryFee) : 0;
-          const totalRefund = refundAmount + deliveryFeeRefund;
-          const newBalance = (parseFloat(customerWallet.balance) + totalRefund).toFixed(2);
+          // Q: لماذا نستخدم money.add بدلاً من parseFloat + arithmetic لحساب مبلغ الاسترداد؟
+          // A: انظر التعليق في أعلى الملف — money.add تضمن دقة القروش وتتجنب أخطاء IEEE 754.
+          //    الاستخدام الدفاعي لـ || "0.00" يُعالج حالة null في expectedDeliveryFee (طلبات قديمة).
+          const subtotalForRefund = subOrder.subtotal.toString();
+          const deliveryFeeForRefund = (subOrder.expectedDeliveryFee || "0.00").toString();
+          const totalRefundStr = money.add(subtotalForRefund, deliveryFeeForRefund);
+          const newBalance = money.add(customerWallet.balance, totalRefundStr);
 
           await tx
             .update(wallets)
@@ -127,7 +141,7 @@ export class SubOrderService {
           await tx.insert(walletTransactions).values({
             walletId: customerWallet.id,
             type: "REFUND",
-            amount: totalRefund.toFixed(2),
+            amount: totalRefundStr,
             relatedOrderId: parentOrder.id,
             status: "COMPLETED",
             notes: `استرداد تلقائي - إلغاء طلب فرعي #${subOrderId.slice(0, 8)} من المتجر`,
@@ -142,11 +156,11 @@ export class SubOrderService {
             referenceId: subOrder.orderId,
             debitUserId: null,
             creditUserId: parentOrder.customerId,
-            amount: totalRefund.toFixed(2),
+            amount: totalRefundStr,
             type: "REFUND",
           });
 
-          console.log(`[SubOrderService] Refunded ${totalRefund} to customer wallet for cancelled sub-order ${subOrderId}`);
+          console.log(`[SubOrderService] Refunded ${totalRefundStr} to customer wallet for cancelled sub-order ${subOrderId}`);
         }
       }
 

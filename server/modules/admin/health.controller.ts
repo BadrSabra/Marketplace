@@ -8,6 +8,7 @@ import { wallets, ledger } from "@shared/schema";
 import { sql } from "drizzle-orm";
 import os from "os";
 import { auditService } from "../../services/auditService";
+import { money } from "../../utils/money";
 
 export const healthController = {
   getHealth: async (req: Request, res: Response) => {
@@ -79,13 +80,31 @@ export const healthController = {
         .from(ledger)
         .where(sql`${ledger.debitUserId} IS NOT NULL`);
       
-      const wTotal = parseFloat(walletSum[0]?.total || "0");
-      const netLedger = parseFloat(ledgerCredits?.sum || "0") - parseFloat(ledgerDebits?.sum || "0");
-      
+      // Q: لماذا نستخدم parseFloat هنا بدلاً من money utility للتحقق من تناسق الدفتر؟
+      // A: هذه المقارنة هي read-only للـ admin health dashboard — لا تُعدّل بيانات مالية.
+      //    parseFloat هنا مقبول للعرض، لكنه يُسبب مشكلة في عتبة التحمل `< 0.01`:
+      //
+      // Q: لماذا عتبة `Math.abs(wTotal - netLedger) < 0.01` خطيرة؟
+      // A: تسمح بفارق يصل لـ 0.999 قرش دون إبلاغ عن inconsistency.
+      //    هذا يعني أن فارقاً بـ "0.009" جنيه في كل محفظة × 1000 محفظة = 9 جنيه
+      //    ضائع يمر بدون تنبيه. القصد من العتبة تجنب false positives من float arithmetic،
+      //    لكن الآن بعد استخدام money utility في كل الحسابات، لا حاجة لعتبة تسامح.
+      //    الإصلاح: استخدام money.equals (تطابق قروش كاملة) بدلاً من `< 0.01`.
+      //
+      // ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+      //    SQL sum قد يُعيد null إذا لم تكن هناك سجلات في ledger بعد.
+      //    `money.subtract(null, null)` سيُطلق استثناءً. الإصلاح: `|| "0"` موجود بالفعل.
+      //    لكن: إذا أعاد SQL مجموعاً بـ 10+ أرقام عشرية (مثل PostgreSQL Numeric بدقة عالية)،
+      //    فإن toCents يُقرّبه لأقرب قرش — وهو السلوك المطلوب.
+      const walletsTotal = walletSum[0]?.total || "0";
+      const ledgerNet = money.subtract(ledgerCredits?.sum || "0", ledgerDebits?.sum || "0");
+      const wTotal = parseFloat(walletsTotal);
+      const netLedger = parseFloat(ledgerNet);
+
       ledgerConsistency = {
         walletsTotal: wTotal,
         ledgerNetTotal: netLedger,
-        consistent: Math.abs(wTotal - netLedger) < 0.01
+        consistent: money.equals(walletsTotal, ledgerNet)
       };
 
       if (!ledgerConsistency.consistent) {

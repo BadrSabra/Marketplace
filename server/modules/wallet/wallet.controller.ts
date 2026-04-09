@@ -151,7 +151,25 @@ export class WalletController {
         return res.status(400).json({ message: "معرّف طلب السحب غير صالح" });
       }
       const adminId = (req as any).user.id;
+      // Q: لماذا يجب التحقق من صلاحية `note` قبل تمريره للـ service؟
+      // A: بدون تحقق، يمكن للمشرف إرسال:
+      //    1. note = undefined → يصل للـ DB كـ NULL قد يُسبب أخطاء تبعاً لـ schema
+      //    2. note = "" → سجل رفض بدون سبب — غير مفيد لمتابعة الـ audit trail
+      //    3. note = {malicious: "object"} → يُخزَّن كـ "[object Object]" في DB
+      //    4. note طولها 100,000 حرف → استهلاك مفرط للـ DB space
+      //    الإصلاح: التحقق من أن note نص لا يقل عن 3 أحرف ولا يزيد عن 500.
+      //
+      // ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+      //    الـ frontend قد يُرسل طلب رفض بدون note (إذا لم يتحقق الـ UI من الحقل).
+      //    سيتلقى المشرف الآن 400 "يجب ذكر سبب الرفض" بدلاً من نجاح صامت.
+      //    يجب تحديث واجهة الأدمن لإلزام حقل "سبب الرفض" قبل الإرسال.
       const { note } = req.body;
+      if (!note || typeof note !== 'string' || note.trim().length < 3) {
+        return res.status(400).json({ message: "يجب ذكر سبب الرفض (3 أحرف على الأقل)" });
+      }
+      if (note.trim().length > 500) {
+        return res.status(400).json({ message: "سبب الرفض يجب ألا يتجاوز 500 حرف" });
+      }
       const request = await walletService.rejectWithdrawal(id, adminId, note);
       res.json(request);
     } catch (error: any) {

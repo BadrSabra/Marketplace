@@ -2,6 +2,20 @@ import { db } from "../../db";
 import { ledger, subOrders, wallets, walletTransactions, stores, users, orders } from "@shared/schema";
 import { eq, and, sql, gte, lte, desc } from "drizzle-orm";
 import { auditService } from "../../services/auditService";
+// Q: هل يجب استخدام money utility في processCommissions بدلاً من parseFloat + toFixed؟
+// A: نعم — العمولات تُحسب كنسب مئوية (1% من المجموع الفرعي) وحسابها بـ parseFloat يعرّضها
+//    لأخطاء IEEE 754. مثال: subtotal = 100.005 → platformCommission = 100.005 * 0.01
+//    = 1.00005 → toFixed(2) = "1.00" في بعض محركات JS لكن "1.01" في أخرى.
+//    money.multiply تستخدم حساب القروش (أعداد صحيحة) وMath.round لتجنب هذه الأخطاء.
+//    الإصلاح: استبدال كل parseFloat + arithmetic + toFixed بـ money.multiply / money.subtract / money.add.
+//
+// ⚠️ خطأ جديد تكشفه هذه الإصلاح:
+//    إذا كان subtotal صغيراً جداً (مثلاً "0.50")، فإن money.multiply("0.50", 0.01) = "0.01"
+//    وstoreAmount = money.subtract("0.50", "0.01") = "0.49". هذا صحيح رياضياً لكن يعني
+//    أن المتجر يحصل على 49 قرشاً مقابل طلب 50 قرشاً. لم يكن هذا السيناريو ظاهراً
+//    قبل الإصلاح بسبب غياب الحد الأدنى للطلب. الإصلاح المستقبلي: إضافة حد أدنى
+//    للطلب في نقطة الإنشاء بدلاً من هنا.
+import { money } from "../../utils/money";
 
 export interface LedgerFilters {
   user_id?: string;
@@ -196,24 +210,29 @@ export class LedgerService {
       const [store] = await tx.select().from(stores).where(eq(stores.id, subOrder.storeId));
       if (!store) throw new Error("STORE_NOT_FOUND");
 
-      const subtotalNum = parseFloat(subOrder.subtotal.toString());
-      const deliveryFeeNum = parseFloat(subOrder.expectedDeliveryFee.toString());
+      // Q: لماذا نستخدم money.multiply/subtract بدلاً من parseFloat + toFixed لحساب العمولات؟
+      // A: انظر التعليق في أعلى الملف — money utility تتجنب أخطاء IEEE 754 الكامنة في
+      //    parseFloat + arithmetic + toFixed عند حساب النسب المئوية على مبالغ حدودية.
+      const subtotalStr = subOrder.subtotal.toString();
+      const deliveryFeeStr = subOrder.expectedDeliveryFee.toString();
 
-      if (subtotalNum < 0 || deliveryFeeNum < 0) {
+      if (money.isNegative(subtotalStr) || money.isNegative(deliveryFeeStr)) {
         throw new Error("INVALID_AMOUNTS");
       }
 
-      // 5. Calculate commissions
+      // 5. Calculate commissions using money utility for precision
       // Platform: 1% of subtotal
-      const platformCommission = subtotalNum * 0.01;
-      const storeAmount = subtotalNum - platformCommission;
-      const driverAmount = deliveryFeeNum;
+      const platformCommission = money.multiply(subtotalStr, 0.01);
+      const storeAmount = money.subtract(subtotalStr, platformCommission);
+      const driverAmount = deliveryFeeStr;
 
       // 3️⃣ COMMISSION GUARD: Validate results
-      const totalCommission = platformCommission + (subOrder.assignedDriverId ? driverAmount : 0);
-      const orderTotal = subtotalNum + deliveryFeeNum;
+      const totalCommission = money.add(platformCommission, subOrder.assignedDriverId ? driverAmount : "0.00");
+      const orderTotal = money.add(subtotalStr, deliveryFeeStr);
 
-      if (storeAmount < 0 || storeAmount > orderTotal || (subOrder.assignedDriverId && driverAmount < 0) || totalCommission < 0 || totalCommission > orderTotal) {
+      if (money.isNegative(storeAmount) || money.isLessThan(orderTotal, storeAmount) ||
+          (subOrder.assignedDriverId && money.isNegative(driverAmount)) ||
+          money.isNegative(totalCommission) || money.isLessThan(orderTotal, totalCommission)) {
         console.error(`[COMMISSION_GUARD] Invalid commission values for subOrder ${subOrderId}`, { storeAmount, driverAmount, platformCommission, orderTotal });
         throw new Error("SYSTEM_ERROR: Invalid commission calculation");
       }
@@ -221,10 +240,14 @@ export class LedgerService {
       const ledgerEntries: string[] = [];
 
       // 6. Process Store Commission
+      // Q: لماذا لا نستخدم .toFixed(2) على storeAmount بعد الآن؟
+      // A: storeAmount أصبح نصاً (string) من money.subtract وليس رقماً (number).
+      //    استدعاء .toFixed(2) على string يُطلق TypeError في runtime.
+      //    money.subtract يُعيد بالفعل نصاً بصيغة "X.XX" مُهيَّئاً لـ DB مباشرةً.
       const [storeLedger] = await tx.insert(ledger).values({
         referenceId: subOrderId,
         creditUserId: store.ownerId,
-        amount: storeAmount.toFixed(2),
+        amount: storeAmount,
         type: "COMMISSION",
       }).returning();
       ledgerEntries.push(storeLedger.id);
@@ -239,7 +262,7 @@ export class LedgerService {
         referenceId: subOrderId,
         debitUserId: null,
         creditUserId: null,
-        amount: platformCommission.toFixed(2),
+        amount: platformCommission,
         type: "COMMISSION",
       }).returning();
       ledgerEntries.push(platformLedger.id);
@@ -250,8 +273,12 @@ export class LedgerService {
       const [storeWallet] = await tx.select().from(wallets).where(eq(wallets.userId, store.ownerId)).for("update");
       if (!storeWallet) throw new Error(`WALLET_NOT_FOUND: No wallet for store owner ${store.ownerId}`);
 
+      // Q: هل يجب استخدام money.add لتحديث رصيد محفظة المتجر؟
+      // A: نعم — نفس مبررات money utility في حساب العمولة تنطبق هنا.
+      //    الرصيد الحالي مُخزَّن كـ numeric في DB وقد يكون له قيم حدودية.
+      //    money.add يضمن الدقة ويتسق مع باقي الكود (approveDeposit يستخدمه بالفعل).
       const storeOldBalance = storeWallet.balance;
-      const storeNewBalance = (parseFloat(storeOldBalance) + storeAmount).toFixed(2);
+      const storeNewBalance = money.add(storeOldBalance, storeAmount);
 
       await tx.update(wallets)
         .set({ balance: storeNewBalance, updatedAt: new Date() })
@@ -267,7 +294,7 @@ export class LedgerService {
       await tx.insert(walletTransactions).values({
         walletId: storeWallet.id,
         type: "DEPOSIT",
-        amount: storeAmount.toFixed(2),
+        amount: storeAmount,
         relatedOrderId: parentOrderForStore?.id ?? subOrder.orderId,
         status: "COMPLETED",
         notes: `عمولة متجر - طلب #${subOrderId.slice(0, 8)}`,
@@ -286,10 +313,12 @@ export class LedgerService {
 
       // 7. Process Driver Commission (if assigned)
       if (subOrder.assignedDriverId) {
+        // Q: لماذا لا .toFixed(2) على driverAmount هنا؟
+        // A: driverAmount = deliveryFeeStr وهو بالفعل نص من DB — .toFixed(2) على string خطأ.
         const [driverLedger] = await tx.insert(ledger).values({
           referenceId: subOrderId,
           creditUserId: subOrder.assignedDriverId,
-          amount: driverAmount.toFixed(2),
+          amount: driverAmount,
           type: "COMMISSION",
         }).returning();
         ledgerEntries.push(driverLedger.id);
@@ -298,8 +327,12 @@ export class LedgerService {
         const [driverWallet] = await tx.select().from(wallets).where(eq(wallets.userId, subOrder.assignedDriverId)).for("update");
         if (!driverWallet) throw new Error(`WALLET_NOT_FOUND: No wallet for driver ${subOrder.assignedDriverId}`);
 
+        // Q: هل يجب استخدام money.add لتحديث رصيد محفظة السائق أيضاً؟
+        // A: نعم — التناسق مهم: جميع عمليات تحديث الرصيد يجب أن تستخدم money utility
+        //    لضمان عدم وجود أخطاء دقة في أي مكان من دورة الحساب. اختلاط money.add
+        //    مع parseFloat + toFixed يعني أن طرفاً واحداً من المعادلة آمن والآخر لا.
         const driverOldBalance = driverWallet.balance;
-        const driverNewBalance = (parseFloat(driverOldBalance) + driverAmount).toFixed(2);
+        const driverNewBalance = money.add(driverOldBalance, driverAmount);
 
         await tx.update(wallets)
           .set({ balance: driverNewBalance, updatedAt: new Date() })
@@ -313,7 +346,7 @@ export class LedgerService {
         await tx.insert(walletTransactions).values({
           walletId: driverWallet.id,
           type: "DEPOSIT",
-          amount: driverAmount.toFixed(2),
+          amount: driverAmount,
           relatedOrderId: parentOrderForDriver?.id ?? subOrder.orderId,
           status: "COMPLETED",
           notes: `عمولة توصيل - طلب #${subOrderId.slice(0, 8)}`,
@@ -352,11 +385,25 @@ export class LedgerService {
     const credits = await db.select({ sum: sql<string>`sum(amount)` }).from(ledger).where(eq(ledger.creditUserId, userId));
     const debits = await db.select({ sum: sql<string>`sum(amount)` }).from(ledger).where(eq(ledger.debitUserId, userId));
 
-    const totalCredits = parseFloat(credits[0]?.sum || "0");
-    const totalDebits = parseFloat(debits[0]?.sum || "0");
-    const calculatedBalance = (totalCredits - totalDebits).toFixed(2);
+    // Q: لماذا لا نستخدم money utility لحساب calculatedBalance في verifyBalance؟
+    // A: credits[0]?.sum هو مجموع SQL مُعاد من Postgres كـ string (قد يكون "1234.56").
+    //    من الناحية التقنية، يجب استخدام money.subtract(totalCredits, totalDebits).
+    //    الكود الحالي يستخدم parseFloat + toFixed وهو أقل دقة لكن مقبول هنا لأن:
+    //    1. verifyBalance هي دالة قراءة فقط (read-only) — لا تُعدّل بيانات مالية
+    //    2. الأثر الأسوأ: inconsistency تُبلَّغ عنه خطأً (false positive/negative) — لا فقدان مال
+    //    الإصلاح الدفاعي: استبدالها بـ money utility للتناسق.
+    //
+    // ⚠️ خطأ جديد تكشفه هذا التوثيق:
+    //    `parseFloat(wallet.balance).toFixed(2)` و `calculatedBalance` مقارنة نصية (===).
+    //    إذا كان wallet.balance = "100.1" (بدون صفر ذيلي)، فـ parseFloat("100.1").toFixed(2) = "100.10".
+    //    لكن إذا كان calculatedBalance = "100.10" (بسبب SQL sum)، فالمقارنة صحيحة.
+    //    الخطر: إذا كان wallet.balance مُخزَّناً بـ trailing zero مفقود (خطأ تاريخي)،
+    //    قد تُبلَّغ inconsistency وهمية. الإصلاح: استخدام money.equals للمقارنة.
+    const totalCreditsStr = credits[0]?.sum || "0";
+    const totalDebitsStr = debits[0]?.sum || "0";
+    const calculatedBalance = money.subtract(totalCreditsStr, totalDebitsStr);
 
-    if (calculatedBalance !== parseFloat(wallet.balance).toFixed(2)) {
+    if (!money.equals(calculatedBalance, wallet.balance)) {
       console.error(`[CRITICAL] Ledger inconsistency for user ${userId}: Wallet=${wallet.balance}, Calculated=${calculatedBalance}`);
       return { consistent: false, walletBalance: wallet.balance, calculatedBalance };
     }

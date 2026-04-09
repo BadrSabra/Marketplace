@@ -75,6 +75,37 @@ export const depositLimiter = rateLimit({
   message: { success: false, error: { code: "DEPOSIT_LIMIT_EXCEEDED", message: "Too many deposit attempts. Try again later." } }
 });
 
+// Q: لماذا يحتاج register endpoint لحد معدل طلبات منفصل؟
+// A: بدون حد، يمكن لمهاجم إنشاء آلاف الحسابات تلقائياً بـ bot:
+//    1. تضخيم قاعدة بيانات المستخدمين (storage DoS)
+//    2. استغلال أي مكافأة تسجيل (bonus abuse)
+//    3. إنشاء حسابات مزيفة للتلاعب بنظام التقييمات
+//    الإصلاح: 10 تسجيلات/ساعة — كافٍ للمستخدم الحقيقي (يسجّل مرة أو مرتين)
+//    ومقيّد بما يكفي لمنع الأتمتة الجماعية.
+//
+// ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+//    express-rate-limit يستخدم IP المصدر للتتبع. في بيئة Replit الإنتاجية،
+//    الطلبات قد تصل عبر proxy مشترك — قد يتأثر مستخدمون شرعيون يشتركون بنفس IP.
+//    تم معالجة ذلك مسبقاً بـ `app.set("trust proxy", 1)` في server/index.ts.
+export const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10,
+  message: { success: false, error: { code: "REGISTER_LIMIT_EXCEEDED", message: "Too many registration attempts. Try again later." } }
+});
+
+// Q: لماذا يحتاج withdraw endpoint لحد معدل طلبات منفصل؟
+// A: طلبات السحب تستدعي تدخلاً بشرياً (admin approval) وتُرسل إشعارات.
+//    بدون حد: مستخدم غاضب أو bot يُرسل 1000 طلب سحب في دقيقة →
+//    1. فيضان إشعارات للأدمن (notification DoS)
+//    2. فيضان جدول withdrawal_requests بسجلات وهمية
+//    3. إشغال موارد DB بـ FOR UPDATE locks المتزامنة
+//    الإصلاح: 5 طلبات/24 ساعة — المستخدم الحقيقي نادراً ما يسحب أكثر من مرة يومياً.
+export const withdrawLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000, // 24 hours
+  max: 5,
+  message: { success: false, error: { code: "WITHDRAW_LIMIT_EXCEEDED", message: "Too many withdrawal requests. Try again later." } }
+});
+
 export const payloadSizeLimit = (req: Request, res: Response, next: NextFunction) => {
   const contentLength = parseInt(req.headers['content-length'] || '0');
   if (contentLength > 10 * 1024 * 1024) { // 10MB

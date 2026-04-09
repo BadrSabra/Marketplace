@@ -4,6 +4,20 @@ import { eq, and, sql, inArray, gt } from "drizzle-orm";
 import { notifyUser } from "../notifications/push.service";
 import { deliveryOtpService } from "../delivery/deliveryOtp.service";
 import { chatService } from "../chat/chat.service";
+// Q: لماذا نستخدم money utility في order.service.ts لحسابات السعر الإجمالي والرصيد؟
+// A: order.service.ts ينفّذ أحرج عملية مالية في النظام: خصم رصيد العميل ودفع الطلب.
+//    الخطأ هنا لا يُتسامح معه — parseFloat + arithmetic يُمكن أن يُسبب:
+//    1. خصم مبلغ مختلف عن المبلغ الحقيقي للطلب (فرق في القروش)
+//    2. رصيد تحت الصفر يمر خطأ بسبب مقارنة float غير دقيقة
+//    3. عدم تطابق بين totalPrice المُخزَّن في orders وما خُصم من المحفظة
+//    الإصلاح: استبدال كل parseFloat arithmetic بـ money utility.
+//
+// ⚠️ خطأ جديد تكشفه هذه الإصلاح:
+//    totalPrice كان number (0 ← +=) والآن أصبح string ("0.00" ← money.add).
+//    أي كود في هذا الملف يُعامل totalPrice كـ number (مثلاً: `if (totalPrice > 100)`)
+//    سيُسبب خطأ TypeScript أو سلوكاً غير متوقع. الإصلاح الدفاعي:
+//    مراجعة كل استخدام لـ totalPrice وضمان استخدام money.isGreaterThan للمقارنات.
+import { money } from "../../utils/money";
 
 export class OrderService {
   async createMultiStoreOrder(customerId: string, items: { productId: string, quantity: number }[]) {
@@ -25,8 +39,12 @@ export class OrderService {
       }
 
       // 2. Group items by storeId and calculate prices
+      // Q: لماذا نغيّر totalPrice من number إلى string مع money utility؟
+      // A: تجميع الأسعار بـ += على float يتراكم فيه خطأ IEEE 754 مع كل عنصر.
+      //    مثال: [10.10, 10.10, 10.10] بـ float: 30.299999999999997 (خطأ قرش)
+      //    مع money.add: "30.30" ← دقة مضمونة.
       const storeGroups: Record<string, { product: typeof fetchedProducts[0]; quantity: number }[]> = {};
-      let totalPrice = 0;
+      let totalPrice = "0.00";
 
       for (const item of items) {
         const product = fetchedProducts.find(p => p.id === item.productId);
@@ -37,17 +55,23 @@ export class OrderService {
         const storeId = product.storeId;
         if (!storeGroups[storeId]) storeGroups[storeId] = [];
         storeGroups[storeId].push({ product, quantity: item.quantity });
-        totalPrice += parseFloat(product.price) * item.quantity;
+        // Q: لماذا نستخدم money.multiply ثم money.add بدلاً من parseFloat(price) * qty؟
+        // A: money.multiply(price, qty) يعمل على القروش: Math.round(toCents(price) * qty)
+        //    ثم يُعيد string آمن. النتيجة تُجمع مع totalPrice بـ money.add.
+        totalPrice = money.add(totalPrice, money.multiply(product.price, item.quantity));
       }
 
       // 3. Deduct from customer wallet — SELECT FOR UPDATE to prevent race condition
       const [wallet] = await tx.select().from(wallets).where(eq(wallets.userId, customerId)).limit(1).for("update");
       if (!wallet) throw new Error("Customer wallet not found");
-      const balance = parseFloat(wallet.balance);
-      if (balance < totalPrice) throw new Error("Insufficient wallet balance");
+      // Q: لماذا نستخدم money.isLessThan بدلاً من `balance < totalPrice`؟
+      // A: totalPrice الآن string (من money utility) ولا يمكن مقارنتها مع float.
+      //    money.isLessThan تُحوّل الاثنين لقروش وتُقارنهما كأعداد صحيحة.
+      if (money.isLessThan(wallet.balance, totalPrice)) throw new Error("Insufficient wallet balance");
 
+      const newWalletBalance = money.subtract(wallet.balance, totalPrice);
       await tx.update(wallets)
-        .set({ balance: (balance - totalPrice).toFixed(2) })
+        .set({ balance: newWalletBalance })
         .where(eq(wallets.id, wallet.id));
 
       // 4. Create parent order BEFORE recording the wallet transaction so we can
@@ -56,7 +80,7 @@ export class OrderService {
       // transaction history or audit reports. Create the order first, then reference its ID.
       const [order] = await tx.insert(orders).values({
         customerId,
-        totalPrice: totalPrice.toFixed(2),
+        totalPrice,
         overallStatus: "PENDING",
         paymentStatus: "PAID",
       }).returning();
@@ -64,7 +88,7 @@ export class OrderService {
       await tx.insert(walletTransactions).values({
         walletId: wallet.id,
         type: "WITHDRAWAL",
-        amount: totalPrice.toFixed(2),
+        amount: totalPrice,
         relatedOrderId: order.id,
         status: "COMPLETED",
         notes: `دفع طلب #${order.id.slice(0, 8)}`,
@@ -76,7 +100,7 @@ export class OrderService {
         referenceId: order.id,
         debitUserId: customerId,
         creditUserId: null,
-        amount: totalPrice.toFixed(2),
+        amount: totalPrice,
         type: "WITHDRAWAL",
       });
 
@@ -86,15 +110,18 @@ export class OrderService {
       const subOrdersCreated: { subOrderId: string; ownerId: string; storeName: string }[] = [];
 
       for (const [storeId, storeItems] of Object.entries(storeGroups)) {
+        // Q: لماذا نستخدم money.add مع money.multiply في reduce بدلاً من float arithmetic؟
+        // A: نفس مبرر totalPrice — تجميع أسعار عناصر متعددة بـ float يُسبب تراكم خطأ التقريب.
+        //    مع money: كل عنصر يُحوَّل لقروش أولاً ثم يُجمع كأعداد صحيحة — لا تراكم.
         const subtotal = storeItems.reduce(
-          (sum, { product, quantity }) => sum + parseFloat(product.price) * quantity,
-          0
+          (sum, { product, quantity }) => money.add(sum, money.multiply(product.price, quantity)),
+          "0.00"
         );
 
         const [subOrder] = await tx.insert(subOrders).values({
           orderId: order.id,
           storeId,
-          subtotal: subtotal.toFixed(2),
+          subtotal,
           status: "PENDING",
           expectedDeliveryFee: "0.00",
         }).returning();
@@ -464,18 +491,22 @@ export class OrderService {
         // missing wallet here means the money vanishes. Throw to roll back the whole tx instead.
         if (!wallet) throw new Error("WALLET_NOT_FOUND: Cannot refund cancelled sub-order — customer wallet missing");
 
-        const subtotalRefund = parseFloat(subOrder.subtotal);
-        const deliveryFeeRefund = subOrder.expectedDeliveryFee ? parseFloat(subOrder.expectedDeliveryFee) : 0;
-        const totalRefund = subtotalRefund + deliveryFeeRefund;
+        // Q: لماذا نستخدم money.add هنا بدلاً من parseFloat + toFixed لحساب الاسترداد؟
+        // A: نفس المبرر — الاسترداد هو قيمة مالية تُضاف لرصيد العميل.
+        //    استخدام || "0.00" يُعالج حالة expectedDeliveryFee = null في DB (طلبات قديمة).
+        const subtotalForRefund = subOrder.subtotal.toString();
+        const deliveryFeeForRefund = (subOrder.expectedDeliveryFee || "0.00").toString();
+        const totalRefundStr = money.add(subtotalForRefund, deliveryFeeForRefund);
+        const newBalanceAfterRefund = money.add(wallet.balance, totalRefundStr);
 
         await tx.update(wallets)
-          .set({ balance: (parseFloat(wallet.balance) + totalRefund).toFixed(2), updatedAt: new Date() })
+          .set({ balance: newBalanceAfterRefund, updatedAt: new Date() })
           .where(eq(wallets.id, wallet.id));
 
         await tx.insert(walletTransactions).values({
           walletId: wallet.id,
           type: "REFUND",
-          amount: totalRefund.toFixed(2),
+          amount: totalRefundStr,
           relatedOrderId: order.id,
           status: "COMPLETED",
           notes: `استرداد عند إلغاء الطلب الفرعي #${subOrderId.slice(0, 8)}`,
@@ -484,11 +515,15 @@ export class OrderService {
         // BUG-FIX: Was type "WITHDRAWAL" for a credit to the customer (refund).
         // BUG-FIX-2: Was type "DEPOSIT" which is semantically wrong — a refund is a
         // distinct financial event. Now uses "REFUND" for accurate audit trail reporting.
+        // BUG-FIX: كان الكود يُشير إلى `totalRefund.toFixed(2)` لكن المتغير أُعيد تسميته
+        // إلى `totalRefundStr` (string) عند الانتقال لـ money utility.
+        // `totalRefund` غير معرّف في هذا النطاق — سيُطلق ReferenceError وقت التشغيل.
+        // الإصلاح: استخدام `totalRefundStr` مباشرةً (بالفعل بصيغة "X.XX" من money.add).
         await tx.insert(ledger).values({
           referenceId: order.id,
           debitUserId: null,
           creditUserId: userId,
-          amount: totalRefund.toFixed(2),
+          amount: totalRefundStr,
           type: "REFUND",
         });
       }
