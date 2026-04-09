@@ -85,6 +85,19 @@ A full-stack hyperlocal marketplace platform built with React (Vite) frontend, N
 9. **`use-orders.ts` pagination not forwarded** — Hook called `/api/orders/my-orders` without pagination parameters after backend added `limit`/`offset` support. Fixed: hook now accepts and forwards `limit`/`offset` parameters.
    - *New error revealed*: Components using `useMyOrders()` without arguments will receive 20 orders instead of all orders.
 
+#### Session 2 Fixes (Continuation)
+10. **Dead code deleted** — `server/modules/deposits/deposits.service.ts` and `shared/deposits.schema.ts` referenced a `deposits` table that never existed in the DB. Both files deleted. The active deposit flow uses `walletService` + `wallet_transactions` table (not this dead code).
+    - *New error revealed*: Any future code importing from these paths will now get a clear compile error instead of a silent runtime crash.
+
+11. **`generateOtp` made idempotent** — Two concurrent GET requests for the same order both triggered OTP generation, where the second invalidated the first. Fixed: `generateOtp` now checks for a valid existing OTP both outside (fast path) and inside the transaction (double-check). Returns the existing code if found — no new generation.
+    - *New error revealed*: Expired OTPs will no longer auto-regenerate on page load. Frontend needs a "Refresh OTP" button that calls `POST /api/orders/suborders/:id/regenerate-otp` with `forceNew=true` for the case where the user's OTP has expired.
+
+12. **Uploaded file cleanup on delete** — Deleting a product or store left orphaned image files in `uploads/`. Fixed: `deleteProduct` fetches `imageUrl` before deleting DB record, then calls `deleteUploadedFile()`. `deleteStore` collects all product and store image URLs before the transaction and cleans up via `setImmediate` after commit (outside transaction — filesystem operations can't be rolled back).
+    - *New error revealed*: If server restarts between transaction commit and `setImmediate` callback, file cleanup is silently skipped. A true fix requires an outbox pattern or a startup cleanup job for orphaned files.
+
+13. **Push notification retry logic** — Web push failures from transient network errors (5xx, ECONNRESET) were silently dropped. Fixed: added one retry after 1 second for non-410/404 errors. 410/404 still immediately marks subscriptions for cleanup via `inArray` delete.
+    - *New error revealed*: If the push provider rate-limits aggressively, the retry could generate a second 429 response. Full fix requires exponential backoff with jitter.
+
 ## Production Safety Audit (April 2026)
 
 ### Critical Bugs Fixed

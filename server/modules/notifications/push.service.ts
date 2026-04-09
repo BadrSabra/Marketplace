@@ -42,21 +42,43 @@ export class PushService {
 
       const payload = JSON.stringify({ title, body, data });
 
+      // Q: لماذا نُضيف retry محدود (مرة واحدة) لأخطاء الشبكة العابرة؟
+      // A: الكود القديم كان fire-and-forget بلا retry: أي خطأ شبكة عابر (timeout، ECONNRESET)
+      //    يُفقد الإشعار إلى الأبد دون أي محاولة ثانية. مزودو web push (FCM, APNS) يُوصون
+      //    بـ exponential backoff للأخطاء 429 و5xx. نُضيف retry واحدة بعد 1 ثانية للأخطاء
+      //    القابلة للاسترداد، ونحذف الـ subscriptions منتهية الصلاحية (410/404) فوراً.
+      //
+      // ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+      //    إذا كان مزود الـ push يُطبّق rate limiting صارم، الـ retry قد يُسبب HTTP 429
+      //    مرتين بدلاً من مرة. الحل الكامل: exponential backoff مع jitter وqueue مركزي،
+      //    لكن هذا أعقد مما يحتاجه المشروع الحالي.
       const failed: string[] = [];
-      await Promise.allSettled(
-        subs.map(async (sub) => {
-          try {
-            await webpush.sendNotification(
-              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-              payload
-            );
-          } catch (err: any) {
-            if (err.statusCode === 410 || err.statusCode === 404) {
-              failed.push(sub.id);
+
+      const sendWithRetry = async (sub: typeof subs[0]): Promise<void> => {
+        const pushConfig = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } };
+        try {
+          await webpush.sendNotification(pushConfig, payload);
+        } catch (err: any) {
+          if (err.statusCode === 410 || err.statusCode === 404) {
+            // Subscription expired or invalid — mark for cleanup, no retry
+            failed.push(sub.id);
+          } else {
+            // Transient error (5xx, network) — retry once after 1 second
+            await new Promise(res => setTimeout(res, 1000));
+            try {
+              await webpush.sendNotification(pushConfig, payload);
+            } catch (retryErr: any) {
+              if (retryErr.statusCode === 410 || retryErr.statusCode === 404) {
+                failed.push(sub.id);
+              } else {
+                console.warn(`[PushService] Web push failed after retry for sub ${sub.id}:`, retryErr.message);
+              }
             }
           }
-        })
-      );
+        }
+      };
+
+      await Promise.allSettled(subs.map(sendWithRetry));
 
       // Q: هل يمكن استخدام sql`id = ANY(${failed})` لحذف subscriptions منتهية الصلاحية؟
       // A: لا — هذا خطأ. sql template tag في Drizzle يُرسل المصفوفة كقيمة مُعامَلة واحدة،

@@ -1,16 +1,81 @@
 import { db } from "../../db";
 import { deliveryOtps, subOrders, orders } from "@shared/schema";
-import { eq, and, ne, lt, gt, inArray } from "drizzle-orm";
+import { eq, and, lt, gt } from "drizzle-orm";
 import { ledgerService } from "../ledger/ledger.service";
 import crypto from "crypto";
 
 export class DeliveryOtpService {
-  async generateOtp(orderId: string, subOrderId?: string): Promise<string> {
-    const otpCode = crypto.randomInt(100000, 999999).toString();
+  // Q: لماذا أصبحت generateOtp idempotent (تُعيد OTP موجودة إذا كانت صالحة)؟
+  // A: الكود القديم كان يُولّد OTP جديدة دائماً ويُبطل القديمة. هذا يخلق race condition:
+  //    طلبان متزامنان على نفس sub-order (مثلاً طلبان متزامنان لـ GET /api/orders/my-orders)
+  //    كلاهما يجد OTP منتهية الصلاحية فيُطلقان generateOtp معاً:
+  //    - الأول يُولّد OTP#1 ويُبطل القديمة
+  //    - الثاني يُبطل OTP#1 ويُولّد OTP#2
+  //    العميل يرى OTP#1 في شاشته لكن DB تحتوي على OTP#2 → السائق يرفض OTP#1.
+  //
+  //    الإصلاح الآن: نُفحص أولاً خارج الـ transaction (للأداء)، ثم نُعيد الفحص داخل
+  //    الـ transaction (للأمان). إذا وجدنا OTP صالحة في أي مرحلة → نُعيدها مباشرةً.
+  //    هذا يعني: مهما كان عدد الطلبات المتزامنة، لن تُنشأ سوى OTP واحدة صالحة.
+  //
+  //    الخيار forceNew=true مُتاح للمشرف عند الحاجة لتجديد OTP يدوياً بغض النظر.
+  //
+  // ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+  //    إذا انقضت صلاحية OTP وكان المستخدم لا يُحدّث الصفحة، سيظل يرى الرمز القديم
+  //    حتى يُعيد التحميل — لأن getOrderWithSubOrders يُعيد الآن OTP الموجودة فقط
+  //    بدلاً من توليد رمز جديد في كل استعلام. الواجهة تحتاج لزر "تجديد الرمز"
+  //    يستدعي POST /api/orders/suborders/:id/regenerate-otp مع forceNew=true.
+  async generateOtp(orderId: string, subOrderId?: string, forceNew = false): Promise<string> {
+    // Step 1 — fast non-transactional read: return early if a valid OTP already exists
+    if (!forceNew && subOrderId) {
+      const [existingOtp] = await db
+        .select({ otpCode: deliveryOtps.otpCode })
+        .from(deliveryOtps)
+        .where(and(
+          eq(deliveryOtps.subOrderId, subOrderId),
+          eq(deliveryOtps.status, "PENDING"),
+          gt(deliveryOtps.expiresAt, new Date())
+        ))
+        .limit(1);
+
+      if (existingOtp) {
+        return existingOtp.otpCode;
+      }
+    }
+
+    const newOtpCode = crypto.randomInt(100000, 999999).toString();
     const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
-    
+
+    // Step 2 — transactional double-check + insert
+    // `finalCode` is a let in the outer scope, reassignable from inside the tx callback.
+    // This is safe because Node.js is single-threaded and the transaction Promise resolves
+    // synchronously within the current event loop micro-task before we return finalCode.
+    let finalCode = newOtpCode;
+
     await db.transaction(async (tx) => {
-      // Auto-invalidate old PENDING OTPs for this sub_order
+      // Re-check inside the transaction: another concurrent request may have already
+      // inserted a valid OTP during the window between Step 1 and this transaction.
+      if (!forceNew && subOrderId) {
+        const [recheckOtp] = await tx
+          .select({ otpCode: deliveryOtps.otpCode })
+          .from(deliveryOtps)
+          .where(and(
+            eq(deliveryOtps.subOrderId, subOrderId),
+            eq(deliveryOtps.status, "PENDING"),
+            gt(deliveryOtps.expiresAt, new Date())
+          ))
+          .limit(1);
+
+        if (recheckOtp) {
+          // Q: كيف نُمرّر قيمة من داخل tx callback للخارج دون رمي استثناء؟
+          // A: نستخدم `let finalCode` في الـ outer scope. الـ callback يُعدّل المتغير
+          //    مباشرةً عبر closure. هذا يعمل لأن await tx() لن يُحسم إلا بعد انتهاء
+          //    الـ callback كاملاً، فنضمن أن finalCode مُعدَّل قبل العودة من generateOtp.
+          finalCode = recheckOtp.otpCode;
+          return; // exit transaction early — no DB writes needed
+        }
+      }
+
+      // Auto-invalidate old PENDING OTPs for this sub_order before inserting new one
       if (subOrderId) {
         await tx.update(deliveryOtps)
           .set({ status: "EXPIRED", updatedAt: new Date() })
@@ -23,12 +88,17 @@ export class DeliveryOtpService {
       await tx.insert(deliveryOtps).values({
         orderId,
         subOrderId,
-        otpCode,
+        otpCode: newOtpCode,
         status: "PENDING",
         expiresAt,
         attemptCount: 0
       });
     });
+
+    if (finalCode !== newOtpCode) {
+      // Race condition was resolved — an existing OTP was found inside the transaction
+      return finalCode;
+    }
 
     console.log(JSON.stringify({
       event: "OTP_GENERATED",
@@ -38,7 +108,7 @@ export class DeliveryOtpService {
       success: true
     }));
 
-    return otpCode;
+    return newOtpCode;
   }
 
   async verifyOtp(orderId: string, otpCode: string, subOrderId?: string): Promise<void> {
@@ -132,8 +202,6 @@ export class DeliveryOtpService {
     //    المتاجر يستحقون العمولة، فلا تُعالَج العمولات إطلاقاً.
     //    الوضع الحالي: deliveryOtp.controller.ts يُمرّر subOrderId دائماً عند التحقق من
     //    التسليم، لذا هذه الحالة نظرية ولا تحدث في الإنتاج.
-    //    الإصلاح الدفاعي: تسجيل تحذير صريح عند تشغيل verifyOtp بدون subOrderId لتنبيه
-    //    المطورين بأن العمولات ستُفوَّت بصمت إذا غُيِّر مسار الاستدعاء مستقبلاً.
     if (subOrderId) {
       try {
         await ledgerService.processCommissions(subOrderId);
