@@ -73,7 +73,20 @@ export class DeliveryOtpController {
       await deliveryOtpService.generateOtp(subOrder.orderId, subOrderId);
       res.json({ success: true, message: "تم تجديد رمز التوصيل. يمكن للعميل الاطلاع عليه في تطبيقه." });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      // Q: هل يجب أن يُرجع generateOtp دائماً 400 عند الفشل؟
+      // A: لا — الكود السابق كان يُرجع 400 لجميع الأخطاء دون استثناء، بما فيها:
+      //    - أخطاء قاعدة البيانات (DB connection failure) → يجب أن تُرجع 500
+      //    - فشل generateOtp الداخلي (DB error أثناء الإدراج) → يجب أن يُرجع 500
+      //    إن أُرجعت أخطاء السيرفر كـ 400، يعتقد العميل أن الطلب كان خاطئاً
+      //    فيُعيد المحاولة بنفس البيانات الصحيحة وهي لن تفيد في حالة DB فشل.
+      //    الإصلاح: التمييز بين أخطاء المنطق المعروفة وأخطاء السيرفر غير المتوقعة.
+      const msg: string = error.message || "";
+      const isClientError =
+        msg.includes("NOT_FOUND") ||
+        msg.includes("expired") ||
+        msg.includes("UNAUTHORIZED") ||
+        msg.includes("IN_TRANSIT");
+      res.status(isClientError ? 400 : 500).json({ message: msg });
     }
   }
 

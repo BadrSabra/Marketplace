@@ -485,6 +485,23 @@ export class WalletService {
           .where(eq(walletTransactions.id, pendingWalletTxToFail.id));
       }
 
+      // Q: هل يكفي تحديث الـ PENDING WITHDRAWAL إلى FAILED دون إنشاء سجل REFUND جديد؟
+      // A: لا — المستخدم يحتاج لسجل صريح يُوضّح سبب ارتفاع رصيده. الكود السابق كان:
+      //    1. يُعيد الرصيد للمحفظة ✓
+      //    2. يُسجّل REFUND في ledger ✓
+      //    3. يُحوّل الـ PENDING WITHDRAWAL إلى FAILED ✓
+      //    4. ✗ لا يُنشئ walletTransaction جديداً من نوع REFUND
+      //    النتيجة: يرى العميل رصيده يرتفع بشكل غامض — WITHDRAWAL مرفوض (FAILED)
+      //    بلا أي سجل يُفسّر الائتمان، مما يُربك تاريخ المعاملات.
+      //    الإصلاح: إنشاء سجل REFUND في walletTransactions لإكمال الأثر المالي.
+      await tx.insert(walletTransactions).values({
+        walletId: wallet.id,
+        type: "REFUND",
+        amount: request.amount,
+        status: "COMPLETED",
+        notes: `استرداد طلب سحب مرفوض${note ? ` — ${note}` : ""}`,
+      });
+
       const [updatedRequest] = await tx.update(withdrawalRequests)
         .set({ status: "REJECTED", reviewedByAdminId: adminId, adminNote: note || null, updatedAt: new Date() })
         .where(eq(withdrawalRequests.id, requestId))
