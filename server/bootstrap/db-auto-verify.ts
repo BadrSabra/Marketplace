@@ -282,6 +282,26 @@ export async function autoVerifyDatabase() {
       report[`Index:notifications_user_idx`] = "Exists ✅";
     }
 
+    // BUG-FIX: Ensure UNIQUE constraint on wallets(user_id).
+    // Without it, concurrent getOrCreateWallet() calls could create duplicate wallet rows.
+    const walletUniqueCheck = await pool.query(`
+      SELECT 1 FROM information_schema.table_constraints
+      WHERE table_name = 'wallets' AND constraint_type = 'UNIQUE'
+      AND constraint_name = 'wallets_user_id_unique'
+    `);
+    if (walletUniqueCheck.rowCount === 0) {
+      // Remove any duplicate wallets first (keep the oldest row per user)
+      await pool.query(`
+        DELETE FROM wallets w1
+        USING wallets w2
+        WHERE w1.user_id = w2.user_id AND w1.created_at > w2.created_at
+      `);
+      await pool.query(`ALTER TABLE wallets ADD CONSTRAINT wallets_user_id_unique UNIQUE (user_id)`);
+      report[`Constraint:wallets_user_id_unique`] = "Created ⚠️";
+    } else {
+      report[`Constraint:wallets_user_id_unique`] = "Exists ✅";
+    }
+
     // 4. Verify Default Data (Atomic Transaction)
     await db.transaction(async (tx) => {
       const [admin] = await tx.select().from(users).where(eq(users.email, "admin@mitgaber.com")).limit(1);

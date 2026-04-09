@@ -244,7 +244,7 @@ export async function initializeDatabase() {
       }
     }
 
-    // 4. Ensure Indexes
+    // 4. Ensure Indexes and Constraints
     console.log("[DB] Checking indexes...");
     const indexCheck = await pool.query(`
       SELECT indexname FROM pg_indexes 
@@ -256,6 +256,32 @@ export async function initializeDatabase() {
       console.log("✅ Index 'sub_order_pending_idx' created.");
     } else {
       console.log("✅ Index 'sub_order_pending_idx' exists.");
+    }
+
+    // BUG-FIX: Ensure unique constraint on wallets(user_id) exists.
+    // Without this, two concurrent getOrCreateWallet() calls for the same user could
+    // both INSERT, creating duplicate wallet rows and splitting the user's balance.
+    const walletUniqueCheck = await pool.query(`
+      SELECT constraint_name FROM information_schema.table_constraints
+      WHERE table_name = 'wallets' AND constraint_type = 'UNIQUE'
+      AND constraint_name = 'wallets_user_id_unique'
+    `);
+    if (walletUniqueCheck.rowCount === 0) {
+      console.log("[DB] Unique constraint on wallets(user_id) missing. Adding...");
+      try {
+        // Deduplicate existing rows before adding constraint (keep oldest wallet per user)
+        await pool.query(`
+          DELETE FROM wallets w1
+          USING wallets w2
+          WHERE w1.user_id = w2.user_id AND w1.created_at > w2.created_at
+        `);
+        await pool.query(`ALTER TABLE wallets ADD CONSTRAINT wallets_user_id_unique UNIQUE (user_id)`);
+        console.log("✅ Unique constraint on wallets(user_id) added.");
+      } catch (e: any) {
+        console.error("❌ Failed to add unique constraint on wallets(user_id):", e.message);
+      }
+    } else {
+      console.log("✅ Unique constraint on wallets(user_id) exists.");
     }
 
     // 5. Auto Create Default Admin

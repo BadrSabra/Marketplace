@@ -35,7 +35,11 @@ export const users = pgTable("users", {
 // WALLETS
 export const wallets = pgTable("wallets", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id),
+  // BUG-FIX: Added .unique() constraint. Without it, two concurrent getOrCreateWallet()
+  // calls for the same user could both find no row and both INSERT, silently creating
+  // duplicate wallets. The unique constraint ensures only one wallet can exist per user
+  // and allows ON CONFLICT DO NOTHING to be used safely in getOrCreateWallet().
+  userId: uuid("user_id").notNull().unique().references(() => users.id),
   balance: numeric("balance", { precision: 12, scale: 2 }).notNull().default("0.00"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

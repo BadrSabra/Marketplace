@@ -340,34 +340,39 @@ export class OrderService {
 
       if (order.paymentStatus === "PAID") {
         const [wallet] = await tx.select().from(wallets).where(eq(wallets.userId, userId)).for("update");
-        if (wallet) {
-          const subtotalRefund = parseFloat(subOrder.subtotal);
-          const deliveryFeeRefund = subOrder.expectedDeliveryFee ? parseFloat(subOrder.expectedDeliveryFee) : 0;
-          const totalRefund = subtotalRefund + deliveryFeeRefund;
 
-          await tx.update(wallets)
-            .set({ balance: (parseFloat(wallet.balance) + totalRefund).toFixed(2), updatedAt: new Date() })
-            .where(eq(wallets.id, wallet.id));
+        // BUG-FIX: Was using `if (wallet)` which silently skips the entire refund when the
+        // wallet row is missing. The order payment already left the customer's wallet, so a
+        // missing wallet here means the money vanishes. Throw to roll back the whole tx instead.
+        if (!wallet) throw new Error("WALLET_NOT_FOUND: Cannot refund cancelled sub-order — customer wallet missing");
 
-          await tx.insert(walletTransactions).values({
-            walletId: wallet.id,
-            type: "REFUND",
-            amount: totalRefund.toFixed(2),
-            relatedOrderId: order.id,
-            status: "COMPLETED",
-            notes: `استرداد عند إلغاء الطلب الفرعي #${subOrderId.slice(0, 8)}`,
-          });
+        const subtotalRefund = parseFloat(subOrder.subtotal);
+        const deliveryFeeRefund = subOrder.expectedDeliveryFee ? parseFloat(subOrder.expectedDeliveryFee) : 0;
+        const totalRefund = subtotalRefund + deliveryFeeRefund;
 
-          // BUG-FIX: Missing ledger entry for customer-triggered sub-order cancellation refund.
-          // Every wallet credit must have a matching ledger entry to maintain double-entry integrity.
-          await tx.insert(ledger).values({
-            referenceId: order.id,
-            debitUserId: null,
-            creditUserId: userId,
-            amount: totalRefund.toFixed(2),
-            type: "WITHDRAWAL",
-          });
-        }
+        await tx.update(wallets)
+          .set({ balance: (parseFloat(wallet.balance) + totalRefund).toFixed(2), updatedAt: new Date() })
+          .where(eq(wallets.id, wallet.id));
+
+        await tx.insert(walletTransactions).values({
+          walletId: wallet.id,
+          type: "REFUND",
+          amount: totalRefund.toFixed(2),
+          relatedOrderId: order.id,
+          status: "COMPLETED",
+          notes: `استرداد عند إلغاء الطلب الفرعي #${subOrderId.slice(0, 8)}`,
+        });
+
+        // BUG-FIX: Was type "WITHDRAWAL" for a credit to the customer (refund).
+        // A refund credits the wallet → must use type "DEPOSIT", consistent with
+        // approveDeposit, rejectWithdrawal reversal, and the suborder.service.ts fix.
+        await tx.insert(ledger).values({
+          referenceId: order.id,
+          debitUserId: null,
+          creditUserId: userId,
+          amount: totalRefund.toFixed(2),
+          type: "DEPOSIT",
+        });
       }
     });
   }

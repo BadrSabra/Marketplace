@@ -9,14 +9,20 @@ import { auditService } from "../../services/auditService";
 
 export class WalletService {
   async getOrCreateWallet(userId: string): Promise<Wallet> {
-    const [existing] = await db.select().from(wallets).where(eq(wallets.userId, userId));
-    if (existing) return existing;
+    // BUG-FIX: The previous SELECT + INSERT pattern had a TOCTOU race condition.
+    // Two concurrent calls for the same userId could both see no row and both INSERT,
+    // creating duplicate wallets (no UNIQUE constraint existed on user_id before this fix).
+    // Now: attempt INSERT with ON CONFLICT DO NOTHING, then re-SELECT if nothing was inserted.
+    // This is fully atomic and safe under any concurrency.
+    const inserted = await db.insert(wallets)
+      .values({ userId, balance: "0.00" })
+      .onConflictDoNothing()
+      .returning();
 
-    const [newWallet] = await db.insert(wallets).values({
-      userId,
-      balance: "0.00"
-    }).returning();
-    return newWallet;
+    if (inserted.length > 0) return inserted[0];
+
+    const [existing] = await db.select().from(wallets).where(eq(wallets.userId, userId));
+    return existing;
   }
 
   async getBalance(userId: string): Promise<string> {
