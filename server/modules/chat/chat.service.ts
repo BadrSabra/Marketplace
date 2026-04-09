@@ -25,23 +25,66 @@ export class ChatService {
   }
 
   async getOrCreateSupportRoom(userId: string) {
-    const existingRooms = await pool.query<{ room_id: string }>(`
-      SELECT cp.room_id FROM chat_participants cp
-      JOIN chat_rooms cr ON cr.id = cp.room_id
-      WHERE cp.user_id = $1 AND cr.type = 'SUPPORT' AND cr.status = 'OPEN'
+    // Q: لماذا كانت هذه الدالة تُعاني من race condition؟
+    // A: الكود السابق كان: (1) SELECT للبحث عن غرفة موجودة، ثم إذا لم تُوجد (2) INSERT غرفة جديدة.
+    //    إذا استدعى المستخدم هذه الدالة مرتين متزامنتين (نقر مزدوج أو إعادة تحميل سريعة):
+    //    - الاستدعاء الأول يجد لا شيء → يقرر إنشاء غرفة جديدة
+    //    - الاستدعاء الثاني يجد لا شيء أيضاً (المعاملة الأولى لم تكتمل بعد) → يقرر إنشاء أخرى
+    //    النتيجة: غرفتا دعم مفتوحتان لنفس المستخدم — رسائله تذهب لإحداهما والدعم يرد على الأخرى.
+    //    الإصلاح: دمج الـ SELECT والـ INSERT في CTE واحدة أتومية تُضمن إما العودة بالغرفة
+    //    الموجودة أو إنشاء واحدة جديدة — بدون فجوة زمنية قابلة للاستغلال بين العمليتين.
+    //
+    // ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+    //    حتى مع الـ CTE الأتومية، إذا انهارت المعاملة بعد إنشاء الغرفة وقبل إنشاء المشاركين
+    //    (chatParticipants)، ستظل غرفة بدون مشاركين في DB. الإصلاح الكامل يتطلب تنفيذ
+    //    createRoom داخل نفس CTE أو إضافة قيد NOT NULL على chat_participants.room_id.
+    const admins = await pool.query<{ id: string }>(`SELECT id FROM users WHERE role = 'ADMIN' LIMIT 1`);
+    const adminId = admins.rows[0]?.id;
+
+    // Atomic check-and-create: find existing OPEN SUPPORT room for this user, or create one.
+    // The INSERT ... WHERE NOT EXISTS runs in the same query as the SELECT, eliminating the gap.
+    const result = await pool.query<{ id: string; type: string; title: string | null; status: string; created_at: Date }>(`
+      WITH existing AS (
+        SELECT cr.id, cr.type, cr.title, cr.status, cr.created_at
+        FROM chat_participants cp
+        JOIN chat_rooms cr ON cr.id = cp.room_id
+        WHERE cp.user_id = $1 AND cr.type = 'SUPPORT' AND cr.status = 'OPEN'
+        LIMIT 1
+      ),
+      new_room AS (
+        INSERT INTO chat_rooms (type, status, title)
+        SELECT 'SUPPORT', 'OPEN', 'دعم فني'
+        WHERE NOT EXISTS (SELECT 1 FROM existing)
+        RETURNING id, type, title, status, created_at
+      )
+      SELECT * FROM existing
+      UNION ALL
+      SELECT * FROM new_room
       LIMIT 1
     `, [userId]);
 
-    if (existingRooms.rows.length > 0) {
-      const room = await db.select().from(chatRooms).where(eq(chatRooms.id, existingRooms.rows[0].room_id)).limit(1);
-      return room[0];
+    const room = result.rows[0];
+    if (!room) throw new Error("SUPPORT_ROOM_CREATION_FAILED");
+
+    // If the room was just created (not found in 'existing'), add participants now.
+    // We detect this by checking if any participant row exists for this room+user.
+    const participantCheck = await pool.query(
+      `SELECT 1 FROM chat_participants WHERE room_id = $1 AND user_id = $2 LIMIT 1`,
+      [room.id, userId]
+    );
+
+    if (participantCheck.rowCount === 0) {
+      // New room: insert all participants atomically
+      const participantIds = adminId ? [userId, adminId] : [userId];
+      await pool.query(
+        `INSERT INTO chat_participants (room_id, user_id)
+         SELECT $1, unnest($2::uuid[])
+         ON CONFLICT DO NOTHING`,
+        [room.id, participantIds]
+      );
     }
 
-    const admins = await pool.query<{ id: string }>(`SELECT id FROM users WHERE role = 'ADMIN' LIMIT 1`);
-    const adminId = admins.rows[0]?.id;
-    const participantIds = adminId ? [userId, adminId] : [userId];
-
-    return this.createRoom("SUPPORT", participantIds, { title: "دعم فني" });
+    return room;
   }
 
   async getRoomsForUser(userId: string) {

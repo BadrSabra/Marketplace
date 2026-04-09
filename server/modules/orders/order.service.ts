@@ -330,20 +330,24 @@ export class OrderService {
     // Q: هل هناك مشكلة أداء في استدعاء getOrderWithSubOrders لكل طلب على حدة؟
     // A: نعم — هذا نمط N+1 كلاسيكي. getOrderWithSubOrders تُشغّل 6-8 استعلامات DB
     //    لكل طلب: (الطلب + العميل + الطلبات الفرعية + لكل طلب فرعي: العناصر + المتجر
-    //    + السائق + OTP). لعميل لديه 10 طلبات، هذا يعني ~60-80 استعلاماً بدلاً من 5-6.
+    //    + السائق + OTP). لعميل لديه 20 طلباً، هذا يعني ~160 استعلاماً بدلاً من 6.
     //    مع Promise.all كل هذه الاستعلامات تنطلق بالتوازي محتلّةً connection pool الـ DB.
     //
     // Q: ما الإصلاح المُطبَّق الآن؟
-    // A: إضافة `limit` و`offset` لتقليل عدد الطلبات المُجلَبة دفعةً واحدة. الحد الأقصى
-    //    الافتراضي 20 طلباً يعني بدلاً من 80+ استعلام نُنفّذ بحد أقصى 20*8 = 160 استعلاماً.
-    //    هذا تحسين جزئي — الإصلاح الكامل هو إعادة كتابة الدالة بـ batch queries.
+    // A: استبدال نمط N+1 بـ 6 استعلامات batch بغض النظر عن عدد الطلبات:
+    //    1. جلب الطلبات (مع pagination)
+    //    2. جلب جميع الطلبات الفرعية لتلك الطلبات بـ inArray دفعةً واحدة
+    //    3. جلب جميع عناصر الطلبات + أسماء المنتجات بـ inArray
+    //    4. جلب جميع المتاجر الفريدة بـ inArray
+    //    5. جلب جميع السائقين المعيّنين الفريدين بـ inArray
+    //    6. جلب جميع رموز OTP الصالحة للطلبات IN_TRANSIT بـ inArray
+    //    ثم التجميع في الذاكرة — أسرع بكثير دون ضغط DB.
     //
     // ⚠️ خطأ جديد تكشفه هذه الإصلاح:
-    //    إضافة limit/offset يعني أن الـ frontend يجب أن يُرسل معاملات pagination صحيحة.
-    //    أي مكوّن React يطلب /api/orders بدون pagination سيحصل على أحدث 20 طلباً فقط.
-    //    إذا كان المستخدم لديه أكثر من 20 طلباً، الطلبات الأقدم ستختفي من الواجهة —
-    //    خطأ جديد في تجربة المستخدم لم يكن موجوداً قبل هذا الإصلاح لأن كل الطلبات
-    //    كانت تُجلَب دفعةً واحدة بدون حد.
+    //    هذه النسخة لا تستدعي generateOtp تلقائياً عند انتهاء صلاحية OTP في قائمة الطلبات
+    //    (كما كانت getOrderWithSubOrders تفعل). العميل سيرى otpCode = null لطلب IN_TRANSIT
+    //    منتهية صلاحية OTP فيه بدلاً من توليد رمز جديد تلقائياً. الإصلاح: يجب على الـ frontend
+    //    استدعاء POST /api/orders/suborders/:id/regenerate-otp لتجديد الرمز عند الحاجة.
     const safeLimit = Math.min(limit, 50);
     const customerOrders = await db
       .select()
@@ -353,9 +357,112 @@ export class OrderService {
       .limit(safeLimit)
       .offset(offset);
 
-    return await Promise.all(customerOrders.map(async (order) => {
-      return await this.getOrderWithSubOrders(order.id);
-    }));
+    if (customerOrders.length === 0) return [];
+
+    const orderIds = customerOrders.map(o => o.id);
+
+    // Batch 1: all sub-orders for these orders in one query
+    const allSubOrders = await db.select().from(subOrders).where(inArray(subOrders.orderId, orderIds));
+    const subOrderIds = allSubOrders.map(s => s.id);
+
+    // Batch 2: all order items + product names in one query
+    const allItems = subOrderIds.length > 0
+      ? await db.select({
+          id: orderItems.id,
+          subOrderId: orderItems.subOrderId,
+          productId: orderItems.productId,
+          quantity: orderItems.quantity,
+          priceAtOrder: orderItems.priceAtOrder,
+          productName: products.name,
+          productImageUrl: products.imageUrl,
+        })
+        .from(orderItems)
+        .leftJoin(products, eq(orderItems.productId, products.id))
+        .where(inArray(orderItems.subOrderId, subOrderIds))
+      : [];
+
+    // Batch 3: all unique stores in one query
+    const storeIds = [...new Set(allSubOrders.map(s => s.storeId).filter(Boolean) as string[])];
+    const allStores = storeIds.length > 0
+      ? await db.select({ id: stores.id, name: stores.name }).from(stores).where(inArray(stores.id, storeIds))
+      : [];
+
+    // Batch 4: all assigned drivers in one query
+    const driverIds = [...new Set(allSubOrders.map(s => s.assignedDriverId).filter(Boolean) as string[])];
+    const allDrivers = driverIds.length > 0
+      ? await db.select({ id: users.id, name: users.name, phone: users.phone }).from(users).where(inArray(users.id, driverIds))
+      : [];
+
+    // Batch 5: all valid OTPs for IN_TRANSIT sub-orders in one query
+    // Q: لماذا لا نُولّد OTP جديداً هنا عند انتهاء الصلاحية (كما كانت getOrderWithSubOrders)؟
+    // A: توليد OTP داخل دالة قراءة GET كانت مشكلة أصلاً (موثقة في getOrderWithSubOrders):
+    //    يُحدث race condition عند الاستعلامات المتزامنة. بالإضافة لذلك، استدعاؤه داخل
+    //    batch يعني وجود K استدعاءات generateOtp متوازية (K = عدد الطلبات IN_TRANSIT)
+    //    مما يُضاعف تأثير الـ race condition. الحل الصحيح: العميل يستدعي
+    //    POST /api/orders/suborders/:id/regenerate-otp بشكل صريح عند الحاجة.
+    const inTransitIds = allSubOrders.filter(s => s.status === "IN_TRANSIT").map(s => s.id);
+    const now = new Date();
+    const allOtps = inTransitIds.length > 0
+      ? await db.select({ subOrderId: deliveryOtps.subOrderId, otpCode: deliveryOtps.otpCode })
+        .from(deliveryOtps)
+        .where(and(
+          inArray(deliveryOtps.subOrderId, inTransitIds),
+          eq(deliveryOtps.status, "PENDING"),
+          gt(deliveryOtps.expiresAt, now)
+        ))
+      : [];
+
+    // Build lookup maps for O(1) assembly
+    const itemsBySubOrder = new Map<string, typeof allItems>();
+    for (const item of allItems) {
+      if (!itemsBySubOrder.has(item.subOrderId)) itemsBySubOrder.set(item.subOrderId, []);
+      itemsBySubOrder.get(item.subOrderId)!.push(item);
+    }
+    const storeMap = new Map(allStores.map(s => [s.id, s]));
+    const driverMap = new Map(allDrivers.map(d => [d.id, d]));
+    const otpMap = new Map(allOtps.map(o => [o.subOrderId, o.otpCode]));
+    const subsByOrder = new Map<string, typeof allSubOrders>();
+    for (const sub of allSubOrders) {
+      if (!subsByOrder.has(sub.orderId)) subsByOrder.set(sub.orderId, []);
+      subsByOrder.get(sub.orderId)!.push(sub);
+    }
+
+    return customerOrders.map(order => {
+      const subs = subsByOrder.get(order.id) || [];
+      const subsWithItems = subs.map(sub => {
+        const rawItems = (itemsBySubOrder.get(sub.id) || []).map(item => ({
+          ...item,
+          product_name: item.productName,
+          price_at_order: item.priceAtOrder,
+        }));
+        return {
+          ...sub,
+          sub_order_id: sub.id,
+          store_id: sub.storeId,
+          store: storeMap.get(sub.storeId) || null,
+          driver: sub.assignedDriverId ? driverMap.get(sub.assignedDriverId) || null : null,
+          otpCode: otpMap.get(sub.id) || null,
+          items: rawItems,
+        };
+      });
+
+      // In-memory auto-heal: keep status consistent without extra DB writes per order
+      const allDone = subsWithItems.every(s => s.status === "DELIVERED" || s.status === "CANCELLED");
+      const anyDelivered = subsWithItems.some(s => s.status === "DELIVERED");
+      const isFinalStatus = order.overallStatus === "DELIVERED" || order.overallStatus === "CANCELLED";
+      let effectiveStatus = order.overallStatus;
+
+      if (allDone && !isFinalStatus) {
+        effectiveStatus = anyDelivered ? "DELIVERED" : "CANCELLED";
+        // Fire-and-forget background heal — does not block the response
+        db.update(orders)
+          .set({ overallStatus: effectiveStatus, updatedAt: new Date() })
+          .where(eq(orders.id, order.id))
+          .catch(() => {});
+      }
+
+      return { ...order, overallStatus: effectiveStatus, subOrders: subsWithItems };
+    });
   }
 
   async getStoreOwnerOrders(ownerId: string) {
