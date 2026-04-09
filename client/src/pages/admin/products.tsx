@@ -60,11 +60,21 @@ export default function ProductsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
+                      {/* Q: ماذا يحدث عند عرض product.stock عندما تكون قيمته null؟
+                          A: null > 10 = false و null > 0 = false ← يُعرض النص باللون الأحمر
+                             (text-destructive) كأن المنتج نفد مخزونه رغم أن null يعني
+                             "مخزون غير محدود". كذلك يعرض "{null} وحدة" = "null وحدة" في الـ DOM.
+                             الإصلاح: معالجة null كحالة خاصة تعني "غير محدود" وعرضها باللون
+                             الأخضر مع نص واضح "غير محدود". */}
                       <div className="flex items-center gap-1.5">
                         <Archive className="w-4 h-4 text-muted-foreground" />
-                        <span className={`font-medium ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-destructive'}`}>
-                          {product.stock} وحدة
-                        </span>
+                        {product.stock === null || product.stock === undefined ? (
+                          <span className="font-medium text-green-600">غير محدود</span>
+                        ) : (
+                          <span className={`font-medium ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-destructive'}`}>
+                            {product.stock} وحدة
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>

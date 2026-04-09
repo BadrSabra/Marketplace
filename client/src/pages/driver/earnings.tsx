@@ -58,7 +58,17 @@ export default function DriverEarnings() {
   //    الـ API يُعيد الآن totalCommissionAmount محسوباً من كامل دفتر الأستاذ.
   const commissionTotal = parseFloat(transactionsData?.totalCommissionAmount || "0");
 
-  const isInconsistent = false; // Placeholder for logic checking consistency
+  // Q: لماذا isInconsistent = false دائماً ولا يُظهر شارة التحذير أبداً؟
+  // A: هذا placeholder وُضع بنية إضافة منطق حقيقي لاحقاً لكنه لم يُنفَّذ.
+  //    الشارة المرفقة به (AlertCircle "تحذير: رصيدك يحتاج مراجعة") معطّلة بشكل كامل
+  //    لأن isInconsistent يُقيَّم دائماً كـ false ولن تُعرض أبداً للسائق.
+  //    للتحقق الحقيقي من التناسق، يجب مقارنة الرصيد الحالي (balance) مع مجموع
+  //    العمولات المحسوبة (totalCommissionAmount) مطروحاً منها مجموع السحوبات.
+  //    لكن API الحالي لا يُعيد إجمالي السحوبات في استجابة /api/ledger/transactions،
+  //    لذا لا توجد بيانات كافية لإجراء الفحص بشكل صحيح في الواجهة الأمامية.
+  //    الإصلاح المؤقت: إبقاء false مع توثيق السبب. الإصلاح الكامل يتطلب إضافة
+  //    totalWithdrawals إلى استجابة الـ API ثم المقارنة: balance ≈ commissions - withdrawals.
+  const isInconsistent = false;
 
   return (
     <div className="container mx-auto p-6 space-y-6 text-right" dir="rtl">

@@ -18,11 +18,21 @@ function ProductItem({ product, storeName, onRequireLogin }: { product: any; sto
   const { toast } = useToast();
   const [added, setAdded] = useState(false);
 
+  // Q: هل يجب منع إضافة المنتج للسلة عندما يكون مخزونه 0؟
+  // A: نعم — الكود السابق لم يكن يتحقق من المخزون إطلاقاً في الواجهة الأمامية.
+  //    المستخدم يستطيع إضافة منتج نفد مخزونه للسلة ثم تقديم الطلب، وسيرفضه الـ backend
+  //    بخطأ "Not enough stock" — تجربة مستخدم سيئة: إضافة + ملء السلة + اكتشاف الرفض
+  //    عند الدفع بدلاً من منع الإضافة من البداية.
+  //    stock === null يعني "مخزون غير محدود" (تُركه يعمل).
+  //    stock === 0 يعني "نفد المخزون" — يجب تعطيل الزر وعرض شارة "نفد".
+  const isOutOfStock = product.stock !== null && product.stock !== undefined && product.stock <= 0;
+
   const handleAdd = () => {
     if (!user) {
       onRequireLogin();
       return;
     }
+    if (isOutOfStock) return;
     addItem({
       productId: product.id,
       name: product.name,
@@ -37,7 +47,7 @@ function ProductItem({ product, storeName, onRequireLogin }: { product: any; sto
   };
 
   return (
-    <Card className="overflow-hidden group hover:shadow-md transition-shadow">
+    <Card className={`overflow-hidden group hover:shadow-md transition-shadow ${isOutOfStock ? "opacity-60" : ""}`}>
       <div className="h-40 md:h-48 bg-slate-100 dark:bg-slate-800 flex items-center justify-center relative overflow-hidden">
         {product.imageUrl ? (
           <img
@@ -47,6 +57,11 @@ function ProductItem({ product, storeName, onRequireLogin }: { product: any; sto
           />
         ) : (
           <ImageOff className="h-12 w-12 text-slate-300 dark:text-slate-600" />
+        )}
+        {isOutOfStock && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">نفد المخزون</span>
+          </div>
         )}
       </div>
       <CardContent className="p-4">
@@ -58,11 +73,14 @@ function ProductItem({ product, storeName, onRequireLogin }: { product: any; sto
             size="sm"
             variant={added ? "outline" : "default"}
             onClick={handleAdd}
+            disabled={isOutOfStock}
             className={`text-xs md:text-sm transition-all ${added ? "border-green-500 text-green-600" : ""}`}
             data-testid={`button-add-cart-${product.id}`}
           >
             {added ? (
               <><Check className="h-3 w-3 ml-1 text-green-600" />تمت الإضافة</>
+            ) : isOutOfStock ? (
+              <>نفد المخزون</>
             ) : (
               <><ShoppingCart className="h-3 w-3 md:h-4 md:w-4 ml-1 md:ml-2" />إضافة</>
             )}
@@ -83,9 +101,23 @@ export default function PublicStorePage() {
     queryKey: [`/api/public/stores/${id}`],
   });
 
+  // Q: لماذا نستخدم store_id كمعامل في الطلب بدلاً من جلب كل المنتجات وتصفيتها؟
+  // A: الكود السابق كان يجلب كامل قائمة المنتجات من كل المتاجر (/api/products بدون فلتر)
+  //    ثم يُصفّيها محلياً بـ .filter(p => p.storeId === id).
+  //    هذا يعني:
+  //    1. تنزيل 100-500+ منتج (حسب حجم المنصة) لعرض 5-20 منتج فقط.
+  //    2. مفتاح الكاش ['/api/products'] يُشارَك بين كل المتاجر — إذا زار المستخدم
+  //       متجراً آخر يُستخدم نفس الكاش المُجمَّع بدلاً من بيانات المتجر المحدد.
+  //    3. أي تحديث (invalidation) يمس الكاش المشترك ويُعيد تحميل كل المنتجات.
+  //    الإصلاح: تمرير store_id كمعامل في URL حتى يُصفّي الـ backend البيانات قبل الإرسال،
+  //    وتضمين store_id في مفتاح الكاش لعزل بيانات كل متجر عن غيره.
   const { data: products, isLoading: productsLoading } = useQuery({
-    queryKey: [`/api/products`],
-    select: (data: any[]) => data.filter(p => p.storeId === id),
+    queryKey: [`/api/products`, { store_id: id }],
+    queryFn: async () => {
+      const res = await fetch(`/api/products?store_id=${id}`);
+      if (!res.ok) throw new Error("فشل تحميل المنتجات");
+      return res.json();
+    },
   });
 
   const handleRequireLogin = () => {
