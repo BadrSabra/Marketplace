@@ -6,6 +6,7 @@ import { notificationService } from "../notifications/notification.service";
 import { notifyUser, notifyAdmins } from "../notifications/push.service";
 import { ledgerService } from "../ledger/ledger.service";
 import { auditService } from "../../services/auditService";
+import { money } from "../../utils/money";
 
 export class WalletService {
   async getOrCreateWallet(userId: string): Promise<Wallet> {
@@ -34,7 +35,10 @@ export class WalletService {
     const wallet = await this.getOrCreateWallet(userId);
     const [user] = await db.select().from(users).where(eq(users.id, userId));
     
-    if (parseFloat(amount) <= 0) {
+    // Q: لماذا نستخدم money.isNonPositive بدلاً من parseFloat(amount) <= 0 ؟
+    // A: money.isNonPositive تستخدم حساب القروش الصحيح — تجنباً لأي حالة حدودية
+    //    مثل "0.001" التي تُعيد parseFloat قيمة موجبة لكنها أقل من أصغر وحدة مالية.
+    if (money.isNonPositive(amount)) {
       throw new Error("Amount must be greater than 0");
     }
 
@@ -107,20 +111,19 @@ export class WalletService {
         .where(eq(users.id, wallet.userId));
 
       // 1️⃣ WALLET PROTECTION LAYER: Prevent Negative Balance
-      const amountNum = parseFloat(transaction.amount);
-      const oldBalanceNum = parseFloat(wallet.balance);
-      
-      if (amountNum < 0) {
+      // Q: لماذا نستخدم money.isNegative / money.add بدلاً من parseFloat؟
+      // A: parseFloat + toFixed يُسبب أخطاء تقريب في IEEE 754 لقيم معينة مثل 1.005
+      //    التي تُعطي "1.00" بدلاً من "1.01". money.add يعمل بالقروش (أعداد صحيحة)
+      //    ويتجنب هذه الأخطاء كلياً. راجع server/utils/money.ts للتفاصيل.
+      if (money.isNegative(transaction.amount)) {
         throw new Error("BUSINESS_RULE_VIOLATION: Negative deduction amount not allowed");
       }
 
-      const newBalanceNum = oldBalanceNum + amountNum;
+      const newBalance = money.add(wallet.balance, transaction.amount);
 
-      if (newBalanceNum < 0) {
+      if (money.isNegative(newBalance)) {
         throw new Error("BUSINESS_RULE_VIOLATION: Insufficient wallet balance");
       }
-
-      const newBalance = newBalanceNum.toFixed(2);
       
       await tx.update(wallets)
         .set({ balance: newBalance })
