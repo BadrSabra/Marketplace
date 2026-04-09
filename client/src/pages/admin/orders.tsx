@@ -46,16 +46,21 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   CANCELLED: "ملغي",
 };
 
+// Q: هل يجب تحديث الـ frontend ليتعامل مع بنية الاستجابة المُجزَّأة الجديدة؟
+// A: نعم — /api/admin/orders يُعيد الآن { orders, total, limit, offset } بدلاً
+//    من مصفوفة مباشرة. أي كود يتوقع مصفوفة مباشرةً (orders.map، orders.length)
+//    سيحصل على undefined ويتعطل بصمت: النتيجة صفحة فارغة بدون أي رسالة خطأ.
+//    الإصلاح: استخراج data.orders في queryFn، وإضافة data-testid للعدد الإجمالي.
 export default function OrdersPage() {
-  const { data: orders, isLoading } = useQuery<any[]>({
+  const { data, isLoading } = useQuery<{ orders: any[]; total: number }>({
     queryKey: ["/api/admin/orders"],
     queryFn: async () => {
-      // apiFetch throws on non-OK — no if(!res.ok) guard needed here
       const res = await apiFetch("/api/admin/orders");
       return res.json();
     },
     refetchInterval: 30000,
   });
+  const orders = data?.orders ?? [];
 
   const getStatusColor = (status: string) => {
     switch (status) {

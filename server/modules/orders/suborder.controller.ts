@@ -24,6 +24,13 @@ export class SubOrderController {
       if (err.message === "NOT_FOUND") {
         return res.status(404).json({ error: "Sub-order not found" });
       }
+      // Q: هل يجب معالجة خطأ PARENT_ORDER_NOT_FOUND كـ 404 أم 500؟
+      // A: 404 — هذا خطأ بيانات تالفة (طلب فرعي يشير لطلب غير موجود)، وليس
+      //    خطأ في السيرفر. إرجاع 404 يُعلم المستدعي أن الطلب المرجعي مفقود
+      //    ويُميّزه عن أخطاء البنية الداخلية الحقيقية.
+      if (err.message?.startsWith("PARENT_ORDER_NOT_FOUND")) {
+        return res.status(404).json({ error: "Parent order not found" });
+      }
       if (err.message === "INVALID_TRANSITION") {
         return res.status(400).json({ error: "Invalid status transition" });
       }

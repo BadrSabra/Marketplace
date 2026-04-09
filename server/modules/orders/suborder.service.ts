@@ -34,6 +34,13 @@ export class SubOrderService {
       this.validateSubOrderTransition(subOrder.status, newStatus);
 
       const [parentOrder] = await tx.select().from(orders).where(eq(orders.id, subOrder.orderId));
+      // Q: هل يجب التحقق من وجود parentOrder قبل الوصول إلى حقوله؟
+      // A: نعم — إذا كان sub_orders.order_id يشير إلى طلب محذوف أو غير موجود
+      //    (بيانات تالفة أو حذف يدوي من DB)، تُرجع الاستعلام [] وتكون parentOrder
+      //    undefined. أي وصول لاحق لـ parentOrder.customerId أو parentOrder.paymentStatus
+      //    سيُطلق TypeError يُسبب خطأ 500 غير مقروء بدلاً من رسالة واضحة.
+      //    الإصلاح: التحقق الصريح وإطلاق خطأ ذو معنى يُعالجه الـ controller بـ 404.
+      if (!parentOrder) throw new Error("PARENT_ORDER_NOT_FOUND: sub-order references a missing parent order");
       const [customer] = await tx.select().from(users).where(eq(users.id, parentOrder.customerId));
 
       const isStoreOwner = actorUser.role === "STORE_OWNER";

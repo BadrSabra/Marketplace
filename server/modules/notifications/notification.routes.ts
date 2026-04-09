@@ -75,10 +75,20 @@ router.put("/read-all", authenticate, async (req: Request, res: Response) => {
   }
 });
 
+// Q: هل يجب التحقق من صيغة UUID قبل تمريرها لقاعدة البيانات في PUT /:id/read؟
+// A: نعم — PostgreSQL يرفض أي قيمة ليست UUID صحيحة بخطأ داخلي (مثل "invalid input syntax
+//    for type uuid"). هذا يعني أن أي مستخدم يمرّر id عشوائية (كـ "abc" أو "123") يحصل
+//    على خطأ 500 بدلاً من 400. إضافةً لذلك، فإن بعض قواعد بيانات PostgreSQL تُعيد
+//    رسائل الخطأ الداخلية للمستخدم مما يُسرّب معلومات عن بنية DB.
+//    الإصلاح: التحقق المبكر من UUID قبل أي وصول لـ DB، مع إرجاع 400 واضح.
 router.put("/:id/read", authenticate, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
     const id = req.params.id as string;
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_REGEX.test(id)) {
+      return res.status(400).json({ message: "Invalid notification ID format" });
+    }
     await pushService.markAsRead(id, userId);
     res.json({ success: true });
   } catch (err: any) {

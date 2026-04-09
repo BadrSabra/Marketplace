@@ -530,6 +530,20 @@ export class WalletService {
         .set({ balance: newBalance, updatedAt: new Date() })
         .where(eq(wallets.id, lockedWallet.id));
 
+      // Q: هل يجب تسجيل سجل walletTransactions عند استدعاء deductBalance؟
+      // A: نعم بالتأكيد — كل خصم من المحفظة يجب أن يُترك أثراً في جدول walletTransactions
+      //    لضمان اكتمال سجل المعاملات المرئي للمستخدم. الغياب الحالي يعني أن أي مستدعٍ
+      //    مستقبلي لـ deductBalance لن يجد الخصم في تاريخ المعاملات — المال يختفي بصمت.
+      //    الإصلاح: إضافة سجل WITHDRAWAL بحالة COMPLETED لكل خصم عبر هذه الدالة.
+      await tx.insert(walletTransactions).values({
+        walletId: lockedWallet.id,
+        type: "WITHDRAWAL",
+        amount: deductAmount.toFixed(2),
+        relatedOrderId: referenceId ?? null,
+        status: "COMPLETED",
+        notes: "خصم نظام داخلي",
+      });
+
       await auditService.logEvent({
         actionType: "WALLET_DEDUCTION",
         entityType: "wallet",

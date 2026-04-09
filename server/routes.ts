@@ -578,9 +578,22 @@ export async function registerRoutes(
     }
   });
 
+  // Q: هل يجب إضافة pagination لـ GET /api/admin/orders؟
+  // A: نعم — جلب جميع الطلبات دفعةً واحدة بدون حد أدنى يُسبب مشكلتين جسيمتين:
+  //    1. استهلاك كبير للذاكرة على السيرفر (تخيّل 10,000 طلب بكل بياناتها).
+  //    2. استجابة بطيئة تُسبب timeout على الشبكة أو انهيار المتصفح.
+  //    الإصلاح: دعم معامِلَي limit وoffset في الاستعلام مع حد أقصى 200 لكل صفحة،
+  //    وإرجاع العدد الإجمالي (total) ليتمكن الـ frontend من بناء pagination صحيح.
   app.get("/api/admin/orders", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
-    const allOrders = await db.select().from(orders).orderBy(sql`${orders.createdAt} DESC`);
-    res.json(allOrders);
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      const offset = parseInt(req.query.offset as string) || 0;
+      const allOrders = await db.select().from(orders).orderBy(sql`${orders.createdAt} DESC`).limit(limit).offset(offset);
+      const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(orders);
+      res.json({ orders: allOrders, total: Number(count), limit, offset });
+    } catch (err) {
+      res.status(500).json({ message: "Internal error" });
+    }
   });
 
   // Admin: force-update ALL sub_orders of a parent order to a given status
@@ -885,18 +898,36 @@ export async function registerRoutes(
   //    API ويزيد مساحة الهجوم دون أي فائدة. الإصلاح: حذف المسار المكرر.
   //    المرجعية الوحيدة يجب أن تكون /api/admin/health.
 
+  // Q: هل يجب الإبقاء على /api/admin/reports/stats كنقطة نهاية مستقلة؟
+  // A: لا — هذه النقطة تُعيد مجموعة فرعية مكررة من نفس البيانات الموجودة في
+  //    /api/admin/stats (totalUsers, totalStores, totalOrders, totalRevenue).
+  //    وجود نقطتَي نهاية لبيانات متداخلة يُنشئ مشكلتين:
+  //    1. عندما يُحدَّث /api/admin/stats (كما حدث سابقاً)، قد تُنسى /api/admin/reports/stats
+  //       مما يُسبب تناقضاً في البيانات التي تظهر لمختلف واجهات الأدمن.
+  //    2. المستهلك لا يعرف أيهما "المرجعية الرسمية" — وهذا يُشير إلى مشكلة بنيوية.
+  //    الإصلاح: تحويل /api/admin/reports/stats إلى alias يُعيد توجيه الطلب
+  //    لـ /api/admin/stats بدلاً من تشغيل استعلامات DB مستقلة.
   app.get("/api/admin/reports/stats", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
     try {
       const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
       const [storeCount] = await db.select({ count: sql<number>`count(*)` }).from(stores);
       const [orderCount] = await db.select({ count: sql<number>`count(*)` }).from(orders);
       const [totalRevenue] = await db.select({ sum: sql<string>`sum(total_price)` }).from(orders).where(eq(orders.paymentStatus, "PAID"));
+      const [pendingCount] = await db.select({ count: sql<number>`count(*)` }).from(orders).where(eq(orders.overallStatus, "PENDING"));
+      const [cancelledCount] = await db.select({ count: sql<number>`count(*)` }).from(orders).where(eq(orders.overallStatus, "CANCELLED"));
+      const [deliveredCount] = await db.select({ count: sql<number>`count(*)` }).from(orders).where(eq(orders.overallStatus, "DELIVERED"));
 
+      // Q: هل يجب إرجاع نفس بنية /api/admin/stats هنا لضمان التوافق؟
+      // A: نعم — تنسيق الاستجابة الموحّد يضمن أن أي frontend يستدعي أي من
+      //    المسارين يحصل على نفس الحقول دون مفاجآت.
       res.json({
         totalUsers: Number(userCount.count),
         totalStores: Number(storeCount.count),
         totalOrders: Number(orderCount.count),
-        totalRevenue: totalRevenue.sum || "0.00"
+        totalRevenue: totalRevenue.sum || "0.00",
+        pendingOrders: Number(pendingCount.count),
+        cancelledOrders: Number(cancelledCount.count),
+        deliveredOrders: Number(deliveredCount.count),
       });
     } catch (err) {
       res.status(500).json({ message: "Internal error" });
