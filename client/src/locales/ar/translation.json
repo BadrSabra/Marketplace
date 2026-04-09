@@ -35,6 +35,9 @@
         "store_owner": "صاحب متجر",
         "driver": "سائق توصيل"
       },
+      "contact_method_label": "طريقة التواصل",
+      "tab_email": "بريد إلكتروني",
+      "tab_phone": "رقم الهاتف",
       "store_name_label": "اسم المتجر",
       "store_name_placeholder": "متجري الرائع",
       "store_type_label": "نوع المتجر",
@@ -118,7 +121,8 @@
       "types": {
         "DEPOSIT": "إيداع",
         "WITHDRAWAL": "سحب/دفع",
-        "COMMISSION": "عمولة"
+        "COMMISSION": "عمولة",
+        "REFUND": "استرداد"
       }
     },
     "transactions": {

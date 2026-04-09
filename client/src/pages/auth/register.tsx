@@ -126,7 +126,7 @@ export default function RegisterPage() {
 
               {/* Identifier toggle tabs */}
               <div className="space-y-2 text-right">
-                <label className="text-sm font-medium text-foreground">طريقة التواصل</label>
+                <label className="text-sm font-medium text-foreground">{t("auth.register.contact_method_label")}</label>
                 <div className="flex rounded-xl border-2 border-border/80 overflow-hidden bg-background">
                   <button
                     type="button"
@@ -139,7 +139,7 @@ export default function RegisterPage() {
                     data-testid="tab-email"
                   >
                     <Mail className="w-4 h-4" />
-                    بريد إلكتروني
+                    {t("auth.register.tab_email")}
                   </button>
                   <button
                     type="button"
@@ -152,7 +152,7 @@ export default function RegisterPage() {
                     data-testid="tab-phone"
                   >
                     <Phone className="w-4 h-4" />
-                    رقم الهاتف
+                    {t("auth.register.tab_phone")}
                   </button>
                 </div>
 
