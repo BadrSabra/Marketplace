@@ -951,18 +951,36 @@ export async function registerRoutes(
       //    أي تحقق حقيقي. هذا يعني أن أي اختلال مالي بين أرصدة المحافظ وإجمالي الحركات
       //    في دفتر الأستاذ سيظل غير مكتشف في فحص الصحة. الإصلاح: حساب إجمالي قيم
       //    دفتر الأستاذ (الدائن ناقص المدين) ومقارنتها بإجمالي أرصدة المحافظ.
-      //    إن تطابقا ضمن دقة 0.01 جنيه فالنظام متسق. إن اختلفا يُبلَّغ عن الاختلال.
       const [ledgerCredits] = await db.select({ sum: sql<string>`sum(amount)` }).from(ledger).where(sql`${ledger.creditUserId} IS NOT NULL`);
       const [ledgerDebits] = await db.select({ sum: sql<string>`sum(amount)` }).from(ledger).where(sql`${ledger.debitUserId} IS NOT NULL`);
 
-      const walletTotal = parseFloat(walletSum.total || "0");
-      const netLedger = parseFloat(ledgerCredits.sum || "0") - parseFloat(ledgerDebits.sum || "0");
-      const isConsistent = Math.abs(walletTotal - netLedger) < 0.01;
+      // Q: لماذا كانت المقارنة `Math.abs(walletTotal - netLedger) < 0.01` غير كافية؟
+      // A: ثلاث مشاكل في المنطق السابق:
+      //    1. استخدام parseFloat + float arithmetic يُسبب أخطاء IEEE 754 في الحساب.
+      //    2. عتبة 0.01 تسمح بفارق يصل لـ 0.009 جنيه بصمت — مُضاعَف على 1000 محفظة
+      //       = فارق ممكن بـ 9 جنيه غير مُبلَّغ عنه (حُجة: "دقة" بينما هو إخفاء).
+      //    3. الـ admin health controller (healthController.getHealth) تم إصلاحه بالفعل
+      //       ليستخدم money.equals بدون عتبة تسامح، لكن هذا المسار العام بقي بالمنطق القديم.
+      //       نتيجة: نقطتا نهاية مختلفتان تعطيان نتائج متناقضة للاتساق المالي.
+      //    الإصلاح: استخدام money.subtract للصافي ثم money.equals للمقارنة — تطابق قرش بقرش.
+      //
+      // ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+      //    نظام قديم يعمل بالمنطق السابق (< 0.01) مع فوارق أقل من قرش ستُعلَّم الآن
+      //    كـ inconsistent بعد التحديث — ما كان "مقبولاً" سابقاً يصبح تنبيهاً حقيقياً.
+      //    يُنصح بمراجعة ledger consistency report قبل وبعد النشر للتأكد من سلامة البيانات.
+      const walletsBalanceStr = walletSum.total || "0";
+      const ledgerNetStr = money.subtract(ledgerCredits.sum || "0", ledgerDebits.sum || "0");
+      const isConsistent = money.equals(walletsBalanceStr, ledgerNetStr);
+
+      // For display only — use parseFloat to show human-readable numbers in the response.
+      // The authoritative consistency decision is made above with money.equals (cent-accurate).
+      const walletTotalDisplay = parseFloat(walletsBalanceStr);
+      const ledgerNetDisplay = parseFloat(ledgerNetStr);
 
       res.json({
         database: "OK",
         ledgerConsistency: isConsistent,
-        ledgerDiscrepancy: isConsistent ? null : (walletTotal - netLedger).toFixed(2),
+        ledgerDiscrepancy: isConsistent ? null : (walletTotalDisplay - ledgerNetDisplay).toFixed(2),
         auditLogCount: Number(auditCount.count),
         totalWalletBalance: walletSum.total || "0.00",
         timestamp: new Date().toISOString()
