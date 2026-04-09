@@ -186,8 +186,7 @@
         "ALL": "جميع الحالات",
         "PENDING": "قيد الانتظار",
         "ACCEPTED": "مقبول",
-        "READY": "جاهز",
-        "PICKED_UP": "تم الاستلام",
+        "IN_TRANSIT": "قيد التوصيل",
         "DELIVERED": "تم التوصيل",
         "CANCELLED": "ملغي"
       },

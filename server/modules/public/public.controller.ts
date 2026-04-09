@@ -1,4 +1,4 @@
-import { stores, type Store } from "@shared/schema";
+import { stores, users } from "@shared/schema";
 import { db } from "../../db";
 import { desc, eq, and } from "drizzle-orm";
 
@@ -9,14 +9,17 @@ export const publicStoresController = {
       const limit = parseInt(req.query.limit as string) || 12;
       const offset = (page - 1) * limit;
 
-      // In a real app, we'd check for 'approved' and 'active' status.
-      // For now, we'll fetch all stores since the schema doesn't have an 'isActive' or 'isApproved' field for stores yet, 
-      // but we can assume they are active if they exist or filter by owner approval if needed.
-      // Based on the prompt: "Return only approved stores" and "active stores".
-      // Let's check if there's any status field we missed or just return all for now.
-      
-      const allStores = await db.select()
+      const allStores = await db
+        .select({
+          id: stores.id,
+          name: stores.name,
+          description: stores.description,
+          imageUrl: stores.imageUrl,
+          createdAt: stores.createdAt,
+        })
         .from(stores)
+        .innerJoin(users, eq(stores.ownerId, users.id))
+        .where(eq(users.isApproved, true))
         .orderBy(desc(stores.createdAt))
         .limit(limit)
         .offset(offset);
@@ -44,7 +47,11 @@ export const publicStoresController = {
       if (!UUID_REGEX.test(id)) {
         return res.status(404).json({ message: "Store not found" });
       }
-      const [store] = await db.select().from(stores).where(eq(stores.id, id));
+      const [store] = await db
+        .select({ id: stores.id, name: stores.name, description: stores.description, imageUrl: stores.imageUrl, createdAt: stores.createdAt, ownerId: stores.ownerId })
+        .from(stores)
+        .innerJoin(users, eq(stores.ownerId, users.id))
+        .where(and(eq(stores.id, id), eq(users.isApproved, true)));
       if (!store) {
         return res.status(404).json({ message: "Store not found" });
       }

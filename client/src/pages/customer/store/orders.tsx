@@ -65,8 +65,7 @@ export default function StoreOrders() {
     const variants: Record<string, string> = {
       PENDING: "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800",
       ACCEPTED: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800",
-      READY: "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800",
-      PICKED_UP: "bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-400 dark:border-cyan-800",
+      IN_TRANSIT: "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800",
       DELIVERED: "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800",
       CANCELLED: "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
     };
@@ -156,8 +155,7 @@ export default function StoreOrders() {
                 <SelectItem value="ALL">{t('store.orders.statuses.ALL')}</SelectItem>
                 <SelectItem value="PENDING">{t('store.orders.statuses.PENDING')}</SelectItem>
                 <SelectItem value="ACCEPTED">{t('store.orders.statuses.ACCEPTED')}</SelectItem>
-                <SelectItem value="READY">{t('store.orders.statuses.READY')}</SelectItem>
-                <SelectItem value="PICKED_UP">{t('store.orders.statuses.PICKED_UP')}</SelectItem>
+                <SelectItem value="IN_TRANSIT">{t('store.orders.statuses.IN_TRANSIT')}</SelectItem>
                 <SelectItem value="DELIVERED">{t('store.orders.statuses.DELIVERED')}</SelectItem>
                 <SelectItem value="CANCELLED">{t('store.orders.statuses.CANCELLED')}</SelectItem>
               </SelectContent>
