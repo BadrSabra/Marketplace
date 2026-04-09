@@ -108,7 +108,31 @@ export class OrderController {
       await orderService.cancelSubOrder(id, userId);
       res.json({ message: "SubOrder cancelled and refunded if applicable" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      // Q: هل يجب إرجاع 400 لجميع أخطاء إلغاء الطلب الفرعي؟
+      // A: لا — الكود السابق كان يُرجع 400 لجميع الأخطاء دون استثناء، مما يُخفي:
+      //    - أخطاء التفويض ("Unauthorized") التي يجب أن تُرجع 403
+      //    - حالات عدم وجود الطلب ("SubOrder not found") التي يجب أن تُرجع 404
+      //    - تعارضات الحالة ("Cannot cancel delivered/in-transit") التي يجب أن تُرجع 409
+      //    - أخطاء السيرفر الداخلية ("WALLET_NOT_FOUND") التي يجب أن تُرجع 500
+      //    الإصلاح: تمييز كل حالة وإرجاع كود HTTP مناسب لكل منها.
+      const msg: string = error.message || "";
+      if (msg === "SubOrder not found") {
+        return res.status(404).json({ message: "الطلب الفرعي غير موجود" });
+      }
+      if (msg === "Unauthorized") {
+        return res.status(403).json({ message: "غير مصرح بإلغاء هذا الطلب" });
+      }
+      if (
+        msg === "Sub-order already cancelled" ||
+        msg === "Cannot cancel delivered sub-order" ||
+        msg === "Cannot cancel sub-order that is already in transit"
+      ) {
+        return res.status(409).json({ message: msg });
+      }
+      if (msg.startsWith("WALLET_NOT_FOUND")) {
+        return res.status(500).json({ message: "خطأ داخلي: لم يمكن معالجة الاسترداد" });
+      }
+      res.status(500).json({ message: "حدث خطأ داخلي" });
     }
   }
 }

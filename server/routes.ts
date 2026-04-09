@@ -317,7 +317,13 @@ export async function registerRoutes(
     }
   }
 
-  app.patch("/api/customer/profile", authenticate, handleProfileUpdate);
+  // Q: هل يجب تقييد PATCH /api/customer/profile للعملاء فقط؟
+  // A: نعم — بدون authorizeRole يستطيع أي مستخدم مُسجَّل (DRIVER, STORE_OWNER, ADMIN)
+  //    استدعاء هذا المسار وتعديل بيانات ملفه الشخصي عبر مسار العملاء بدلاً من مساره
+  //    المخصص. هذا يتحايل على القيود المقصودة (مثل: السائق لا يُفترض أن يعدّل بياناته
+  //    إلا عبر /api/driver/profile الذي يملك قيوداً إضافية). الإصلاح: إضافة
+  //    authorizeRole(["CUSTOMER"]) لضمان أن هذا المسار للعملاء فقط.
+  app.patch("/api/customer/profile", authenticate, authorizeRole(["CUSTOMER"]), handleProfileUpdate);
   app.patch("/api/driver/profile", authenticate, authorizeRole(["DRIVER"]), handleProfileUpdate);
 
   // Receipt upload endpoint for deposits
@@ -768,10 +774,24 @@ export async function registerRoutes(
     try {
       const [walletSum] = await db.select({ total: sql<string>`sum(balance)` }).from(wallets);
       const [auditCount] = await db.select({ count: sql<number>`count(*)` }).from(auditLogs);
-      
+
+      // Q: هل يجب أن يتحقق /api/health فعلاً من اتساق المحفظة مع دفتر الأستاذ؟
+      // A: نعم — الكود السابق كان يُرجع `ledgerConsistency: true` دائماً بشكل ثابت بدون
+      //    أي تحقق حقيقي. هذا يعني أن أي اختلال مالي بين أرصدة المحافظ وإجمالي الحركات
+      //    في دفتر الأستاذ سيظل غير مكتشف في فحص الصحة. الإصلاح: حساب إجمالي قيم
+      //    دفتر الأستاذ (الدائن ناقص المدين) ومقارنتها بإجمالي أرصدة المحافظ.
+      //    إن تطابقا ضمن دقة 0.01 جنيه فالنظام متسق. إن اختلفا يُبلَّغ عن الاختلال.
+      const [ledgerCredits] = await db.select({ sum: sql<string>`sum(amount)` }).from(ledger).where(sql`${ledger.creditUserId} IS NOT NULL`);
+      const [ledgerDebits] = await db.select({ sum: sql<string>`sum(amount)` }).from(ledger).where(sql`${ledger.debitUserId} IS NOT NULL`);
+
+      const walletTotal = parseFloat(walletSum.total || "0");
+      const netLedger = parseFloat(ledgerCredits.sum || "0") - parseFloat(ledgerDebits.sum || "0");
+      const isConsistent = Math.abs(walletTotal - netLedger) < 0.01;
+
       res.json({
         database: "OK",
-        ledgerConsistency: true,
+        ledgerConsistency: isConsistent,
+        ledgerDiscrepancy: isConsistent ? null : (walletTotal - netLedger).toFixed(2),
         auditLogCount: Number(auditCount.count),
         totalWalletBalance: walletSum.total || "0.00",
         timestamp: new Date().toISOString()
@@ -855,7 +875,13 @@ export async function registerRoutes(
   app.get("/api/orders/my-store", authenticate, authorizeRole(["STORE_OWNER", "ADMIN"]), orderController.getMyStoreOrders);
   app.get("/api/orders/:id", authenticate, orderController.get);
   app.post("/api/orders", authenticate, orderLimiter, orderController.create);
-  app.patch("/api/suborders/:id/cancel", authenticate, orderController.cancelSubOrder);
+  // Q: هل يجب تقييد PATCH /api/suborders/:id/cancel للعملاء فقط؟
+  // A: نعم — هذا المسار مخصص حصراً للعملاء لإلغاء طلباتهم الفرعية واسترداد رصيدهم.
+  //    بدون authorizeRole يستطيع أي مستخدم مُصادق عليه (DRIVER, STORE_OWNER, ADMIN)
+  //    محاولة الإلغاء. كان الحاجز الوحيد هو الفحص الداخلي `order.customerId !== userId`
+  //    الذي يُرجع "Unauthorized" لكن بكود 400 خاطئ بدلاً من 403. الإصلاح: إضافة
+  //    authorizeRole(["CUSTOMER"]) على المسار لصد غير العملاء قبل دخولهم للمنطق.
+  app.patch("/api/suborders/:id/cancel", authenticate, authorizeRole(["CUSTOMER"]), orderController.cancelSubOrder);
 
   // Ensure Admin account is ready
   async function ensureAdminAccount() {

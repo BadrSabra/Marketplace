@@ -5,6 +5,11 @@ import { db } from "../../db";
 import { subOrders } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
+// Q: لماذا يحتاج هذا الملف إلى z من zod؟
+// A: استُخدم z.ZodError في كتلة catch ضمن verify() للتمييز بين أخطاء التحقق من
+//    صحة بيانات الإدخال (يجب أن تُرجع 400) وأخطاء السيرفر (يجب أن تُرجع 500).
+//    z كان مستورداً بالفعل للـ verifySchema وgenerateSchema في هذا الملف.
+
 const generateSchema = z.object({
   orderId: z.string().uuid(),
   subOrderId: z.string().uuid().optional(),
@@ -67,7 +72,23 @@ export class DeliveryOtpController {
       await deliveryOtpService.verifyOtp(subOrder.orderId, otpCode, subOrderId);
       res.json({ message: "Delivery verified successfully" });
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      // Q: هل يجب أن يُرجع التحقق من OTP دائماً 400 عند الفشل؟
+      // A: لا — الكود السابق كان يُرجع 400 لجميع أخطاء التحقق، بما فيها:
+      //    - أخطاء Zod (بيانات إدخال غير صالحة) → 400 صحيح
+      //    - خطأ "Invalid OTP code" أو "Maximum attempts exceeded" → 400 صحيح
+      //    - أخطاء DB (فشل processCommissions، أخطاء الاتصال) → يجب 500
+      //    إن أُرجعت أخطاء السيرفر كـ 400، يعتقد العميل أن الطلب كان خاطئاً فيعيد
+      //    المحاولة بنفس البيانات، مما يستنزف محاولات OTP المتاحة (5 محاولات) عبثاً.
+      //    الإصلاح: التمييز بين أخطاء العميل المعروفة وأخطاء السيرفر غير المتوقعة.
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      const msg: string = error.message || "";
+      const isClientError =
+        msg.includes("Invalid") ||
+        msg.includes("expired") ||
+        msg.includes("attempts");
+      res.status(isClientError ? 400 : 500).json({ message: msg });
     }
   }
 }
