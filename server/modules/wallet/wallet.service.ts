@@ -305,7 +305,11 @@ export class WalletService {
   }
 
   async approveWithdrawal(requestId: string, adminId: string): Promise<WithdrawalRequest> {
-    return await db.transaction(async (tx) => {
+    // Capture email + amount for post-transaction notification (email is non-critical,
+    // must not be sent inside the transaction where a failure would prevent the commit).
+    let notifData: { email: string; amount: string } | null = null;
+
+    const result = await db.transaction(async (tx) => {
       const [request] = await tx.select()
         .from(withdrawalRequests)
         .where(eq(withdrawalRequests.id, requestId))
@@ -366,7 +370,7 @@ export class WalletService {
         metadata: { amount: request.amount, userId: request.userId }
       });
 
-      // Notify user
+      // Push notification (fire-and-forget)
       notifyUser(
         request.userId,
         "WITHDRAWAL_APPROVED",
@@ -375,12 +379,27 @@ export class WalletService {
         { amount: request.amount }
       ).catch(console.error);
 
+      // Fetch user email for post-transaction email notification
+      const [user] = await tx.select({ email: users.email }).from(users).where(eq(users.id, request.userId)).limit(1);
+      if (user) notifData = { email: user.email, amount: request.amount };
+
       return updatedRequest;
     });
+
+    // Send email AFTER the transaction commits so a nodemailer failure cannot roll back
+    // the withdrawal approval. Email delivery is best-effort and non-blocking.
+    if (notifData) {
+      const { email, amount } = notifData as { email: string; amount: string };
+      notificationService.notifyWithdrawalApproved(email, amount).catch(console.error);
+    }
+
+    return result;
   }
 
   async rejectWithdrawal(requestId: string, adminId: string, note?: string): Promise<WithdrawalRequest> {
-    return await db.transaction(async (tx) => {
+    let notifData: { email: string; amount: string } | null = null;
+
+    const result = await db.transaction(async (tx) => {
       const [request] = await tx.select()
         .from(withdrawalRequests)
         .where(eq(withdrawalRequests.id, requestId))
@@ -457,7 +476,7 @@ export class WalletService {
         metadata: { amount: request.amount, userId: request.userId, note }
       });
 
-      // Notify user
+      // Push notification (fire-and-forget)
       notifyUser(
         request.userId,
         "WITHDRAWAL_REJECTED",
@@ -466,8 +485,21 @@ export class WalletService {
         { amount: request.amount, note }
       ).catch(console.error);
 
+      // Fetch user email for post-transaction email notification
+      const [user] = await tx.select({ email: users.email }).from(users).where(eq(users.id, request.userId)).limit(1);
+      if (user) notifData = { email: user.email, amount: request.amount };
+
       return updatedRequest;
     });
+
+    // Send email AFTER the transaction commits so a nodemailer failure cannot roll back
+    // the withdrawal rejection. Email delivery is best-effort and non-blocking.
+    if (notifData) {
+      const { email, amount } = notifData as { email: string; amount: string };
+      notificationService.notifyWithdrawalRejected(email, amount).catch(console.error);
+    }
+
+    return result;
   }
 
   async deductBalance(userId: string, amount: string, referenceId?: string): Promise<void> {

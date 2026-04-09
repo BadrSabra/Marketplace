@@ -74,6 +74,29 @@ export class NotificationService {
       `مرحباً،\n\nنأسف لإعلامك بأنه تم رفض طلب الإيداع بمبلغ ${amount} جنيه.\n\nيُرجى التأكد من أن الإيصال المُرفق صحيح وواضح، أو التواصل مع فريق الدعم عبر واتساب للمساعدة.\n\nفريق ميت جابر`
     );
   }
+
+  // Q: لماذا أُضيفت notifyWithdrawalApproved و notifyWithdrawalRejected؟
+  // A: مسارا الموافقة والرفض على السحب (approveWithdrawal/rejectWithdrawal في wallet.service.ts)
+  //    كانا يُرسلان فقط إشعار Push عبر notifyUser() دون أي بريد إلكتروني.
+  //    في المقابل، دورة الإيداع كاملة تُرسل بريداً في ثلاث حالات (submit/approve/reject).
+  //    تناقض: السائق وصاحب المتجر يتلقيان إشعار Push قابل للإغفال لكن لا يصلهما بريد
+  //    يؤكد أن مبلغ السحب تم تحويله أو أُعيد لرصيدهم. الإصلاح: إضافة دالتي تنبيه
+  //    بالبريد مع نص عربي واضح ثم استدعاؤهما في wallet.service.ts بعد انتهاء المعاملة.
+  async notifyWithdrawalApproved(email: string, amount: string) {
+    await this.sendEmail(
+      email,
+      "تمت الموافقة على طلب السحب - ميت جابر",
+      `مرحباً،\n\nتهانينا! تمت الموافقة على طلب سحب مبلغ ${amount} جنيه من محفظتك.\n\nسيتم تحويل المبلغ إليك عبر الطريقة المتفق عليها.\n\nفريق ميت جابر`
+    );
+  }
+
+  async notifyWithdrawalRejected(email: string, amount: string) {
+    await this.sendEmail(
+      email,
+      "تم رفض طلب السحب - ميت جابر",
+      `مرحباً،\n\nنأسف لإعلامك بأنه تم رفض طلب سحب مبلغ ${amount} جنيه.\n\nتم إعادة المبلغ كاملاً إلى رصيد محفظتك. للاستفسار يُرجى التواصل مع فريق الدعم.\n\nفريق ميت جابر`
+    );
+  }
 }
 
 export const notificationService = new NotificationService();

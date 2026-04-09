@@ -25,7 +25,12 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 import { deliveryController } from "./modules/delivery/delivery.controller";
 import depositRouter from "./modules/deposits/deposits.controller";
 import ledgerRouter from "./modules/ledger/ledger.controller";
-import { auditMiddleware } from "./modules/audit/audit.middleware";
+// Q: لماذا أُزيل auditMiddleware من app.use()؟
+// A: auditMiddleware هو كود ميت — يُغلّف res.send على كل طلب HTTP لكنه
+//    يفحص req.audit قبل تسجيل أي شيء، ولا يوجد مسار واحد في كامل الكودبيس
+//    يُعيِّن req.audit. النتيجة: كل طلب يمر عبر wrapper إضافي بدون فائدة.
+//    التسجيل الفعلي يتم عبر auditService.logEvent() مباشرةً في كل وحدة.
+//    الإصلاح: حذف app.use(auditMiddleware) لإزالة overhead غير مبرر من كل طلب.
 import { deliveryOfferController } from "./modules/delivery/deliveryOffer.controller";
 import { deliveryOtpController } from "./modules/delivery/deliveryOtp.controller";
 
@@ -39,7 +44,6 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
     const { otpLimiter } = await import("./middleware/security");
-    app.use(auditMiddleware);
 
     // Self-deployment webhook - GitHub يُرسل هنا عند كل push
     app.post(
