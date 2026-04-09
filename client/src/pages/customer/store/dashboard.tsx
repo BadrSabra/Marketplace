@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Package, Wallet, ShoppingBag, TrendingUp, AlertTriangle, Store, ImagePlus, Upload } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, getAuthHeaders } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { StoreLayout } from "@/components/layout/store-layout";
 import { Spinner } from "@/components/ui/spinner";
@@ -87,10 +87,9 @@ export default function StoreDashboard() {
     try {
       const formData = new FormData();
       formData.append("image", file);
-      const token = localStorage.getItem("jwt_token");
       const res = await fetch(`/api/stores/${myStore.id}/image`, {
         method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: getAuthHeaders(),
         body: formData,
       });
       if (!res.ok) {

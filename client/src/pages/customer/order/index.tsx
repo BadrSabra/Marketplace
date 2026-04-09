@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, getAuthHeaders } from "@/lib/queryClient";
 import { apiFetch } from "@/lib/api";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -65,7 +65,7 @@ function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; or
     queryKey: ["/api/delivery/suborders", subOrderId, "offers"],
     queryFn: async () => {
       const res = await fetch(`/api/delivery/suborders/${subOrderId}/offers`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("jwt_token")}` },
+        headers: getAuthHeaders(),
       });
       if (!res.ok) return [];
       return res.json();

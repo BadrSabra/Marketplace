@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, getAuthHeaders } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -196,10 +196,9 @@ export default function CustomerWallet() {
       const formData = new FormData();
       formData.append("receipt", file);
 
-      const token = localStorage.getItem("jwt_token");
       const res = await fetch("/api/wallet/deposit/receipt", {
         method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: getAuthHeaders(),
         body: formData,
       });
 

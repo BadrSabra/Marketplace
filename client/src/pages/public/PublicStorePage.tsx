@@ -155,7 +155,9 @@ export default function PublicStorePage() {
                   <p className="text-sm md:text-base text-white/80 mt-1 max-w-xl line-clamp-2">{storeData.description}</p>
                 )}
               </div>
-              <Badge className="mb-1 bg-green-500 text-white border-0">مفتوح</Badge>
+              <Badge className={`mb-1 border-0 text-white ${storeData.isOpen ? "bg-green-500" : "bg-slate-500"}`}>
+                {storeData.isOpen ? "مفتوح" : "مغلق"}
+              </Badge>
             </div>
           </div>
         </div>

@@ -6,6 +6,8 @@ import {
 } from "@/components/ui/accordion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { HelpCircle } from "lucide-react";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 
 export default function FAQPage() {
   const faqs = [
@@ -26,35 +28,41 @@ export default function FAQPage() {
       answer: "قم بالتسجيل واختيار دور 'سائق'، وارفاق الوثائق المطلوبة. بمجرد مراجعة طلبك والموافقة عليه، ستتمكن من استقبال طلبات التوصيل وتقديم عروض الأسعار."
     },
     {
-      question: "ما هو نظام العروض (Offers) للسائقين؟",
+      question: "ما هو نظام العروض للسائقين؟",
       answer: "عندما يطلب العميل توصيلاً، يظهر الطلب للسائقين المتاحين. يمكن لكل سائق تقديم عرض سعر للتوصيل، ويقوم العميل أو النظام باختيار العرض الأنسب."
     }
   ];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Card className="max-w-4xl mx-auto">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-3xl font-bold">
-            <HelpCircle className="h-8 w-8 text-primary" />
-            الأسئلة الشائعة
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Accordion type="single" collapsible className="w-full">
-            {faqs.map((faq, index) => (
-              <AccordionItem key={index} value={`item-${index}`}>
-                <AccordionTrigger className="text-right text-lg font-medium">
-                  {faq.question}
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground text-base leading-relaxed">
-                  {faq.answer}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </CardContent>
-      </Card>
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950" dir="rtl">
+      <Navbar />
+
+      <main className="flex-grow container mx-auto px-4 py-8">
+        <Card className="max-w-4xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-3xl font-bold">
+              <HelpCircle className="h-8 w-8 text-primary" />
+              الأسئلة الشائعة
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Accordion type="single" collapsible className="w-full">
+              {faqs.map((faq, index) => (
+                <AccordionItem key={index} value={`item-${index}`}>
+                  <AccordionTrigger className="text-right text-lg font-medium">
+                    {faq.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground text-base leading-relaxed text-right">
+                    {faq.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </CardContent>
+        </Card>
+      </main>
+
+      <Footer />
     </div>
   );
 }

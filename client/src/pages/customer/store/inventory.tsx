@@ -9,7 +9,7 @@ import { Loader2, Plus, Edit, Trash2, Package, Search, AlertTriangle, ImagePlus,
 import { useAuth } from "@/hooks/use-auth";
 import { Product } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, getAuthHeaders } from "@/lib/queryClient";
 import { StoreLayout } from "@/components/layout/store-layout";
 import {
   Dialog,
@@ -123,10 +123,9 @@ export default function StoreInventory() {
       const formData = new FormData();
       formData.append("image", selectedImageFile);
 
-      const token = localStorage.getItem("jwt_token");
       const res = await fetch(`/api/products/${productId}/image`, {
         method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: getAuthHeaders(),
         body: formData,
       });
 
