@@ -12,6 +12,15 @@ const createOrderSchema = z.object({
   })).min(1)
 });
 
+// Q: هل يجب التحقق من صحة UUID في معرّفات الطلبات قبل تمريرها لقاعدة البيانات؟
+// A: نعم بالتأكيد — PostgreSQL يُرجع خطأ 500 غير واضح عند تمرير UUID غير صالح
+//    (مثل "abc" أو سلسلة فارغة) بدلاً من 400 واضح. هذا يُربك العميل ويُخفي
+//    السبب الحقيقي للخطأ. الإصلاح: التحقق من UUID بـ regex قبل أي استعلام DB.
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isValidUuid(id: string): boolean {
+  return UUID_REGEX.test(id);
+}
+
 export class OrderController {
   async create(req: Request, res: Response) {
     try {
@@ -39,6 +48,9 @@ export class OrderController {
   async get(req: Request, res: Response) {
     try {
       const id = req.params.id as string;
+      if (!isValidUuid(id)) {
+        return res.status(400).json({ message: "معرّف الطلب غير صالح" });
+      }
       const actor = (req as any).user;
       const order = await orderService.getOrderWithSubOrders(id);
 
@@ -105,6 +117,9 @@ export class OrderController {
     try {
       const userId = (req as any).user.id;
       const id = req.params.id as string;
+      if (!isValidUuid(id)) {
+        return res.status(400).json({ message: "معرّف الطلب الفرعي غير صالح" });
+      }
       await orderService.cancelSubOrder(id, userId);
       res.json({ message: "SubOrder cancelled and refunded if applicable" });
     } catch (error: any) {

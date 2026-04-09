@@ -5,6 +5,16 @@ import { eq, and, sql } from "drizzle-orm";
 import { auditService } from "../../services/auditService";
 import { notifyUser } from "../notifications/push.service";
 
+// Q: هل جدول `deposits` يُنشأ تلقائياً عند بدء تشغيل السيرفر؟
+// A: لا — جدول `deposits` مُعرَّف في ملف منفصل `shared/deposits.schema.ts` ولم
+//    يُدرَج ضمن سكريبت التحقق التلقائي `server/autoVerifyDb.ts` الذي يُنشئ
+//    الجداول عند الإقلاع. هذا يعني:
+//    1. إذا استُدعيت دالة `depositService.approveDeposit` ستفشل بـ "relation does not exist".
+//    2. نظام الإيداع الفعلي يعمل عبر جدول `wallet_transactions` في `walletService`، 
+//       وهذا الـ `DepositService` هو كود ميت لا يُستدعى من أي مسار حالي.
+//    الإصلاح المطلوب: إما دمج `deposits.schema.ts` في `schema.ts` الرئيسي وإضافة
+//    الجدول لسكريبت التحقق، أو حذف هذا الـ service كلياً إذا لم يكن مطلوباً.
+//    ⚠️ تحذير: استدعاء أي دالة هنا سيُسبب خطأ 500 في الإنتاج.
 export class DepositService {
   async approveDeposit(depositId: string, adminId: string, force = false, notes?: string) {
 

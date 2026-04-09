@@ -33,6 +33,19 @@ export class DeliveryOfferController {
   async getOffersForSubOrder(req: Request, res: Response) {
     try {
       const subOrderId = req.params.id as string;
+      const customerId = (req as any).user.id as string;
+
+      // Q: هل يجب التحقق من أن العميل يمتلك هذا الطلب الفرعي قبل إعادة العروض؟
+      // A: نعم — بدون هذا الفحص يستطيع أي عميل مُصادَق عليه عرض جميع عروض التوصيل
+      //    لأي طلب فرعي بمجرد معرفة UUID الخاص به (عن طريق التخمين أو القرصنة).
+      //    هذا يُكشف معلومات حساسة مثل أسماء السائقين وأرقام هواتفهم وأسعار عروضهم
+      //    لعملاء غير مصرح لهم. الإصلاح: جلب الطلب الفرعي والطلب الأصلي والتحقق
+      //    من أن customerId الخاص بالطلب يطابق هوية العميل المُصادَق عليه حالياً.
+      const ownership = await deliveryOfferService.verifySubOrderOwnership(subOrderId, customerId);
+      if (!ownership) {
+        return res.status(403).json({ error: "غير مصرح: هذا الطلب الفرعي لا ينتمي إليك" });
+      }
+
       const offers = await deliveryOfferService.getOffersForSubOrder(subOrderId);
       res.json(offers);
     } catch (err: any) {

@@ -2,7 +2,6 @@ import { db } from "../../db";
 import { subOrders, orders, stores, users, orderItems, products, deliveryOffers } from "@shared/schema";
 import { eq, and, isNull, sql, asc, inArray, SQL } from "drizzle-orm";
 import { AvailableTaskDTO, GetAvailableTasksFilters } from "./delivery.types";
-import { auditService } from "../../services/auditService";
 
 export class DeliveryService {
   async getAvailableTasks(driverId: string, filters: GetAvailableTasksFilters): Promise<{ tasks: AvailableTaskDTO[], total: number }> {
@@ -48,13 +47,18 @@ export class DeliveryService {
       .where(combinedWhere);
     const total = Number(totalResults[0].count);
 
+    // Q: هل يجب إرجاع الاسم الكامل للعميل لجميع السائقين في قائمة المهام المتاحة؟
+    // A: لا — في هذه المرحلة لم يُسنَد السائق بعد إلى الطلب؛ أي سائق يرى قائمة
+    //    المهام المتاحة يحصل على أسماء عملاء ليسوا عملاءه. هذا تسرّب للخصوصية.
+    //    الإصلاح: استخدام أول حرف فقط من الاسم مع نقاط (مثل "م.أ") حتى يُسنَد
+    //    السائق فعلياً، ومن ثَمّ يظهر له الاسم الكامل في صفحة التوصيل النشطة.
     const results = await db
       .select({
         sub_order_id: subOrders.id,
         order_id: subOrders.orderId,
         store_id: subOrders.storeId,
         store_name: stores.name,
-        customer_name: users.name,
+        customer_name: sql<string>`CONCAT(LEFT(${users.name}, 1), '***')`,
         customer_address: sql<string>`COALESCE((${users.addresses}->>0), 'لا يوجد عنوان محدد')`,
         subtotal: subOrders.subtotal,
         created_at: subOrders.createdAt,
@@ -144,15 +148,12 @@ export class DeliveryService {
       };
     });
 
-    await auditService.logEvent({
-      actionType: "VIEW_AVAILABLE_TASKS",
-      entityType: "DELIVERY_TASK",
-      entityId: driverId,
-      performedByUserId: driverId,
-      performedByRole: "DRIVER",
-      metadata: { filters, totalResults: total },
-    });
-
+    // Q: هل يجب تسجيل كل استعلام "عرض المهام المتاحة" في سجلات المراجعة؟
+    // A: لا — تسجيل الأحداث في audit_logs مُصمَّم للعمليات التي تُغيّر الحالة
+    //    (مثل: قبول طلب، إلغاء طلب، سحب مبلغ). تسجيل كل استعلام قراءة يعني أن
+    //    جدول audit_logs سيُملأ بآلاف السجلات غير ذات القيمة كل يوم (خاصةً مع
+    //    التحديث التلقائي كل 30 ثانية)، مما يُصعّب إيجاد الأحداث الحقيقية ويُبطئ
+    //    الاستعلامات المدقّقة. الإصلاح: حذف هذا التسجيل من عملية القراءة تماماً.
     return { tasks, total };
   }
 }

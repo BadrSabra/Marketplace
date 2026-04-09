@@ -55,6 +55,23 @@ export class DeliveryOfferService {
   }
 
   /**
+   * Verifies that the given customerId owns the sub-order (via parent order).
+   * Returns true if ownership is confirmed, false otherwise.
+   * Used as an authorization guard before exposing sensitive offer data.
+   */
+  async verifySubOrderOwnership(subOrderId: string, customerId: string): Promise<boolean> {
+    // Q: هل يكفي التحقق من الطلب الفرعي فقط دون جلب الطلب الأصلي؟
+    // A: لا — الطلب الفرعي لا يحتوي على customerId مباشرةً؛ العلاقة هي:
+    //    sub_orders.order_id → orders.id → orders.customer_id.
+    //    لذا يجب جلب الطلب الأصلي لمعرفة من يملكه.
+    const [subOrder] = await db.select({ orderId: subOrders.orderId }).from(subOrders).where(eq(subOrders.id, subOrderId));
+    if (!subOrder) return false;
+    const [parentOrder] = await db.select({ customerId: orders.customerId }).from(orders).where(eq(orders.id, subOrder.orderId));
+    if (!parentOrder) return false;
+    return parentOrder.customerId === customerId;
+  }
+
+  /**
    * Get all actionable offers for a sub-order (for customer to view and act on)
    * Includes PENDING and COUNTERED offers
    */

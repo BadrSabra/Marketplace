@@ -578,6 +578,16 @@ export async function registerRoutes(
   app.patch("/api/admin/orders/:id/status", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
     try {
       const id = req.params.id as string;
+
+      // Q: هل يجب التحقق من صحة UUID قبل استعلام قاعدة البيانات في مسارات الأدمن؟
+      // A: نعم — PostgreSQL يُرجع خطأ غير معالَج عند تمرير معرّف غير صالح كـ "abc"
+      //    أو سلسلة بها مسافات، مما يُسبب استجابة 500 بدلاً من 400 مفهومة للمستخدم.
+      //    الإصلاح: التحقق من UUID بـ regex قبل أي استعلام.
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!UUID_REGEX.test(id)) {
+        return res.status(400).json({ message: "معرّف الطلب غير صالح" });
+      }
+
       const statusSchema = z.object({ status: z.enum(["DELIVERED", "CANCELLED"]) });
       const { status } = statusSchema.parse(req.body);
 
