@@ -89,6 +89,12 @@ export class LedgerService {
 
     // Fetch held funds (PENDING wallet transactions) - only when user_id is defined
     let heldFundsResult: { sum: string } | undefined;
+    // Q: هل يجب احتساب إجمالي العمولات من البيانات المُعادة (transactions) أم من قاعدة البيانات؟
+    // A: من قاعدة البيانات مباشرةً — احتساب العمولات من الـ transactions المُعادة يعني أننا
+    //    نحتسب فقط الصفحة الحالية (limit=50 افتراضياً). لو كان للمستخدم 100 عملية توصيل،
+    //    تظهر البطاقة "إجمالي العمولات" رقماً خاطئاً يمثّل نصف أرباحه فقط. الإصلاح:
+    //    إضافة استعلام مستقل يجمع إجمالي مبالغ COMMISSION لهذا المستخدم من كامل دفتر الأستاذ.
+    let totalCommissionAmountResult: { sum: string } | undefined;
     if (filters.user_id) {
       // BUG-FIX: Was summing ALL pending wallet transactions including DEPOSIT type.
       // Pending deposits are money waiting to come IN (not approved yet), so they are
@@ -105,6 +111,15 @@ export class LedgerService {
           eq(walletTransactions.status, "PENDING")
         ));
       heldFundsResult = result;
+
+      const [commissionSum] = await db
+        .select({ sum: sql<string>`sum(amount)` })
+        .from(ledger)
+        .where(and(
+          eq(ledger.creditUserId, filters.user_id),
+          eq(ledger.type, "COMMISSION")
+        ));
+      totalCommissionAmountResult = commissionSum;
     }
 
     return {
@@ -112,6 +127,7 @@ export class LedgerService {
       limit,
       offset,
       heldFunds: heldFundsResult?.sum || "0.00",
+      totalCommissionAmount: totalCommissionAmountResult?.sum || "0.00",
       transactions: transactions.map(t => ({
         ...t,
         status: "COMPLETED", // Placeholder since ledger table lacks status

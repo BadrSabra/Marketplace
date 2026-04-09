@@ -145,7 +145,9 @@ export default function CustomerTransactions() {
                   <SelectItem value="all">{t('customer.wallet.all_types')}</SelectItem>
                   <SelectItem value="DEPOSIT">{t('customer.wallet.types.DEPOSIT')}</SelectItem>
                   <SelectItem value="WITHDRAWAL">{t('customer.wallet.types.WITHDRAWAL') || 'سحب'}</SelectItem>
-                  <SelectItem value="COMMISSION">{t('customer.wallet.types.COMMISSION')}</SelectItem>
+                  {/* Q: هل COMMISSION خيار مناسب لفلتر معاملات العملاء؟
+                      A: لا — العملاء لا يحصلون على عمولات (COMMISSION). هذا النوع خاص
+                         بأصحاب المتاجر والسائقين. الإصلاح: إبقاء REFUND وحذف COMMISSION. */}
                   <SelectItem value="REFUND">{t('customer.wallet.types.REFUND')}</SelectItem>
                 </SelectContent>
               </Select>

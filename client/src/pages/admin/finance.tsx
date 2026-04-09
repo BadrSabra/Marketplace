@@ -3,11 +3,20 @@ import { useQuery } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { TrendingUp, TrendingDown, DollarSign, ArrowUpRight, ArrowDownLeft, RotateCcw, Percent } from "lucide-react";
 
+// Q: هل حقول LedgerEntry تتطابق مع ما يُعيده الـ API فعلاً؟
+// A: لا — ledger.service.ts يُعيد الحقول بأسماء مختلفة في SELECT alias:
+//    - referenceId       → related_order_id
+//    - debitUserId       → debit_user_id
+//    - creditUserId      → credit_user_id / user_id
+//    استخدام entry.referenceId كان يُعيد undefined دائماً مما يجعل كل
+//    خانة "مرجع" في جدول المعاملات تعرض "—" حتى مع وجود مرجع صالح.
+//    الإصلاح: تحديث الـ interface ليعكس الأسماء الحقيقية المُعادة من الـ API.
 interface LedgerEntry {
   id: string;
-  referenceId: string | null;
-  debitUserId: string | null;
-  creditUserId: string | null;
+  related_order_id: string | null;
+  debit_user_id: string | null;
+  credit_user_id: string | null;
+  user_id: string | null;
   amount: string;
   type: string;
   createdAt: string;
@@ -124,7 +133,7 @@ export default function FinancePage() {
                         {Number(entry.amount).toFixed(2)} ج.م
                       </td>
                       <td className="px-6 py-4 text-muted-foreground font-mono text-xs">
-                        {entry.referenceId ? entry.referenceId.slice(0, 8) + "..." : "—"}
+                        {entry.related_order_id ? entry.related_order_id.slice(0, 8) + "..." : "—"}
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
                         {/* BUG-FIX: "dd MMM yyyy" → English month name. Replaced with Arabic locale. */}

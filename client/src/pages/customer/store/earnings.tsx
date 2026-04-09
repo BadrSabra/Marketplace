@@ -22,6 +22,7 @@ type LedgerResponse = {
   transactions: LedgerTransaction[];
   total: number;
   heldFunds: string;
+  totalCommissionAmount: string;
 };
 
 export default function StoreEarnings() {
@@ -68,6 +69,12 @@ export default function StoreEarnings() {
   });
 
   const transactions = ledgerData?.transactions || [];
+  // Q: هل يجب احتساب إجمالي العمولات من البيانات المُعادة (transactions) أم من الـ API؟
+  // A: من الـ API مباشرةً — الـ transactions تحتوي فقط على الصفحة الحالية (50 سجل بحد أقصى).
+  //    إذا كان لصاحب المتجر 100+ طلب توصيل، فإن احتساب العمولات من الصفحة الأولى فقط
+  //    يُظهر نصف الأرباح الحقيقية. الـ API يُعيد الآن totalCommissionAmount محسوباً
+  //    من كامل دفتر الأستاذ على مستوى قاعدة البيانات.
+  const totalCommissions = parseFloat(ledgerData?.totalCommissionAmount || "0");
 
   if (isWalletLoading || isTransactionsLoading) {
     return (
@@ -78,15 +85,6 @@ export default function StoreEarnings() {
       </StoreLayout>
     );
   }
-
-  const completedCommissions = transactions?.filter(
-    (tx) => tx.type === "COMMISSION" && (tx as any).status === "COMPLETED"
-  ) || [];
-
-  const totalCommissions = completedCommissions.reduce(
-    (acc, tx) => acc + parseFloat(tx.amount),
-    0
-  );
 
   return (
     <StoreLayout>
@@ -221,8 +219,13 @@ export default function StoreEarnings() {
                             <span className="font-bold text-sm">{t(`customer.wallet.types.${tx.type}`)}</span>
                           </div>
                         </TableCell>
+                        {/* Q: هل الحقل الصحيح هو tx.referenceId أم tx.related_order_id؟
+                            A: tx.related_order_id — الـ API يُعيد الحقل باسم related_order_id
+                               (اسمه في استعلام الـ ledger.service.ts). tx.referenceId كان دائماً
+                               undefined مما يجعل كل خانة مرجع الطلب تعرض "—" حتى لو كان هناك
+                               طلب مرتبط. */}
                         <TableCell className="font-mono text-xs rtl:text-right">
-                          {tx.referenceId ? `#${tx.referenceId.split("-")[0]}` : "—"}
+                          {(tx as any).related_order_id ? `#${(tx as any).related_order_id.split("-")[0]}` : "—"}
                         </TableCell>
                         <TableCell className={cn(
                           "font-black text-base rtl:text-right",
@@ -230,6 +233,10 @@ export default function StoreEarnings() {
                         )}>
                           {isCredit ? "+" : "-"}{parseFloat(tx.amount).toFixed(2)} جنيه
                         </TableCell>
+                        {/* Q: هل شارة الحالة تعرض العربية أم الإنجليزية الخام؟
+                            A: الإنجليزية الخام — {status} يعرض "COMPLETED"/"PENDING" مباشرةً.
+                               لطالما كانت واجهة المنصة عربية RTL ومن المفترض أن تكون جميع
+                               النصوص بالعربية. الإصلاح: ربط كل قيمة إنجليزية بمرادفها العربي. */}
                         <TableCell className="rtl:text-right">
                           <Badge 
                             variant="outline"
@@ -240,7 +247,10 @@ export default function StoreEarnings() {
                               "border-red-200 bg-red-50 text-red-700"
                             )}
                           >
-                            {status}
+                            {status === "COMPLETED" ? "مكتمل"
+                              : status === "PENDING" ? "قيد المعالجة"
+                              : status === "FAILED" ? "فشل"
+                              : status}
                           </Badge>
                         </TableCell>
                       </TableRow>

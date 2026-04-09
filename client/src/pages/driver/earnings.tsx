@@ -24,6 +24,7 @@ export default function DriverEarnings() {
     transactions: any[];
     total: number;
     heldFunds: string;
+    totalCommissionAmount: string;
   }>({
     queryKey: ["/api/ledger/transactions", { type, page, limit }],
     queryFn: async () => {
@@ -51,9 +52,11 @@ export default function DriverEarnings() {
   const totalTransactions = transactionsData?.total || 0;
   const totalPages = Math.ceil(totalTransactions / limit);
 
-  const commissionTotal = transactions
-    ?.filter(tx => tx.type === 'COMMISSION' && tx.status === 'COMPLETED')
-    .reduce((sum, tx) => sum + parseFloat(tx.amount), 0) || 0;
+  // Q: هل يجب احتساب إجمالي العمولات من بيانات الصفحة الحالية أم من الـ API؟
+  // A: من الـ API — transactions تحتوي على الصفحة الحالية فقط (limit=10 هنا).
+  //    لو قدّم السائق 20 توصيلاً، ستظهر البطاقة نصف أرباحه في الصفحة الأولى.
+  //    الـ API يُعيد الآن totalCommissionAmount محسوباً من كامل دفتر الأستاذ.
+  const commissionTotal = parseFloat(transactionsData?.totalCommissionAmount || "0");
 
   const isInconsistent = false; // Placeholder for logic checking consistency
 
