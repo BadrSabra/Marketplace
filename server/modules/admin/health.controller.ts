@@ -56,19 +56,32 @@ export const healthController = {
     }
 
     // 4. Ledger Consistency Check
+    // Q: هل المقارنة الصحيحة هي sum(wallet.balance) مقابل sum(ledger.amount)؟
+    // A: لا — هذا خطأ رياضي. دفتر الأستاذ يحتوي على مدخلات دائن ومدين معاً.
+    //    جمع كل المبالغ (credits + debits) يُعطي قيمة أكبر دائماً من رصيد المحفظة
+    //    لأن كل عملية دفع تُسجَّل مرتين (مدين للعميل + دائن للمتجر/السائق).
+    //    الصواب: (مجموع الدائن - مجموع المدين) يجب أن يُساوي مجموع أرصدة المحافظ.
+    //    الإصلاح: استخدام استعلامين منفصلين (credit فقط، debit فقط) واحتساب الصافي.
     let ledgerConsistency: any = { consistent: true };
     try {
       const { wallets, ledger } = await import("@shared/schema");
       const walletSum = await db.select({ total: sql<string>`sum(balance)` }).from(wallets);
-      const ledgerSum = await db.select({ total: sql<string>`sum(amount)` }).from(ledger);
+      const [ledgerCredits] = await db
+        .select({ sum: sql<string>`sum(amount)` })
+        .from(ledger)
+        .where(sql`${ledger.creditUserId} IS NOT NULL`);
+      const [ledgerDebits] = await db
+        .select({ sum: sql<string>`sum(amount)` })
+        .from(ledger)
+        .where(sql`${ledger.debitUserId} IS NOT NULL`);
       
       const wTotal = parseFloat(walletSum[0]?.total || "0");
-      const lTotal = parseFloat(ledgerSum[0]?.total || "0");
+      const netLedger = parseFloat(ledgerCredits?.sum || "0") - parseFloat(ledgerDebits?.sum || "0");
       
       ledgerConsistency = {
         walletsTotal: wTotal,
-        ledgerTotal: lTotal,
-        consistent: Math.abs(wTotal - lTotal) < 0.01
+        ledgerNetTotal: netLedger,
+        consistent: Math.abs(wTotal - netLedger) < 0.01
       };
 
       if (!ledgerConsistency.consistent) {

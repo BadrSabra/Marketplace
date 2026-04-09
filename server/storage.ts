@@ -20,7 +20,21 @@ export interface IStorage {
   updateProduct(id: string, product: any): Promise<any>;
   deleteProduct(id: string): Promise<void>;
   updateProductStock(id: string, stock: number): Promise<any>;
-  deleteStore(id: string): Promise<boolean>;
+  // Q: هل يجب أن تُرجع deleteStore قيمة boolean أم كائن تقرير؟
+  // A: كائن تقرير — التنفيذ يُرجع تقريراً مفصّلاً بعدد الموارد المحذوفة
+  //    (منتجات، طلبات فرعية، عروض توصيل إلخ). الإعلان عن boolean خاطئ ويُخفي
+  //    معلومات هامة عن المستدعي ويسبب خطأ في الأنواع TypeScript.
+  deleteStore(id: string): Promise<{
+    storeId: string;
+    storeName: string;
+    ownerId?: string;
+    ownerEmail?: string;
+    productsDeleted: number;
+    subOrdersDeleted: number;
+    orderItemsDeleted: number;
+    deliveryOffersDeleted: number;
+    deliveryOtpsDeleted: number;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {

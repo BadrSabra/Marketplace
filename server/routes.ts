@@ -10,7 +10,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { eq, sql, and } from "drizzle-orm";
+import { eq, sql, and, inArray } from "drizzle-orm";
 import { authenticate, authorizeRole } from "./middleware/auth";
 import { productsController, upload } from "./modules/products/products.controller";
 import { upload as avatarUpload } from "./modules/avatar/avatar.upload";
@@ -592,27 +592,37 @@ export async function registerRoutes(
             .where(and(eq(subOrders.orderId, id), sql`${subOrders.status} NOT IN ('DELIVERED', 'CANCELLED')`))
         : [];
 
+      // Q: هل يجب جلب الطلبات الفرعية غير الملغية قبل تحديث الحالة أم بعدها؟
+      // A: قبلها حتماً — السطر الأول داخل المعاملة يُحوّل جميع الطلبات الفرعية إلى CANCELLED.
+      //    أي استعلام لاحق داخل نفس المعاملة بشرط `status != 'CANCELLED'` سيُعيد صفراً
+      //    لأن قاعدة البيانات ترى التحديث فور تنفيذه في نفس المعاملة.
+      //    النتيجة السابقة: لا يُعاد مخزون، لا يُستردّ أي رصيد للعميل — المال يختفي.
+      //    الإصلاح: التقاط حالة الطلبات الفرعية غير الملغية قبل المعاملة واستخدامها داخلها.
+      const activeSubOrdersSnapshot = status === "CANCELLED"
+        ? await db
+            .select({ id: subOrders.id, subtotal: subOrders.subtotal, deliveryFee: subOrders.expectedDeliveryFee })
+            .from(subOrders)
+            .where(and(eq(subOrders.orderId, id), sql`${subOrders.status} != 'CANCELLED'`))
+        : [];
+
+      const activeSubOrderItemsSnapshot = activeSubOrdersSnapshot.length > 0
+        ? await db
+            .select({ productId: orderItems.productId, quantity: orderItems.quantity })
+            .from(orderItems)
+            .where(inArray(orderItems.subOrderId, activeSubOrdersSnapshot.map(s => s.id)))
+        : [];
+
       await db.transaction(async (tx) => {
         await tx.update(subOrders).set({ status, updatedAt: new Date() }).where(eq(subOrders.orderId, id));
         await tx.update(orders)
           .set({ overallStatus: status, updatedAt: new Date() })
           .where(eq(orders.id, id));
 
-        // BUG-FIX: Admin cancellation never replenished product stock, causing permanent
-        // inventory leakage identical to the bug in customer-initiated cancellation.
-        // Now restores stock for all items across all sub-orders in the cancelled order.
-        // BUG-FIX-2: Only restore stock for sub-orders that are NOT already CANCELLED.
-        // Previously ALL sub-orders' items were included, so any already-cancelled sub-order
-        // (whose stock was restored on individual cancellation) would be double-counted,
-        // causing phantom inventory inflation.
+        // Stock restoration uses the pre-transaction snapshot of non-cancelled sub-orders.
+        // The snapshot was captured before the batch update to avoid the query-after-update
+        // bug where all sub-orders are already CANCELLED when we try to find non-cancelled ones.
         if (status === "CANCELLED") {
-          const cancelledOrderItems = await tx
-            .select({ productId: orderItems.productId, quantity: orderItems.quantity })
-            .from(orderItems)
-            .innerJoin(subOrders, eq(orderItems.subOrderId, subOrders.id))
-            .where(and(eq(subOrders.orderId, id), sql`${subOrders.status} != 'CANCELLED'`));
-
-          for (const item of cancelledOrderItems) {
+          for (const item of activeSubOrderItemsSnapshot) {
             await tx.update(products)
               .set({ stock: sql`stock + ${item.quantity}` })
               .where(eq(products.id, item.productId));
@@ -621,15 +631,10 @@ export async function registerRoutes(
 
         // Refund the customer wallet if cancelling a paid order
         if (status === "CANCELLED" && parentOrder.paymentStatus === "PAID") {
-          // BUG-FIX: Was refunding the full parentOrder.totalPrice regardless of whether
-          // individual sub-orders had already been cancelled and their amounts refunded earlier
-          // (via cancelSubOrder). This caused double-refunds for partially-cancelled orders.
-          // Now compute refund only from sub-orders that are NOT already CANCELLED,
-          // since CANCELLED sub-orders were already refunded when they were cancelled.
-          const activeSubOrders = await tx
-            .select({ subtotal: subOrders.subtotal, deliveryFee: subOrders.expectedDeliveryFee })
-            .from(subOrders)
-            .where(and(eq(subOrders.orderId, id), sql`${subOrders.status} != 'CANCELLED'`));
+          // Refund amount computed from the pre-transaction snapshot (not-yet-cancelled sub-orders).
+          // Using the snapshot avoids the bug where all sub-orders are already CANCELLED
+          // inside the transaction, causing the query to return nothing and refundAmount = 0.
+          const activeSubOrders = activeSubOrdersSnapshot;
 
           const refundAmount = activeSubOrders.reduce((sum, s) => {
             return sum + parseFloat(s.subtotal) + (s.deliveryFee ? parseFloat(s.deliveryFee) : 0);
