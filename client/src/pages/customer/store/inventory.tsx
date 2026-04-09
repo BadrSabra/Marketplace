@@ -41,13 +41,13 @@ import { z } from "zod";
 import { t } from "@/i18n";
 
 const productFormSchema = z.object({
-  name: z.string().min(3, "Name must be at least 3 characters"),
-  description: z.string().max(500, "Description must be max 500 characters").optional(),
+  name: z.string().min(3, "يجب أن يكون الاسم 3 أحرف على الأقل"),
+  description: z.string().max(500, "يجب ألا يتجاوز الوصف 500 حرف").optional(),
   price: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
-    message: "Price must be a positive number",
+    message: "يجب أن يكون السعر رقماً موجباً",
   }),
-  stock: z.number().int().min(0, "Stock must be non-negative"),
-  category: z.string().min(1, "Category is required"),
+  stock: z.number().int().min(0, "يجب أن تكون الكمية صفراً أو أكثر"),
+  category: z.string().min(1, "الفئة مطلوبة"),
   status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
 });
 
@@ -85,7 +85,7 @@ export default function StoreInventory() {
       description: "",
       price: "0.00",
       stock: 0,
-      category: "General",
+      category: "عام",
       status: "ACTIVE",
     },
   });
