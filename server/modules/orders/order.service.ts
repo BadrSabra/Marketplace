@@ -60,6 +60,17 @@ export class OrderService {
         paymentStatus: "PAID",
       }).returning();
 
+      // BUG-FIX: Missing ledger entry for order payment — every wallet debit must have
+      // a matching double-entry ledger record. Without this, all customer order payments
+      // were completely invisible in the ledger, breaking financial reporting and auditing.
+      await tx.insert(ledger).values({
+        referenceId: order.id,
+        debitUserId: customerId,
+        creditUserId: null,
+        amount: totalPrice.toFixed(2),
+        type: "WITHDRAWAL",
+      });
+
       const [customer] = await tx.select().from(users).where(eq(users.id, customerId)).limit(1);
 
       // 5. Create sub-orders and order items per store

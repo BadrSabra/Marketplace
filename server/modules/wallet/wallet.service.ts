@@ -361,22 +361,25 @@ export class WalletService {
         .where(eq(wallets.id, request.walletId))
         .for("update");
 
-      if (wallet) {
-        const refundedBalance = (parseFloat(wallet.balance) + parseFloat(request.amount)).toFixed(2);
-        await tx.update(wallets)
-          .set({ balance: refundedBalance, updatedAt: new Date() })
-          .where(eq(wallets.id, wallet.id));
+      // BUG-FIX: Was silently skipping the balance refund AND the ledger reversal if the
+      // wallet row was somehow missing. The withdrawal already deducted the balance at
+      // request-time, so a missing wallet here means the user's money simply vanishes.
+      // Throwing ensures the transaction rolls back rather than committing a one-sided debit.
+      if (!wallet) throw new Error("WALLET_NOT_FOUND: Cannot refund withdrawal — wallet missing");
 
-        // BUG-FIX: Missing ledger reversal entry when withdrawal is rejected.
-        // The original withdrawal debited the user; rejecting it must credit them back.
-        await tx.insert(ledger).values({
-          referenceId: request.id,
-          debitUserId: null,
-          creditUserId: request.userId,
-          amount: request.amount,
-          type: "DEPOSIT",
-        });
-      }
+      const refundedBalance = (parseFloat(wallet.balance) + parseFloat(request.amount)).toFixed(2);
+      await tx.update(wallets)
+        .set({ balance: refundedBalance, updatedAt: new Date() })
+        .where(eq(wallets.id, wallet.id));
+
+      // Credit the user back in the ledger (reversal of the original debit on request creation)
+      await tx.insert(ledger).values({
+        referenceId: request.id,
+        debitUserId: null,
+        creditUserId: request.userId,
+        amount: request.amount,
+        type: "DEPOSIT",
+      });
 
       const [updatedRequest] = await tx.update(withdrawalRequests)
         .set({ status: "REJECTED", reviewedByAdminId: adminId, adminNote: note || null, updatedAt: new Date() })

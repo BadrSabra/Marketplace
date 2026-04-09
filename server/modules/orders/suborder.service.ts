@@ -86,12 +86,15 @@ export class SubOrderService {
 
           // BUG-FIX-11: Missing ledger entry for sub-order cancellation refund.
           // Every wallet credit must have a matching ledger entry for accounting integrity.
+          // BUG-FIX: Was using type "WITHDRAWAL" for a credit to customer — semantically wrong.
+          // A refund credits the customer's wallet, so type must be "DEPOSIT" (same as
+          // approveDeposit and rejectWithdrawal reversal entries).
           await tx.insert(ledger).values({
             referenceId: subOrder.orderId,
             debitUserId: null,
             creditUserId: parentOrder.customerId,
             amount: totalRefund.toFixed(2),
-            type: "WITHDRAWAL",
+            type: "DEPOSIT",
           });
 
           console.log(`[SubOrderService] Refunded ${totalRefund} to customer wallet for cancelled sub-order ${subOrderId}`);
