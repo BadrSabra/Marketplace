@@ -25,7 +25,6 @@ import {
   Loader2, Search, ChevronLeft, ChevronRight, ShieldAlert, 
   History, User, Box, Clock, ChevronDown, ChevronUp 
 } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export default function AdminAudit() {
   const [userId, setUserId] = useState("");
@@ -37,7 +36,7 @@ export default function AdminAudit() {
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const limit = 20;
 
-  const { data, isLoading, isError, refetch } = useQuery<{ logs: AuditLog[], total: number }>({
+  const { data, isLoading } = useQuery<{ logs: AuditLog[], total: number }>({
     queryKey: ["/api/admin/audit", { userId, actionType, status, startDate, endDate, offset: page * limit, limit }],
   });
 
@@ -53,7 +52,8 @@ export default function AdminAudit() {
   const getStatusBadge = (log: AuditLog) => {
     const logStatus = (log.metadata as any)?.status || "SUCCESS";
     const variant = logStatus === "FAILED" ? "destructive" : "default";
-    return <Badge variant={variant}>{logStatus}</Badge>;
+    const label = logStatus === "FAILED" ? "فشل" : "نجاح";
+    return <Badge variant={variant}>{label}</Badge>;
   };
 
   const toggleRow = (id: string) => {
@@ -63,11 +63,11 @@ export default function AdminAudit() {
   const totalPages = Math.ceil((data?.total || 0) / limit);
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-8 space-y-8" dir="rtl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Audit Logs</h1>
-          <p className="text-muted-foreground">Monitor system changes and administrative actions.</p>
+          <h1 className="text-3xl font-bold tracking-tight">سجلات التدقيق</h1>
+          <p className="text-muted-foreground">مراقبة التغييرات في النظام والإجراءات الإدارية.</p>
         </div>
         <ShieldAlert className="h-8 w-8 text-primary" />
       </div>
@@ -76,21 +76,21 @@ export default function AdminAudit() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <History className="h-5 w-5" />
-            System Activity
+            نشاط النظام
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
             <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="User ID..."
+                placeholder="معرّف المستخدم..."
                 value={userId}
                 onChange={(e) => {
                   setUserId(e.target.value);
                   setPage(0);
                 }}
-                className="pl-9"
+                className="pr-9 text-right"
                 data-testid="input-filter-userid"
               />
             </div>
@@ -102,14 +102,14 @@ export default function AdminAudit() {
               }}
             >
               <SelectTrigger data-testid="select-filter-actiontype">
-                <SelectValue placeholder="Action Type" />
+                <SelectValue placeholder="نوع الإجراء" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Actions</SelectItem>
-                <SelectItem value="PROFILE_UPDATE">Profile Update</SelectItem>
-                <SelectItem value="COMMISSION_PROCESSED">Commission Processed</SelectItem>
-                <SelectItem value="DEPOSIT_APPROVED">Deposit Approved</SelectItem>
-                <SelectItem value="LEDGER_LIST_ACCESS">Ledger Access</SelectItem>
+                <SelectItem value="all">جميع الإجراءات</SelectItem>
+                <SelectItem value="PROFILE_UPDATE">تحديث الملف الشخصي</SelectItem>
+                <SelectItem value="COMMISSION_PROCESSED">معالجة العمولة</SelectItem>
+                <SelectItem value="DEPOSIT_APPROVED">الموافقة على الإيداع</SelectItem>
+                <SelectItem value="LEDGER_LIST_ACCESS">الوصول إلى السجل المالي</SelectItem>
               </SelectContent>
             </Select>
             <Select 
@@ -120,12 +120,12 @@ export default function AdminAudit() {
               }}
             >
               <SelectTrigger data-testid="select-filter-status">
-                <SelectValue placeholder="Status" />
+                <SelectValue placeholder="الحالة" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="SUCCESS">Success</SelectItem>
-                <SelectItem value="FAILED">Failed</SelectItem>
+                <SelectItem value="all">جميع الحالات</SelectItem>
+                <SelectItem value="SUCCESS">نجاح</SelectItem>
+                <SelectItem value="FAILED">فشل</SelectItem>
               </SelectContent>
             </Select>
             <Input
@@ -153,11 +153,11 @@ export default function AdminAudit() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[30px]"></TableHead>
-                  <TableHead>Timestamp</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>User/Role</TableHead>
-                  <TableHead>Entity ID</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">التوقيت</TableHead>
+                  <TableHead className="text-right">الإجراء</TableHead>
+                  <TableHead className="text-right">المستخدم / الدور</TableHead>
+                  <TableHead className="text-right">معرّف الكيان</TableHead>
+                  <TableHead className="text-right">الحالة</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -190,7 +190,7 @@ export default function AdminAudit() {
                         <TableCell className="text-xs text-muted-foreground">
                           <div className="flex items-center gap-1 whitespace-nowrap">
                             <Clock className="h-3 w-3" />
-                            {format(new Date(log.createdAt), "MMM dd, yyyy HH:mm:ss")}
+                            {format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss")}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -220,24 +220,24 @@ export default function AdminAudit() {
                       {expandedRows[log.id] && (
                         <TableRow className="bg-muted/30">
                           <TableCell colSpan={6}>
-                            <div className="p-4 space-y-4">
+                            <div className="p-4 space-y-4 text-right">
                               <div>
-                                <h4 className="text-sm font-semibold mb-2">Metadata</h4>
-                                <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-40">
+                                <h4 className="text-sm font-semibold mb-2">البيانات الوصفية</h4>
+                                <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-40 text-left" dir="ltr">
                                   {JSON.stringify(log.metadata, null, 2)}
                                 </pre>
                               </div>
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                  <h4 className="text-sm font-semibold mb-2 text-red-500">Previous Value</h4>
-                                  <pre className="text-xs bg-red-50/50 p-2 rounded overflow-auto max-h-40 border border-red-100">
-                                    {log.oldValue ? JSON.stringify(log.oldValue, null, 2) : "None"}
+                                  <h4 className="text-sm font-semibold mb-2 text-red-500">القيمة السابقة</h4>
+                                  <pre className="text-xs bg-red-50/50 p-2 rounded overflow-auto max-h-40 border border-red-100 text-left" dir="ltr">
+                                    {log.oldValue ? JSON.stringify(log.oldValue, null, 2) : "لا يوجد"}
                                   </pre>
                                 </div>
                                 <div>
-                                  <h4 className="text-sm font-semibold mb-2 text-green-500">New Value</h4>
-                                  <pre className="text-xs bg-green-50/50 p-2 rounded overflow-auto max-h-40 border border-green-100">
-                                    {log.newValue ? JSON.stringify(log.newValue, null, 2) : "None"}
+                                  <h4 className="text-sm font-semibold mb-2 text-green-500">القيمة الجديدة</h4>
+                                  <pre className="text-xs bg-green-50/50 p-2 rounded overflow-auto max-h-40 border border-green-100 text-left" dir="ltr">
+                                    {log.newValue ? JSON.stringify(log.newValue, null, 2) : "لا يوجد"}
                                   </pre>
                                 </div>
                               </div>
@@ -252,24 +252,11 @@ export default function AdminAudit() {
             </Table>
           </div>
 
-          <div className="flex items-center justify-between space-x-2 py-4">
+          <div className="flex items-center justify-between py-4">
             <div className="text-sm text-muted-foreground">
-              Total {data?.total || 0} logs
+              إجمالي السجلات: {data?.total || 0}
             </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0 || isLoading}
-                data-testid="button-prev-page"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              <div className="text-sm font-medium">
-                Page {page + 1} of {totalPages || 1}
-              </div>
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -277,7 +264,20 @@ export default function AdminAudit() {
                 disabled={page >= totalPages - 1 || isLoading}
                 data-testid="button-next-page"
               >
-                Next
+                <ChevronLeft className="h-4 w-4" />
+                التالي
+              </Button>
+              <div className="text-sm font-medium">
+                صفحة {page + 1} من {totalPages || 1}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0 || isLoading}
+                data-testid="button-prev-page"
+              >
+                السابق
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>

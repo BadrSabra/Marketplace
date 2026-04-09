@@ -190,6 +190,7 @@ export class SubOrderService {
         storeId: subOrders.storeId,
         customerName: users.name,
         customerPhone: users.phone,
+        updatedAt: subOrders.updatedAt,
       })
       .from(subOrders)
       .innerJoin(orders, eq(subOrders.orderId, orders.id))

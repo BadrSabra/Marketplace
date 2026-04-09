@@ -8,10 +8,10 @@ export default function ProductsPage() {
 
   return (
     <AdminLayout>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8" dir="rtl">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Products</h1>
-          <p className="text-muted-foreground mt-1">Platform-wide catalog of all items.</p>
+          <h1 className="text-3xl font-bold text-foreground">المنتجات</h1>
+          <p className="text-muted-foreground mt-1">عرض شامل لجميع المنتجات على المنصة.</p>
         </div>
       </div>
 
@@ -21,17 +21,17 @@ export default function ProductsPage() {
         ) : !products || products.length === 0 ? (
           <div className="p-12 text-center text-muted-foreground flex flex-col items-center">
             <Package className="w-12 h-12 mb-4 opacity-20" />
-            <p>No products available.</p>
+            <p>لا توجد منتجات متاحة.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
+            <table className="w-full text-sm" dir="rtl">
               <thead className="bg-secondary/50 text-muted-foreground font-semibold uppercase border-b border-border/50">
                 <tr>
-                  <th className="px-6 py-4">Product Details</th>
-                  <th className="px-6 py-4">Store ID</th>
-                  <th className="px-6 py-4">Price</th>
-                  <th className="px-6 py-4">Stock</th>
+                  <th className="px-6 py-4 text-right">تفاصيل المنتج</th>
+                  <th className="px-6 py-4 text-right">معرّف المتجر</th>
+                  <th className="px-6 py-4 text-right">السعر</th>
+                  <th className="px-6 py-4 text-right">المخزون</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">

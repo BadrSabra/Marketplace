@@ -10,6 +10,8 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { t } from "@/i18n";
 
+const DELIVERY_WINDOW_SECONDS = 1800;
+
 interface ActiveTask {
   id: string;
   orderId: string;
@@ -17,13 +19,19 @@ interface ActiveTask {
   subtotal: string;
   customerName: string;
   customerPhone: string;
+  updatedAt: string;
   items: { productName: string; quantity: number }[];
   hasOtp?: boolean;
 }
 
+function calcTimeLeft(updatedAt: string): number {
+  const elapsed = Math.floor((Date.now() - new Date(updatedAt).getTime()) / 1000);
+  return Math.max(0, DELIVERY_WINDOW_SECONDS - elapsed);
+}
+
 export default function ActiveDelivery() {
   const { toast } = useToast();
-  const [timeLeft, setTimeLeft] = useState(1800);
+  const [timeLeft, setTimeLeft] = useState(DELIVERY_WINDOW_SECONDS);
   const [otpInput, setOtpInput] = useState("");
 
   const { data: task, isLoading, error } = useQuery<ActiveTask>({
@@ -33,11 +41,12 @@ export default function ActiveDelivery() {
 
   useEffect(() => {
     if (!task) return;
+    setTimeLeft(calcTimeLeft(task.updatedAt));
     const interval = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+      setTimeLeft(calcTimeLeft(task.updatedAt));
     }, 1000);
     return () => clearInterval(interval);
-  }, [task]);
+  }, [task?.updatedAt]);
 
   const verifyOtpMutation = useMutation({
     mutationFn: async ({ subOrderId, otpCode }: { subOrderId: string; otpCode: string }) => {
