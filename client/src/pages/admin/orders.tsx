@@ -1,11 +1,25 @@
 import { AdminLayout } from "@/components/layout/admin-layout";
-import { useOrders } from "@/hooks/use-orders";
+import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/api";
 import { Spinner } from "@/components/ui/spinner";
 import { format } from "date-fns";
 import { ShoppingCart, Truck, CreditCard } from "lucide-react";
 
 export default function OrdersPage() {
-  const { data: orders, isLoading } = useOrders().useOrders();
+  // BUG-FIX: Was using useOrders().useOrders() which calls "/api/orders" — a per-user
+  // endpoint that returns only the current user's orders (getMyOrders). The admin user
+  // has no orders themselves, so the page always showed "No orders processed yet" even
+  // when real customer orders existed on the platform.
+  // Now correctly uses "/api/admin/orders" which returns all platform orders.
+  const { data: orders, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/orders"],
+    queryFn: async () => {
+      const res = await apiFetch("/api/admin/orders");
+      if (!res.ok) return [];
+      return res.json();
+    },
+    refetchInterval: 30000,
+  });
 
   const getStatusColor = (status: string) => {
     switch(status) {
@@ -21,8 +35,8 @@ export default function OrdersPage() {
     <AdminLayout>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Orders</h1>
-          <p className="text-muted-foreground mt-1">Monitor all platform transactions and deliveries.</p>
+          <h1 className="text-3xl font-bold text-foreground">الطلبات</h1>
+          <p className="text-muted-foreground mt-1">مراقبة جميع طلبات المنصة وعمليات التوصيل.</p>
         </div>
       </div>
 
@@ -32,18 +46,18 @@ export default function OrdersPage() {
         ) : !orders || orders.length === 0 ? (
           <div className="p-12 text-center text-muted-foreground flex flex-col items-center">
             <ShoppingCart className="w-12 h-12 mb-4 opacity-20" />
-            <p>No orders processed yet.</p>
+            <p>لا توجد طلبات حتى الآن.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
+            <table className="w-full text-sm text-right" dir="rtl">
               <thead className="bg-secondary/50 text-muted-foreground font-semibold uppercase border-b border-border/50">
                 <tr>
-                  <th className="px-6 py-4">Order ID & Date</th>
-                  <th className="px-6 py-4">Customer ID</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Delivery</th>
-                  <th className="px-6 py-4">Fees</th>
+                  <th className="px-6 py-4">رقم الطلب والتاريخ</th>
+                  <th className="px-6 py-4">معرّف العميل</th>
+                  <th className="px-6 py-4">الحالة</th>
+                  <th className="px-6 py-4">التوصيل</th>
+                  <th className="px-6 py-4">الرسوم</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">
@@ -79,7 +93,7 @@ export default function OrdersPage() {
                     </td>
                     <td className="px-6 py-4 font-medium">
                       <div className="text-foreground">
-                        الإجمالي: {Number((order as any).totalPrice || 0).toFixed(2)} ج.م
+                        {Number((order as any).totalPrice || 0).toFixed(2)} ج.م
                       </div>
                     </td>
                   </tr>

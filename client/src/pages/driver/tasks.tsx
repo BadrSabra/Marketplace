@@ -35,9 +35,14 @@ export default function DriverTasksPage() {
       <header className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-right">المهام</h1>
+          {/* BUG-FIX: Was showing a badge for "ACCEPTED" status tasks, but a driver is only
+              assigned to a sub-order when it moves to "IN_TRANSIT" (not ACCEPTED).
+              The ACCEPTED badge always showed 0 after the backend fix that corrected
+              getActiveDeliveryForDriver to only return IN_TRANSIT tasks.
+              Now shows a single accurate "active delivery" count. */}
           <div className="flex gap-2 mt-2">
-            <Badge variant="outline">مسندة: {tasks?.filter(t => t.status === 'ACCEPTED').length || 0}</Badge>
             <Badge variant="outline">قيد التوصيل: {tasks?.filter(t => t.status === 'IN_TRANSIT').length || 0}</Badge>
+            <Badge variant="outline">المتاح: {offers?.length || 0}</Badge>
           </div>
         </div>
       </header>

@@ -1,6 +1,6 @@
 import { db } from "../../db";
 import { subOrders, stores, orderItems, products, deliveryOffers, users, orders, deliveryOtps, wallets, walletTransactions, ledger } from "@shared/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { User } from "@shared/schema";
 import { auditService } from "../../services/auditService";
 import { allowedTransitions, type SubOrderStatus } from "./suborder.types";
@@ -11,8 +11,12 @@ export class SubOrderService {
   validateSubOrderTransition(currentStatus: string, nextStatus: string) {
     const allowed = allowedTransitions[currentStatus as SubOrderStatus];
     if (!allowed || !allowed.includes(nextStatus as SubOrderStatus)) {
+      // BUG-FIX: Was throwing "BUSINESS_RULE_VIOLATION: Illegal state transition..."
+      // but suborder.controller.ts checks for err.message === "INVALID_TRANSITION".
+      // Mismatch meant invalid transitions always returned HTTP 500 instead of 400.
+      // Now throws exactly "INVALID_TRANSITION" so the controller maps it to 400 correctly.
       console.error(`[BLOCK] Illegal status transition: ${currentStatus} -> ${nextStatus}`);
-      throw new Error(`BUSINESS_RULE_VIOLATION: Illegal state transition from ${currentStatus} to ${nextStatus}`);
+      throw new Error("INVALID_TRANSITION");
     }
   }
 
@@ -188,9 +192,15 @@ export class SubOrderService {
       .innerJoin(users, eq(orders.customerId, users.id))
       .innerJoin(stores, eq(subOrders.storeId, stores.id))
       .where(
+        // BUG-FIX: Was filtering by ["ACCEPTED", "IN_TRANSIT"] but a driver is only assigned
+        // (assignedDriverId is set) when the customer accepts an offer, which simultaneously
+        // sets the status to "IN_TRANSIT". A sub-order in "ACCEPTED" state has NO assigned driver
+        // yet — it means the store accepted the customer's order but no driver has been picked.
+        // Including "ACCEPTED" here was dead code that added confusion without ever matching
+        // any real row. Now correctly filters to only "IN_TRANSIT" for the assigned driver.
         and(
           eq(subOrders.assignedDriverId, driverId),
-          inArray(subOrders.status, ["ACCEPTED", "IN_TRANSIT"])
+          eq(subOrders.status, "IN_TRANSIT")
         )
       )
       .limit(1);

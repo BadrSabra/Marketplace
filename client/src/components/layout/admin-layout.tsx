@@ -24,15 +24,19 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// BUG-FIX: "/stores" was linking to the PUBLIC stores page (PublicStoresPage) visible to all
+// visitors, not the admin store management page at "/admin/stores".
+// Similarly "/products" and "/orders" had no role restrictions and were accessible to any
+// authenticated user. All admin nav items now point to the correct admin-scoped routes.
 const NAV_ITEMS = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/", label: "لوحة التحكم", icon: LayoutDashboard },
   { href: "/admin/deposits", label: "طلبات الإيداع", icon: Wallet },
   { href: "/admin/withdrawals", label: "طلبات السحب", icon: ArrowDownLeft },
-  { href: "/admin/audit", label: "Audit Logs", icon: ShieldAlert },
-  { href: "/admin/users", label: "Users", icon: Users },
-  { href: "/stores", label: "Stores", icon: StoreIcon },
-  { href: "/products", label: "Products", icon: Package },
-  { href: "/orders", label: "Orders", icon: ShoppingCart },
+  { href: "/admin/audit", label: "سجلات التدقيق", icon: ShieldAlert },
+  { href: "/admin/users", label: "المستخدمون", icon: Users },
+  { href: "/admin/stores", label: "المتاجر", icon: StoreIcon },
+  { href: "/admin/products", label: "المنتجات", icon: Package },
+  { href: "/admin/orders", label: "الطلبات", icon: ShoppingCart },
   { href: "/chat", label: "الرسائل", icon: MessageCircle },
 ];
 

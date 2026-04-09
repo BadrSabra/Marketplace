@@ -233,11 +233,21 @@ function Router() {
       <Route path="/admin/stores">
         {() => <ProtectedRoute component={StoresPage} roles={["ADMIN"]} />}
       </Route>
+      {/* BUG-FIX: "/products" and "/orders" had NO role restriction — any authenticated user
+          could access admin management pages. Added ADMIN role guards and registered the
+          new "/admin/products" and "/admin/orders" canonical admin routes to match the
+          admin sidebar nav links. The old paths are kept as aliases for backward compatibility. */}
       <Route path="/products">
-        {() => <ProtectedRoute component={ProductsPage} />}
+        {() => <ProtectedRoute component={ProductsPage} roles={["ADMIN"]} />}
+      </Route>
+      <Route path="/admin/products">
+        {() => <ProtectedRoute component={ProductsPage} roles={["ADMIN"]} />}
       </Route>
       <Route path="/orders">
-        {() => <ProtectedRoute component={OrdersPage} />}
+        {() => <ProtectedRoute component={OrdersPage} roles={["ADMIN"]} />}
+      </Route>
+      <Route path="/admin/orders">
+        {() => <ProtectedRoute component={OrdersPage} roles={["ADMIN"]} />}
       </Route>
       
       {/* Chat Routes */}
