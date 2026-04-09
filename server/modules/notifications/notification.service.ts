@@ -18,6 +18,14 @@ export class NotificationService {
   }
 
   private async handleNotification(event: NotificationEvent) {
+    // Q: هل يُستدعى handleNotification فعلاً من أي مكان في التطبيق؟
+    // A: لا — هذا كود ميت (dead code). notificationEmitter.emitEvent() وemitNotification()
+    //    مُعرَّفان في notification.emitter.ts لكن لا يُستدعيان من أي وحدة أخرى في المشروع.
+    //    نظام الإشعارات الفعلي يعمل عبر push.service.ts مباشرةً (createNotification)
+    //    الذي يُسجّل في DB ويُرسل عبر socket.io + webpush دون استخدام الـ emitter.
+    //    النتيجة: سجل الـ audit الذي يُفترض تسجيله هنا لكل حدث إشعار لا يُنفَّذ أبداً.
+    //    للإصلاح الكامل: إزالة notificationEmitter واستدعاء auditService مباشرةً
+    //    من createNotification() في push.service.ts إذا أُريد تسجيل الإشعارات.
     try {
       // BUG-FIX: Was importing auditService from ../audit/audit.service which uses
       // insertAuditLog() with a hardcoded fallback UUID "00000000-0000-0000-0000-000000000000"
