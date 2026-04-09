@@ -52,7 +52,10 @@ export const ledger = pgTable("ledger", {
   debitUserId: uuid("debit_user_id").references(() => users.id),
   creditUserId: uuid("credit_user_id").references(() => users.id),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
-  type: text("type", { enum: ["DEPOSIT", "WITHDRAWAL", "COMMISSION"] }).notNull(),
+  // BUG-FIX: Added "REFUND" to the ledger type enum. Previously refunds were recorded
+  // as "DEPOSIT" which is semantically misleading in financial audit trails — a refund
+  // is a distinct event from a deposit. Using "REFUND" makes audit reports accurate.
+  type: text("type", { enum: ["DEPOSIT", "WITHDRAWAL", "COMMISSION", "REFUND"] }).notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

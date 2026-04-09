@@ -405,12 +405,14 @@ export class WalletService {
         .where(eq(wallets.id, wallet.id));
 
       // Credit the user back in the ledger (reversal of the original debit on request creation)
+      // BUG-FIX: Was type "DEPOSIT" which conflates a withdrawal rejection reversal with a
+      // new deposit. Now uses "REFUND" for accurate audit trail and financial reporting.
       await tx.insert(ledger).values({
         referenceId: request.id,
         debitUserId: null,
         creditUserId: request.userId,
         amount: request.amount,
-        type: "DEPOSIT",
+        type: "REFUND",
       });
 
       // BUG-FIX: The wallet transaction created as PENDING on withdrawal request was never

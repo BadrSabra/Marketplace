@@ -114,14 +114,13 @@ export class DatabaseStorage implements IStorage {
 
   async deleteStore(id: string): Promise<any> {
     const schema = await import("@shared/schema");
-    const { subOrders, products, stores, orderItems, deliveryOffers, deliveryOtps, users, wallets, walletTransactions, ratings, auditLogs } = schema;
+    const { subOrders, products, stores, orderItems, deliveryOffers, deliveryOtps, users } = schema;
     
     return await db.transaction(async (tx) => {
       const [store] = await tx.select().from(stores).where(eq(stores.id, id));
       if (!store) throw new Error("Store not found");
 
       const [owner] = await tx.select().from(users).where(eq(users.id, store.ownerId));
-      const [wallet] = await tx.select().from(wallets).where(eq(wallets.userId, store.ownerId));
 
       const report = {
         storeId: store.id,
@@ -133,11 +132,6 @@ export class DatabaseStorage implements IStorage {
         orderItemsDeleted: 0,
         deliveryOffersDeleted: 0,
         deliveryOtpsDeleted: 0,
-        walletDeleted: false,
-        userDeleted: false,
-        walletTransactionsDeleted: 0,
-        ratingsDeleted: 0,
-        auditLogsDeleted: 0
       };
 
       // 1. Delete dependent records for sub-orders
@@ -163,32 +157,12 @@ export class DatabaseStorage implements IStorage {
       await tx.delete(subOrders).where(eq(subOrders.storeId, id));
 
       // 4. Delete store
+      // BUG-FIX: Previously, this function also deleted the store owner's wallet,
+      // wallet transactions, ratings, audit logs, and USER ACCOUNT — catastrophic
+      // side effect. Deleting a store should NOT delete the person who owns it.
+      // The owner's account, wallet, and history are preserved. Only store-specific
+      // data (products, sub-orders, order items, delivery offers, OTPs) is removed.
       await tx.delete(stores).where(eq(stores.id, id));
-
-      // 5. Delete owner related data
-      if (owner) {
-        // Wallet transactions
-        if (wallet) {
-          const deletedTx = await tx.delete(walletTransactions).where(eq(walletTransactions.walletId, wallet.id)).returning();
-          report.walletTransactionsDeleted = deletedTx.length;
-          await tx.delete(wallets).where(eq(wallets.id, wallet.id));
-          report.walletDeleted = true;
-        }
-
-        // Ratings
-        const deletedRatings = await tx.delete(ratings).where(
-          sql`${ratings.fromUserId} = ${owner.id} OR ${ratings.toUserId} = ${owner.id}`
-        ).returning();
-        report.ratingsDeleted = deletedRatings.length;
-
-        // Audit Logs
-        const deletedAudit = await tx.delete(auditLogs).where(eq(auditLogs.performedByUserId, owner.id)).returning();
-        report.auditLogsDeleted = deletedAudit.length;
-
-        // Finally delete user
-        await tx.delete(users).where(eq(users.id, owner.id));
-        report.userDeleted = true;
-      }
 
       return report;
     });

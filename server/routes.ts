@@ -390,7 +390,11 @@ export async function registerRoutes(
   app.get("/api/public/stores/:id", publicStoresController.getStore);
 
   // --- STORES MODULE ---
-  app.get(api.stores.list.path, async (req, res) => {
+  // BUG-FIX: Route was completely unauthenticated — any anonymous user could list all stores
+  // with owner IDs and internal data. The public equivalent is /api/public/stores which is
+  // intentionally open. This internal route now requires authentication (ADMIN sees all,
+  // STORE_OWNER can access their own store data which is filtered client-side).
+  app.get(api.stores.list.path, authenticate, authorizeRole(["ADMIN", "STORE_OWNER"]), async (req, res) => {
     const stores = await storage.getStores();
     res.json(stores);
   });
@@ -617,14 +621,15 @@ export async function registerRoutes(
               notes: `استرداد تلقائي - إلغاء الطلب #${parentOrder.id.slice(0, 8)} بواسطة الإدارة`,
             });
 
-            // A refund credits the customer's wallet — ledger type must be "DEPOSIT"
-            // (same convention as cancelSubOrder in order.service.ts and rejectWithdrawal).
+            // BUG-FIX: Was type "DEPOSIT" which conflates admin refunds with new incoming
+            // deposits, making financial audit reports inaccurate. Now uses "REFUND" which
+            // is a distinct ledger type added to the schema for this purpose.
             await tx.insert(ledger).values({
               referenceId: parentOrder.id,
               debitUserId: null,
               creditUserId: parentOrder.customerId,
               amount: refundAmount.toFixed(2),
-              type: "DEPOSIT",
+              type: "REFUND",
             });
 
             console.log(`[Admin] Refunded ${refundAmount.toFixed(2)} to customer ${parentOrder.customerId} for cancelled order ${id}`);

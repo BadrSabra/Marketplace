@@ -33,9 +33,13 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
     }
     
     if (response.status === 401) {
-      // Clear token if unauthorized to force re-login
+      // BUG-FIX: Token was cleared but user was NOT redirected to the login page,
+      // leaving them on a broken page with empty/failed data until a manual refresh.
+      // Now the user is immediately redirected to /login on any 401 response.
       localStorage.removeItem("jwt_token");
-      // Optional: window.location.href = '/login';
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
     }
     
     throw new Error(errorMessage);

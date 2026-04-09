@@ -80,12 +80,18 @@ export class LedgerService {
     // Fetch held funds (PENDING wallet transactions) - only when user_id is defined
     let heldFundsResult: { sum: string } | undefined;
     if (filters.user_id) {
+      // BUG-FIX: Was summing ALL pending wallet transactions including DEPOSIT type.
+      // Pending deposits are money waiting to come IN (not approved yet), so they are
+      // NOT "held" from the current balance — the balance wasn't reduced for them.
+      // Only PENDING WITHDRAWAL transactions represent funds already deducted but awaiting
+      // admin approval, so only those should be counted as held funds.
       const [result] = await db
         .select({ sum: sql<string>`sum(amount)` })
         .from(walletTransactions)
         .innerJoin(wallets, eq(walletTransactions.walletId, wallets.id))
         .where(and(
           eq(wallets.userId, filters.user_id),
+          eq(walletTransactions.type, "WITHDRAWAL"),
           eq(walletTransactions.status, "PENDING")
         ));
       heldFundsResult = result;

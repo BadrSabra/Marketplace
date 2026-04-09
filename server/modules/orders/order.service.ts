@@ -406,14 +406,14 @@ export class OrderService {
         });
 
         // BUG-FIX: Was type "WITHDRAWAL" for a credit to the customer (refund).
-        // A refund credits the wallet → must use type "DEPOSIT", consistent with
-        // approveDeposit, rejectWithdrawal reversal, and the suborder.service.ts fix.
+        // BUG-FIX-2: Was type "DEPOSIT" which is semantically wrong — a refund is a
+        // distinct financial event. Now uses "REFUND" for accurate audit trail reporting.
         await tx.insert(ledger).values({
           referenceId: order.id,
           debitUserId: null,
           creditUserId: userId,
           amount: totalRefund.toFixed(2),
-          type: "DEPOSIT",
+          type: "REFUND",
         });
       }
     });

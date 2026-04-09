@@ -2,10 +2,11 @@ import { db } from "../db";
 import { wallets, ledger, auditLogs, walletTransactions } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 
+// BUG-FIX: Added "REFUND" to the type union to match the updated ledger schema
 export async function walletTransactionWrapper(
   userId: string,
   amount: string,
-  type: "DEPOSIT" | "WITHDRAWAL" | "COMMISSION",
+  type: "DEPOSIT" | "WITHDRAWAL" | "COMMISSION" | "REFUND",
   operation: (tx: any) => Promise<any>
 ) {
   try {
