@@ -63,7 +63,7 @@ export interface IStorage {
 //    إذا غُيّرت بنية مجلد uploads (مثلاً انتقلنا لـ S3 أو CDN)، هذه الدالة
 //    ستفشل بصمت — الملفات ستُحذف من DB لكن تبقى على التخزين الخارجي.
 //    الإصلاح المستقبلي: استبدال fs.unlink بـ storage adapter يدعم S3 وlocal filesystem.
-function deleteUploadedFile(urlPath: string | null | undefined): void {
+export function deleteUploadedFile(urlPath: string | null | undefined): void {
   if (!urlPath) return;
   try {
     // Strip leading slash and resolve to absolute path

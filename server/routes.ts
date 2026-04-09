@@ -43,6 +43,7 @@ import ledgerRouter from "./modules/ledger/ledger.controller";
 //    الإصلاح: حذف app.use(auditMiddleware) لإزالة overhead غير مبرر من كل طلب.
 import { deliveryOfferController } from "./modules/delivery/deliveryOffer.controller";
 import { deliveryOtpController } from "./modules/delivery/deliveryOtp.controller";
+import { deliveryOtpService } from "./modules/delivery/deliveryOtp.service";
 
 import { loginLimiter, orderLimiter, depositLimiter, registerLimiter, withdrawLimiter } from "./middleware/security";
 import { chatController } from "./modules/chat/chat.controller";
@@ -1049,6 +1050,58 @@ export async function registerRoutes(
   //    الذي يُرجع "Unauthorized" لكن بكود 400 خاطئ بدلاً من 403. الإصلاح: إضافة
   //    authorizeRole(["CUSTOMER"]) على المسار لصد غير العملاء قبل دخولهم للمنطق.
   app.patch("/api/suborders/:id/cancel", authenticate, authorizeRole(["CUSTOMER"]), orderController.cancelSubOrder);
+
+  // Q: لماذا يحتاج العميل لنقطة نهاية لتجديد رمز OTP؟
+  // A: بعد أن أصبحت generateOtp idempotent (تُعيد الرمز الموجود بدلاً من توليد جديد
+  //    في كل مرة)، لن يُجدَّد الرمز تلقائياً عند انتهاء صلاحيته. العميل الذي يفتح
+  //    الصفحة بعد انتهاء صلاحية الرمز (2 ساعة) يرى رمزاً قديماً منتهياً — لا يستطيع
+  //    السائق قبوله، ولا توجد وسيلة للعميل لتجديده بدون هذه النقطة.
+  //    الإصلاح: نُضيف POST /api/orders/suborders/:id/regenerate-otp يستدعي
+  //    generateOtp() مع forceNew=false (يُعيد الرمز الصالح إن وُجد أو يُنشئ جديداً)
+  //    ويُرجع otpCode للعميل مباشرةً حتى يراه في واجهته.
+  //
+  // ⚠️ لماذا نُرجع otpCode للعميل هنا لكن لا نُرجعه للسائق في generateOtp (DRIVER)؟
+  //    OTP هو رمز يُظهره العميل للسائق وجهاً لوجه. العميل يحتاج أن يرى الرمز ليُبلّغه
+  //    للسائق. السائق لا يجب أن يحصل عليه بشكل مستقل — ذلك يُبطل نظام التحقق.
+  app.post(
+    "/api/orders/suborders/:id/regenerate-otp",
+    authenticate,
+    authorizeRole(["CUSTOMER"]),
+    async (req, res) => {
+      try {
+        const subOrderId = req.params.id as string;
+        const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!UUID_REGEX.test(subOrderId)) {
+          return res.status(400).json({ message: "معرّف الطلب الفرعي غير صالح" });
+        }
+
+        const customerId = (req as any).user.id;
+
+        const [subOrder] = await db.select().from(subOrders).where(eq(subOrders.id, subOrderId));
+        if (!subOrder) return res.status(404).json({ message: "الطلب الفرعي غير موجود" });
+
+        // Verify ownership: only the customer who placed the order can regenerate its OTP
+        const [order] = await db.select().from(orders).where(eq(orders.id, subOrder.orderId));
+        if (!order || order.customerId !== customerId) {
+          return res.status(403).json({ message: "غير مصرح: هذا الطلب لا ينتمي إليك" });
+        }
+
+        // OTP is only relevant when the sub-order is IN_TRANSIT (driver is on the way)
+        if (subOrder.status !== "IN_TRANSIT") {
+          return res.status(400).json({ message: "لا يمكن تجديد رمز التوصيل إلا للطلبات في حالة IN_TRANSIT" });
+        }
+
+        // generateOtp is idempotent: returns the existing valid OTP, or creates a new one
+        // if the old one is expired. forceNew=false is intentional — we do not want to
+        // invalidate a code that the driver may already be on their way to verify.
+        const otpCode = await deliveryOtpService.generateOtp(subOrder.orderId, subOrderId, false);
+        res.json({ otpCode });
+      } catch (err: any) {
+        console.error("[RegenerateOTP] Error:", err);
+        res.status(500).json({ message: "حدث خطأ داخلي" });
+      }
+    }
+  );
 
   // Ensure Admin account is ready
   async function ensureAdminAccount() {

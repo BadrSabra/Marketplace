@@ -3,6 +3,7 @@ import { products, stores } from "@shared/schema";
 import { eq, and, asc } from "drizzle-orm";
 import { ProductDTO, CreateProductDTO, UpdateProductDTO } from "./products.types";
 import { auditService } from "../../services/auditService";
+import { deleteUploadedFile } from "../../storage";
 
 export class ProductsService {
   private mapToDTO(product: any): ProductDTO {
@@ -133,6 +134,15 @@ export class ProductsService {
     //    الإصلاح: نرمي خطأ "HAS_ACTIVE_ORDERS" من الـ service قبل أن نصل للـ DELETE،
     //    أو نتعامل مع كود PostgreSQL 23503 في الـ controller لإرسال 409 مع رسالة واضحة.
     //    اخترنا الفحص المسبق في الـ service لأنه أوضح وأكثر توقعاً.
+    //
+    // Q: هل يجب حذف صورة المنتج من القرص عند حذفه من DB؟
+    // A: نعم — بدون حذف الملف تتراكم الصور يتيمةً في uploads/products/ إلى الأبد.
+    //    الإصلاح: نُخزّن imageUrl من داخل الـ transaction (قبل الحذف) ثم نُنظّف الملف
+    //    بعد اكتمال الـ transaction بنجاح. سبب التأجيل: عمليات filesystem ليست جزءاً
+    //    من DB transaction ولا يمكن rollback حذف الملف؛ لو نفّذنا الحذف داخل الـ
+    //    transaction وفشل شيء لاحق، سيُلغى record DB لكن الملف سيبقى محذوفاً.
+    //    بالتأجيل نضمن حذف الملف فقط بعد نجاح حذف DB.
+    let imageUrlToDelete: string | null | undefined;
     try {
       await db.transaction(async (tx) => {
         // BUG-FIX: Was reading product + checking ownership then deleting outside a transaction.
@@ -146,6 +156,9 @@ export class ProductsService {
           throw new Error("UNAUTHORIZED_OWNERSHIP");
         }
 
+        // Capture imageUrl before deletion so we can clean it up after the tx commits
+        imageUrlToDelete = product.imageUrl;
+
         await tx.delete(products).where(eq(products.id, id));
         await auditService.logEvent({
           actionType: "DELETE_PRODUCT",
@@ -156,6 +169,12 @@ export class ProductsService {
           oldValue: { name: product.name, storeId: product.storeId },
         });
       });
+
+      // Clean up the image file AFTER the transaction has committed successfully.
+      // Non-blocking best-effort: a failed file delete should not roll back an already-committed DB delete.
+      if (imageUrlToDelete) {
+        deleteUploadedFile(imageUrlToDelete);
+      }
     } catch (err: any) {
       // PostgreSQL foreign key violation — product is referenced by order_items
       if (err?.code === "23503" || err?.message?.includes("foreign key")) {
@@ -174,10 +193,25 @@ export class ProductsService {
       throw new Error("UNAUTHORIZED_OWNERSHIP");
     }
 
+    // Q: هل يجب حذف الصورة القديمة عند استبدالها بصورة جديدة؟
+    // A: نعم — بدون حذف الملف القديم، كل تحديث للصورة يترك ملفاً يتيماً في
+    //    uploads/products/. بعد عشرات التحديثات يتراكم مئات الميغابايت من الصور
+    //    غير المُستخدمة. الإصلاح: نحفظ URL الصورة القديمة قبل التحديث ثم نحذفها
+    //    بعد نجاح التحديث في DB. التنظيف يتم بعد DB (لا قبله) لأن فشل التحديث
+    //    يعني الإبقاء على الصورة القديمة صالحة وغير يتيمة.
+    const oldImageUrl = product.imageUrl;
+
     const [updated] = await db.update(products)
       .set({ imageUrl, updatedAt: new Date() })
       .where(eq(products.id, id))
       .returning();
+
+    // BUG-FIX: Old image file was never cleaned up when a product image was replaced.
+    // Delete the old file after the DB update succeeds. Best-effort: a filesystem error
+    // should not fail the request since the DB record is already updated successfully.
+    if (oldImageUrl && oldImageUrl !== imageUrl) {
+      deleteUploadedFile(oldImageUrl);
+    }
 
     await auditService.logEvent({
       actionType: "UPDATE_PRODUCT_IMAGE",
@@ -185,6 +219,7 @@ export class ProductsService {
       entityId: id,
       performedByUserId: user.id,
       performedByRole: user.role,
+      oldValue: { imageUrl: oldImageUrl },
       newValue: { imageUrl },
     });
     return this.mapToDTO(updated);
