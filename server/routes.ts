@@ -659,7 +659,7 @@ export async function registerRoutes(
       if (search) {
         const searchTerm = (search as string).toLowerCase();
         result.transactions = result.transactions.filter(t => 
-          t.referenceId?.toLowerCase().includes(searchTerm)
+          t.related_order_id?.toLowerCase().includes(searchTerm)
         );
       }
       

@@ -51,50 +51,50 @@ export class DeliveryOtpService {
       subOrderId ? eq(deliveryOtps.subOrderId, subOrderId) : undefined
     );
 
-    const [otpRecord] = await db.select()
-      .from(deliveryOtps)
-      .where(baseWhere);
-
-    if (!otpRecord) {
-      throw new Error("Invalid, expired, or too many attempts");
-    }
-
-    if (otpRecord.otpCode !== otpCode) {
-      const newAttemptCount = otpRecord.attemptCount + 1;
-      const newStatus = newAttemptCount >= 5 ? "EXPIRED" : "PENDING";
-      
-      await db.update(deliveryOtps)
-        .set({ 
-          attemptCount: newAttemptCount, 
-          status: newStatus,
-          updatedAt: new Date() 
-        })
-        .where(eq(deliveryOtps.id, otpRecord.id));
-
-      console.log(JSON.stringify({
-        event: "OTP_VERIFICATION_FAILED",
-        orderId,
-        subOrderId,
-        timestamp: new Date().toISOString(),
-        reason: newStatus === "EXPIRED" ? "MAX_ATTEMPTS_EXCEEDED" : "INVALID_OTP_CODE",
-        success: false
-      }));
-      throw new Error(newStatus === "EXPIRED" ? "Maximum attempts exceeded" : "Invalid OTP code");
-    }
-
+    // BUG-FIX: TOCTOU race condition — previously the OTP was read outside a transaction,
+    // then verified and updated in a separate transaction. Two concurrent correct submissions
+    // could both pass the read check and both mark the order as delivered.
+    // Fix: wrap the entire check + update in one atomic transaction with SELECT FOR UPDATE.
     await db.transaction(async (tx) => {
+      const [otpRecord] = await tx.select()
+        .from(deliveryOtps)
+        .where(baseWhere)
+        .for("update")
+        .limit(1);
+
+      if (!otpRecord) {
+        throw new Error("Invalid, expired, or too many attempts");
+      }
+
+      if (otpRecord.otpCode !== otpCode) {
+        const newAttemptCount = otpRecord.attemptCount + 1;
+        const newStatus = newAttemptCount >= 5 ? "EXPIRED" : "PENDING";
+
+        await tx.update(deliveryOtps)
+          .set({ attemptCount: newAttemptCount, status: newStatus, updatedAt: new Date() })
+          .where(eq(deliveryOtps.id, otpRecord.id));
+
+        console.log(JSON.stringify({
+          event: "OTP_VERIFICATION_FAILED",
+          orderId,
+          subOrderId,
+          timestamp: new Date().toISOString(),
+          reason: newStatus === "EXPIRED" ? "MAX_ATTEMPTS_EXCEEDED" : "INVALID_OTP_CODE",
+          success: false
+        }));
+        throw new Error(newStatus === "EXPIRED" ? "Maximum attempts exceeded" : "Invalid OTP code");
+      }
+
       // Mark OTP as verified
       await tx.update(deliveryOtps)
         .set({ status: "VERIFIED", updatedAt: new Date() })
         .where(eq(deliveryOtps.id, otpRecord.id));
 
       if (subOrderId) {
-        // Mark suborder as delivered
         await tx.update(subOrders)
           .set({ status: "DELIVERED", updatedAt: new Date() })
           .where(eq(subOrders.id, subOrderId));
 
-        // Check if ALL sub-orders of this parent order are now done
         const allSubs = await tx.select({ id: subOrders.id, status: subOrders.status })
           .from(subOrders)
           .where(eq(subOrders.orderId, orderId));
@@ -112,7 +112,6 @@ export class DeliveryOtpService {
             .where(eq(orders.id, orderId));
         }
       } else {
-        // Mark whole order as delivered if no subOrderId (simple case)
         await tx.update(orders)
           .set({ overallStatus: "DELIVERED", updatedAt: new Date() })
           .where(eq(orders.id, orderId));

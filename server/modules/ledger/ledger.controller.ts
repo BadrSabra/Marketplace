@@ -35,7 +35,7 @@ router.get("/ledger/transactions", authenticate, async (req, res) => {
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
       result.transactions = result.transactions.filter(t => 
-        t.referenceId?.toLowerCase().includes(searchTerm)
+        t.related_order_id?.toLowerCase().includes(searchTerm)
       );
     }
 

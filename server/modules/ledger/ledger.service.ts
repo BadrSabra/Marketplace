@@ -49,12 +49,15 @@ export class LedgerService {
     const limit = Math.min(filters.limit || 50, 200);
     const offset = filters.offset || 0;
     const sortBy = filters.sort_by || "createdAt";
-    const sortOrder = filters.sort_order === "asc" ? sql`asc` : sql`desc`;
+    // BUG-FIX: The previous `query` variable was built with proper field aliases
+    // but never awaited/executed. A second raw db.select() ran instead, losing all
+    // the field aliases and returning wrong column names. Now a single correct query runs.
+    const orderBy = sortBy === "createdAt" ? (filters.sort_order === "asc" ? ledger.createdAt : desc(ledger.createdAt)) : desc(ledger.createdAt);
 
-    const query = db
+    const transactions = await db
       .select({
         id: ledger.id,
-        user_id: ledger.creditUserId, // Defaulting to credit user for "user_id" field in response
+        user_id: ledger.creditUserId,
         debit_user_id: ledger.debitUserId,
         credit_user_id: ledger.creditUserId,
         type: ledger.type,
@@ -63,14 +66,6 @@ export class LedgerService {
         createdAt: ledger.createdAt,
         updatedAt: ledger.updatedAt,
       })
-      .from(ledger)
-      .where(whereClause);
-
-    // Sorting
-    const orderBy = sortBy === "createdAt" ? (filters.sort_order === "asc" ? ledger.createdAt : desc(ledger.createdAt)) : desc(ledger.createdAt);
-    
-    const transactions = await db
-      .select()
       .from(ledger)
       .where(whereClause)
       .orderBy(orderBy as any)
@@ -197,29 +192,28 @@ export class LedgerService {
       ledgerEntries.push(storeLedger.id);
 
       // Update Store Wallet
+      // BUG-FIX: If storeWallet is null, the ledger entry above already credits the owner
+      // but their wallet balance never updates — money is lost in limbo. Guard against this.
       const [storeWallet] = await tx.select().from(wallets).where(eq(wallets.userId, store.ownerId)).for("update");
-      if (storeWallet) {
-        const oldBalance = storeWallet.balance;
-        const newBalance = (parseFloat(oldBalance) + storeAmount).toFixed(2);
-        
-        await tx.update(wallets)
-          .set({ 
-            balance: newBalance,
-            updatedAt: new Date()
-          })
-          .where(eq(wallets.id, storeWallet.id));
+      if (!storeWallet) throw new Error(`WALLET_NOT_FOUND: No wallet for store owner ${store.ownerId}`);
 
-        await auditService.logEvent({
-          actionType: "COMMISSION_PROCESSED",
-          entityType: "wallet",
-          entityId: storeWallet.id,
-          performedByUserId: store.ownerId,
-          performedByRole: "SYSTEM",
-          oldValue: { balance: oldBalance },
-          newValue: { balance: newBalance },
-          metadata: { subOrderId, amount: storeAmount.toString(), type: "STORE" }
-        });
-      }
+      const storeOldBalance = storeWallet.balance;
+      const storeNewBalance = (parseFloat(storeOldBalance) + storeAmount).toFixed(2);
+
+      await tx.update(wallets)
+        .set({ balance: storeNewBalance, updatedAt: new Date() })
+        .where(eq(wallets.id, storeWallet.id));
+
+      await auditService.logEvent({
+        actionType: "COMMISSION_PROCESSED",
+        entityType: "wallet",
+        entityId: storeWallet.id,
+        performedByUserId: store.ownerId,
+        performedByRole: "SYSTEM",
+        oldValue: { balance: storeOldBalance },
+        newValue: { balance: storeNewBalance },
+        metadata: { subOrderId, amount: storeAmount.toString(), type: "STORE" }
+      });
 
       // 7. Process Driver Commission (if assigned)
       if (subOrder.assignedDriverId) {
@@ -231,29 +225,27 @@ export class LedgerService {
         }).returning();
         ledgerEntries.push(driverLedger.id);
 
+        // BUG-FIX: Same guard as store wallet — throw if driver wallet missing to keep ledger/wallet in sync.
         const [driverWallet] = await tx.select().from(wallets).where(eq(wallets.userId, subOrder.assignedDriverId)).for("update");
-        if (driverWallet) {
-          const oldBalance = driverWallet.balance;
-          const newBalance = (parseFloat(oldBalance) + driverAmount).toFixed(2);
+        if (!driverWallet) throw new Error(`WALLET_NOT_FOUND: No wallet for driver ${subOrder.assignedDriverId}`);
 
-          await tx.update(wallets)
-            .set({ 
-              balance: newBalance,
-              updatedAt: new Date()
-            })
-            .where(eq(wallets.id, driverWallet.id));
+        const driverOldBalance = driverWallet.balance;
+        const driverNewBalance = (parseFloat(driverOldBalance) + driverAmount).toFixed(2);
 
-          await auditService.logEvent({
-            actionType: "COMMISSION_PROCESSED",
-            entityType: "wallet",
-            entityId: driverWallet.id,
-            performedByUserId: subOrder.assignedDriverId,
-            performedByRole: "SYSTEM",
-            oldValue: { balance: oldBalance },
-            newValue: { balance: newBalance },
-            metadata: { subOrderId, amount: driverAmount.toString(), type: "DRIVER" }
-          });
-        }
+        await tx.update(wallets)
+          .set({ balance: driverNewBalance, updatedAt: new Date() })
+          .where(eq(wallets.id, driverWallet.id));
+
+        await auditService.logEvent({
+          actionType: "COMMISSION_PROCESSED",
+          entityType: "wallet",
+          entityId: driverWallet.id,
+          performedByUserId: subOrder.assignedDriverId,
+          performedByRole: "SYSTEM",
+          oldValue: { balance: driverOldBalance },
+          newValue: { balance: driverNewBalance },
+          metadata: { subOrderId, amount: driverAmount.toString(), type: "DRIVER" }
+        });
       }
 
       return { ledger_entry_ids: ledgerEntries };
