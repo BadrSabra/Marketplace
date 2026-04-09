@@ -32,7 +32,11 @@ type Transaction = {
   type: "DEPOSIT" | "WITHDRAWAL" | "COMMISSION" | "REFUND";
   amount: string;
   status: "PENDING" | "COMPLETED" | "FAILED";
-  referenceId?: string;
+  // BUG-FIX: Was named referenceId but the /api/ledger/transactions endpoint returns
+  // related_order_id (mapped from ledger.referenceId in ledger.service.ts).
+  // Using the correct field name so the order ID column shows the actual reference
+  // instead of always showing "-".
+  related_order_id?: string;
   createdAt: string;
   notes?: string;
 };
@@ -235,7 +239,7 @@ export default function CustomerTransactions() {
                       </TableCell>
                       <TableCell className="font-medium text-right">{t(`customer.wallet.types.${t_row.type}`)}</TableCell>
                       <TableCell className="font-mono text-sm text-right">
-                        {t_row.referenceId || "-"}
+                        {t_row.related_order_id ? t_row.related_order_id.slice(0, 8) + "..." : "-"}
                       </TableCell>
                       <TableCell className={`font-bold text-right ${getAmountColor(t_row.type)}`}>
                         {["DEPOSIT", "COMMISSION", "REFUND"].includes(t_row.type) ? "+" : "-"}

@@ -74,7 +74,7 @@ export class WalletService {
     ));
   }
 
-  async approveDeposit(transactionId: string): Promise<WalletTransaction> {
+  async approveDeposit(transactionId: string, adminId?: string): Promise<WalletTransaction> {
     return await db.transaction(async (tx) => {
       const [transaction] = await tx.select()
         .from(walletTransactions)
@@ -131,16 +131,19 @@ export class WalletService {
         type: "DEPOSIT",
       });
 
-      // Log audit for deposit approval
+      // BUG-FIX: Was using user?.id (the CUSTOMER) as performedByUserId because approveDeposit()
+      // had no adminId parameter. The admin who approved the deposit was never recorded in the
+      // audit trail — every deposit approval appeared as if the customer approved their own deposit.
+      // Now accepts an optional adminId and prefers it over the customer's ID in the audit entry.
       await auditService.logEvent({
         actionType: "DEPOSIT_APPROVED",
         entityType: "wallet_transaction",
         entityId: transactionId,
-        performedByUserId: user?.id || wallet.userId,
-        performedByRole: user?.role || "ADMIN",
+        performedByUserId: adminId || user?.id || wallet.userId,
+        performedByRole: adminId ? "ADMIN" : (user?.role || "ADMIN"),
         oldValue: { balance: wallet.balance },
         newValue: { balance: newBalance },
-        metadata: { amount: transaction.amount, walletId: wallet.id }
+        metadata: { amount: transaction.amount, walletId: wallet.id, customerId: wallet.userId }
       });
 
       if (user) {

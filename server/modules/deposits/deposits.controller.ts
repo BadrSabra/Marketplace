@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { depositService } from "./deposits.service";
 import { authenticate, authorizeRole } from "../../middleware/auth";
 import { walletService } from "../wallet/wallet.service";
 import { notifyUser } from "../notifications/push.service";
@@ -22,7 +21,8 @@ router.get("/admin/deposits/pending", authenticate, authorizeRole(["ADMIN"]), as
 router.post("/admin/deposits/:id/approve", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
   try {
     const id = req.params.id as string;
-    const transaction = await walletService.approveDeposit(id);
+    const adminId = (req as any).user?.id;
+    const transaction = await walletService.approveDeposit(id, adminId);
 
     // Notify user
     try {

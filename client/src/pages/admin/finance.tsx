@@ -16,10 +16,11 @@ interface LedgerEntry {
 }
 
 interface LedgerResponse {
-  data: LedgerEntry[];
+  transactions: LedgerEntry[];
   total: number;
   limit: number;
   offset: number;
+  heldFunds: string;
 }
 
 const typeConfig: Record<string, { label: string; icon: React.ComponentType<any>; colorClass: string }> = {
@@ -43,7 +44,10 @@ export default function FinancePage() {
     queryKey: ["/api/admin/stats"],
   });
 
-  const entries = data?.data ?? [];
+  // BUG-FIX: Was data?.data which is always undefined — the API returns { transactions: [...] }
+  // not { data: [...] }. The finance page always showed empty "لا توجد معاملات" even when
+  // there were transactions in the ledger.
+  const entries = data?.transactions ?? [];
 
   return (
     <AdminLayout>

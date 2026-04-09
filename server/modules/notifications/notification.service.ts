@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import { notificationEmitter, type NotificationEvent } from "./notification.emitter";
-import { auditService } from "../audit/audit.service";
+import { auditService } from "../../services/auditService";
 
 export class NotificationService {
   private transporter;
@@ -19,12 +19,18 @@ export class NotificationService {
 
   private async handleNotification(event: NotificationEvent) {
     try {
-      await auditService.insertAuditLog({
+      // BUG-FIX: Was importing auditService from ../audit/audit.service which uses
+      // insertAuditLog() with a hardcoded fallback UUID "00000000-0000-0000-0000-000000000000"
+      // when userId is missing. Since performedByUserId has a NOT NULL FK to users.id,
+      // that fallback UUID would cause a FK violation if the system UUID doesn't exist.
+      // Now uses the shared auditService from services/auditService (logEvent method)
+      // which is used consistently throughout the codebase.
+      await auditService.logEvent({
         actionType: `NOTIFICATION_${event.type}`,
         entityType: "NOTIFICATION",
         entityId: event.userId,
-        userId: event.userId,
-        role: event.role,
+        performedByUserId: event.userId,
+        performedByRole: event.role,
         newValue: event.payload,
         metadata: {
           timestamp: event.timestamp,
