@@ -283,6 +283,29 @@ export class OrderService {
       .innerJoin(users, eq(orders.customerId, users.id))
       .where(inArray(subOrders.storeId, storeIds));
 
+    // BUG-FIX: N+1 query — was fetching order items for each sub-order individually inside
+    // a for loop, causing 1 + N database round-trips. Now batch-fetches all items in a
+    // single query and groups them in memory before building the response.
+    const subOrderIds = ownerSubOrders.map(r => r.subOrder.id);
+    let allItemsMap: Record<string, { product_name: string; price: string; quantity: number }[]> = {};
+
+    if (subOrderIds.length > 0) {
+      const allItems = await db.select({
+        subOrderId: orderItems.subOrderId,
+        product_name: products.name,
+        price: orderItems.priceAtOrder,
+        quantity: orderItems.quantity,
+      })
+        .from(orderItems)
+        .innerJoin(products, eq(orderItems.productId, products.id))
+        .where(inArray(orderItems.subOrderId, subOrderIds));
+
+      for (const item of allItems) {
+        if (!allItemsMap[item.subOrderId]) allItemsMap[item.subOrderId] = [];
+        allItemsMap[item.subOrderId].push({ product_name: item.product_name, price: item.price, quantity: item.quantity });
+      }
+    }
+
     const orderMap = new Map();
 
     for (const row of ownerSubOrders) {
@@ -296,21 +319,12 @@ export class OrderService {
         });
       }
 
-      const items = await db.select({
-        product_name: products.name,
-        price: orderItems.priceAtOrder,
-        quantity: orderItems.quantity,
-      })
-        .from(orderItems)
-        .innerJoin(products, eq(orderItems.productId, products.id))
-        .where(eq(orderItems.subOrderId, row.subOrder.id));
-
       orderMap.get(orderId).sub_orders.push({
         sub_order_id: row.subOrder.id,
         status: row.subOrder.status,
         subtotal: row.subOrder.subtotal,
         createdAt: row.subOrder.createdAt,
-        items,
+        items: allItemsMap[row.subOrder.id] || [],
       });
     }
 
@@ -351,6 +365,20 @@ export class OrderService {
       if (subOrder.status === "IN_TRANSIT") throw new Error("Cannot cancel sub-order that is already in transit");
 
       await tx.update(subOrders).set({ status: "CANCELLED", updatedAt: new Date() }).where(eq(subOrders.id, subOrderId));
+
+      // BUG-FIX: Stock was never replenished on sub-order cancellation, causing permanent
+      // inventory leakage — cancelled items remained deducted from the store's stock levels
+      // indefinitely. Fetch all items for this sub-order and increment each product's stock.
+      const cancelledItems = await tx
+        .select({ productId: orderItems.productId, quantity: orderItems.quantity })
+        .from(orderItems)
+        .where(eq(orderItems.subOrderId, subOrderId));
+
+      for (const item of cancelledItems) {
+        await tx.update(products)
+          .set({ stock: sql`stock + ${item.quantity}` })
+          .where(eq(products.id, item.productId));
+      }
 
       if (order.paymentStatus === "PAID") {
         const [wallet] = await tx.select().from(wallets).where(eq(wallets.userId, userId)).for("update");

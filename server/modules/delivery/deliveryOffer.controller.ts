@@ -156,6 +156,12 @@ export class DeliveryOfferController {
       if (err.message === "NOT_FOUND") {
         return res.status(404).json({ error: "Task not found" });
       }
+      if (err.message === "TASK_NOT_AVAILABLE") {
+        return res.status(400).json({ error: "هذه المهمة غير متاحة للقبول" });
+      }
+      if (err.message === "DRIVER_NOT_APPROVED") {
+        return res.status(403).json({ error: "Driver account not approved" });
+      }
       res.status(500).json({ error: "Internal server error" });
     }
   }

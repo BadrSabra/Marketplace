@@ -48,7 +48,11 @@ export class SubOrderService {
           throw new Error("UNAUTHORIZED: Store owner can only ACCEPT or CANCEL sub-orders");
         }
       } else if (isDriver) {
-        if (subOrder.assignedDriverId && subOrder.assignedDriverId !== actorUser.id) {
+        // BUG-FIX: The previous check only rejected drivers with a *different* assignedDriverId.
+        // If assignedDriverId was null (no driver assigned yet), any authenticated driver could
+        // update the sub-order status (e.g., mark it as IN_TRANSIT or DELIVERED before being
+        // assigned). Now strictly requires the driver to be the one assigned to this sub-order.
+        if (subOrder.assignedDriverId !== actorUser.id) {
           throw new Error("UNAUTHORIZED: Driver not assigned to this sub-order");
         }
       } else if (!isAdmin) {

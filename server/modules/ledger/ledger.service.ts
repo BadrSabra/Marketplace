@@ -191,6 +191,21 @@ export class LedgerService {
       }).returning();
       ledgerEntries.push(storeLedger.id);
 
+      // BUG-FIX: The platform's 1% commission was never recorded in the ledger,
+      // making the admin stats `platformCommissions` field inaccurate. The previous
+      // query returned the sum of ALL COMMISSION entries (store + driver payouts) instead
+      // of the platform's actual cut. Now we record a separate COMMISSION entry with
+      // both creditUserId and debitUserId as null to represent the platform's revenue,
+      // which is then queryable with `WHERE creditUserId IS NULL AND debitUserId IS NULL`.
+      const [platformLedger] = await tx.insert(ledger).values({
+        referenceId: subOrderId,
+        debitUserId: null,
+        creditUserId: null,
+        amount: platformCommission.toFixed(2),
+        type: "COMMISSION",
+      }).returning();
+      ledgerEntries.push(platformLedger.id);
+
       // Update Store Wallet
       // BUG-FIX: If storeWallet is null, the ledger entry above already credits the owner
       // but their wallet balance never updates — money is lost in limbo. Guard against this.

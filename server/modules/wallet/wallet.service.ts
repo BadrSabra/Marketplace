@@ -325,13 +325,27 @@ export class WalletService {
       // updated to COMPLETED on approval. Funds were deducted but the transaction stayed PENDING
       // forever, causing ledger.service.ts heldFunds calculation to permanently count approved
       // withdrawals as "held" and inflating reported held funds.
-      await tx.update(walletTransactions)
-        .set({ status: "COMPLETED" })
+      // BUG-FIX-2: Previous update was too broad — matched ALL PENDING WITHDRAWAL transactions
+      // for the wallet instead of only the one linked to this request. If a user had multiple
+      // PENDING withdrawal transactions (edge case), all would be marked COMPLETED.
+      // Now fetches the specific matching transaction by walletId + type + status + amount first,
+      // then updates by ID for a precise single-row update.
+      const [pendingWalletTx] = await tx
+        .select({ id: walletTransactions.id })
+        .from(walletTransactions)
         .where(and(
           eq(walletTransactions.walletId, request.walletId),
           eq(walletTransactions.type, "WITHDRAWAL"),
-          eq(walletTransactions.status, "PENDING")
-        ));
+          eq(walletTransactions.status, "PENDING"),
+          eq(walletTransactions.amount, request.amount)
+        ))
+        .limit(1);
+
+      if (pendingWalletTx) {
+        await tx.update(walletTransactions)
+          .set({ status: "COMPLETED" })
+          .where(eq(walletTransactions.id, pendingWalletTx.id));
+      }
 
       const [updatedRequest] = await tx.update(withdrawalRequests)
         .set({ status: "APPROVED", reviewedByAdminId: adminId, updatedAt: new Date() })
@@ -403,13 +417,24 @@ export class WalletService {
       // updated to FAILED on rejection. It stayed PENDING forever, causing the heldFunds
       // calculation to permanently show rejected withdrawals as "held" and the wallet
       // transaction history to show a ghost PENDING withdrawal indefinitely.
-      await tx.update(walletTransactions)
-        .set({ status: "FAILED" })
+      // BUG-FIX-2: Same over-broad issue as in approveWithdrawal — now fetches the specific
+      // matching transaction by ID before updating, rather than updating all matching rows.
+      const [pendingWalletTxToFail] = await tx
+        .select({ id: walletTransactions.id })
+        .from(walletTransactions)
         .where(and(
           eq(walletTransactions.walletId, request.walletId),
           eq(walletTransactions.type, "WITHDRAWAL"),
-          eq(walletTransactions.status, "PENDING")
-        ));
+          eq(walletTransactions.status, "PENDING"),
+          eq(walletTransactions.amount, request.amount)
+        ))
+        .limit(1);
+
+      if (pendingWalletTxToFail) {
+        await tx.update(walletTransactions)
+          .set({ status: "FAILED" })
+          .where(eq(walletTransactions.id, pendingWalletTxToFail.id));
+      }
 
       const [updatedRequest] = await tx.update(withdrawalRequests)
         .set({ status: "REJECTED", reviewedByAdminId: adminId, adminNote: note || null, updatedAt: new Date() })

@@ -51,10 +51,18 @@ export class DeliveryOtpController {
   async verify(req: Request, res: Response) {
     try {
       const subOrderId = req.params.id as string;
+      const driverId = (req as any).user?.id;
       const { otpCode } = verifySchema.parse(req.body);
 
       const [subOrder] = await db.select().from(subOrders).where(eq(subOrders.id, subOrderId));
       if (!subOrder) return res.status(404).json({ error: "Sub-order not found" });
+
+      // BUG-FIX: Missing driver ownership check — any authenticated DRIVER could verify
+      // OTP for any sub-order that was not theirs, marking it as DELIVERED and triggering
+      // commission payouts to the wrong driver. Now enforced before calling verifyOtp.
+      if (subOrder.assignedDriverId !== driverId) {
+        return res.status(403).json({ error: "لا يمكنك التحقق من رمز OTP لطلب غير مُسند إليك" });
+      }
 
       await deliveryOtpService.verifyOtp(subOrder.orderId, otpCode, subOrderId);
       res.json({ message: "Delivery verified successfully" });

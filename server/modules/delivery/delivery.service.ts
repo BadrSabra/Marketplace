@@ -99,16 +99,28 @@ export class DeliveryService {
       }
     }
 
-    const tasks: AvailableTaskDTO[] = await Promise.all(results.map(async (res: any) => {
-      const items = await db
+    // BUG-FIX: N+1 query — previously fetched order items for each sub-order in a separate
+    // query inside a Promise.all loop, causing 1 + N database round-trips (one per task).
+    // Now fetches all items for all sub-orders in a single batch query and groups them in memory.
+    let allItemsMap: Record<string, { product_name: string; quantity: number }[]> = {};
+    if (subOrderIds.length > 0) {
+      const allItems = await db
         .select({
+          subOrderId: orderItems.subOrderId,
           product_name: products.name,
           quantity: orderItems.quantity,
         })
         .from(orderItems)
         .innerJoin(products, eq(orderItems.productId, products.id))
-        .where(eq(orderItems.subOrderId, res.sub_order_id));
+        .where(inArray(orderItems.subOrderId, subOrderIds));
 
+      for (const item of allItems) {
+        if (!allItemsMap[item.subOrderId]) allItemsMap[item.subOrderId] = [];
+        allItemsMap[item.subOrderId].push({ product_name: item.product_name, quantity: item.quantity });
+      }
+    }
+
+    const tasks: AvailableTaskDTO[] = results.map((res: any) => {
       const existingOffer = driverOffersMap[res.sub_order_id] || null;
 
       return {
@@ -118,7 +130,7 @@ export class DeliveryService {
         store_name: res.store_name,
         customer_name: res.customer_name,
         customer_address: res.customer_address,
-        items,
+        items: allItemsMap[res.sub_order_id] || [],
         subtotal: Number(res.subtotal),
         created_at: res.created_at.toISOString(),
         status: res.status as any,
@@ -127,7 +139,7 @@ export class DeliveryService {
         driver_offered_fee: existingOffer?.offeredFee ?? null,
         driver_counter_offered_fee: existingOffer?.counterOfferedFee ?? null,
       };
-    }));
+    });
 
     await auditService.logEvent({
       actionType: "VIEW_AVAILABLE_TASKS",

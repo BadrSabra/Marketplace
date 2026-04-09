@@ -80,12 +80,13 @@ export default function UsersPage() {
                       {format(new Date(user.createdAt), "MMM d, yyyy")}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {!user.isApproved && (
+                      {!user.isApproved && ["STORE_OWNER", "DRIVER"].includes(user.role) && (
                         <button
                           onClick={() => handleApprove(user.id)}
                           disabled={approveUser.isPending}
                           className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
                           title="الموافقة على المستخدم"
+                          data-testid={`button-approve-user-${user.id}`}
                         >
                           <CheckCircle className="w-5 h-5" />
                         </button>

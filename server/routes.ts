@@ -3,7 +3,7 @@ import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, wallets, walletTransactions, stores, orders, subOrders, auditLogs, ledger } from "@shared/schema";
+import { users, wallets, walletTransactions, stores, orders, subOrders, auditLogs, ledger, orderItems, products } from "@shared/schema";
 import { walletService } from "./modules/wallet/wallet.service";
 import { ledgerService } from "./modules/ledger/ledger.service";
 import { api } from "@shared/routes";
@@ -487,7 +487,12 @@ export async function registerRoutes(
       const [pendingCount] = await db.select({ count: sql<number>`count(*)` }).from(orders).where(eq(orders.overallStatus, "PENDING"));
       const [cancelledCount] = await db.select({ count: sql<number>`count(*)` }).from(orders).where(eq(orders.overallStatus, "CANCELLED"));
       const [deliveredCount] = await db.select({ count: sql<number>`count(*)` }).from(orders).where(eq(orders.overallStatus, "DELIVERED"));
-      const [commissionSum] = await db.select({ sum: sql<string>`sum(amount)` }).from(ledger).where(eq(ledger.type, "COMMISSION"));
+      // BUG-FIX: Was summing ALL COMMISSION ledger entries (store + driver payouts), which
+      // is not the platform's revenue. After the processCommissions fix, platform's 1% cut
+      // is now recorded as a dedicated COMMISSION entry with both creditUserId and debitUserId
+      // set to NULL. Query only those entries to get the actual platform commission total.
+      const [commissionSum] = await db.select({ sum: sql<string>`sum(amount)` }).from(ledger)
+        .where(and(eq(ledger.type, "COMMISSION"), sql`${ledger.creditUserId} IS NULL`, sql`${ledger.debitUserId} IS NULL`));
 
       // BUG-FIX: storeEarnings and driverEarnings were hardcoded to "0.00".
       // Now calculated from ledger by joining with users table to distinguish roles.
@@ -542,24 +547,61 @@ export async function registerRoutes(
           .set({ overallStatus: status, updatedAt: new Date() })
           .where(eq(orders.id, id));
 
+        // BUG-FIX: Admin cancellation never replenished product stock, causing permanent
+        // inventory leakage identical to the bug in customer-initiated cancellation.
+        // Now restores stock for all items across all sub-orders in the cancelled order.
+        // BUG-FIX-2: Only restore stock for sub-orders that are NOT already CANCELLED.
+        // Previously ALL sub-orders' items were included, so any already-cancelled sub-order
+        // (whose stock was restored on individual cancellation) would be double-counted,
+        // causing phantom inventory inflation.
+        if (status === "CANCELLED") {
+          const cancelledOrderItems = await tx
+            .select({ productId: orderItems.productId, quantity: orderItems.quantity })
+            .from(orderItems)
+            .innerJoin(subOrders, eq(orderItems.subOrderId, subOrders.id))
+            .where(and(eq(subOrders.orderId, id), sql`${subOrders.status} != 'CANCELLED'`));
+
+          for (const item of cancelledOrderItems) {
+            await tx.update(products)
+              .set({ stock: sql`stock + ${item.quantity}` })
+              .where(eq(products.id, item.productId));
+          }
+        }
+
         // Refund the customer wallet if cancelling a paid order
         if (status === "CANCELLED" && parentOrder.paymentStatus === "PAID") {
-          const [customerWallet] = await tx
-            .select()
-            .from(wallets)
-            .where(eq(wallets.userId, parentOrder.customerId))
-            .for("update");
+          // BUG-FIX: Was refunding the full parentOrder.totalPrice regardless of whether
+          // individual sub-orders had already been cancelled and their amounts refunded earlier
+          // (via cancelSubOrder). This caused double-refunds for partially-cancelled orders.
+          // Now compute refund only from sub-orders that are NOT already CANCELLED,
+          // since CANCELLED sub-orders were already refunded when they were cancelled.
+          const activeSubOrders = await tx
+            .select({ subtotal: subOrders.subtotal, deliveryFee: subOrders.expectedDeliveryFee })
+            .from(subOrders)
+            .where(and(eq(subOrders.orderId, id), sql`${subOrders.status} != 'CANCELLED'`));
 
-          // BUG-FIX: Was using `if (customerWallet)` (soft check) which silently skips
-          // the refund if the wallet row is missing. Money paid by the customer would vanish.
-          // Throw instead to roll back the transaction — no state should be committed
-          // if the refund cannot be completed.
-          if (!customerWallet) {
-            throw new Error("WALLET_NOT_FOUND: Cannot refund order — customer wallet missing");
-          }
+          const refundAmount = activeSubOrders.reduce((sum, s) => {
+            return sum + parseFloat(s.subtotal) + (s.deliveryFee ? parseFloat(s.deliveryFee) : 0);
+          }, 0);
 
-          {
-            const refundAmount = parseFloat(parentOrder.totalPrice);
+          if (refundAmount <= 0) {
+            // All sub-orders were already cancelled and refunded individually — nothing to refund
+            console.log(`[Admin] No refund needed for order ${id} — all sub-orders were already cancelled and refunded`);
+          } else {
+            const [customerWallet] = await tx
+              .select()
+              .from(wallets)
+              .where(eq(wallets.userId, parentOrder.customerId))
+              .for("update");
+
+            // BUG-FIX: Was using `if (customerWallet)` (soft check) which silently skips
+            // the refund if the wallet row is missing. Money paid by the customer would vanish.
+            // Throw instead to roll back the transaction — no state should be committed
+            // if the refund cannot be completed.
+            if (!customerWallet) {
+              throw new Error("WALLET_NOT_FOUND: Cannot refund order — customer wallet missing");
+            }
+
             const newBalance = (parseFloat(customerWallet.balance) + refundAmount).toFixed(2);
             await tx
               .update(wallets)
@@ -569,7 +611,7 @@ export async function registerRoutes(
             await tx.insert(walletTransactions).values({
               walletId: customerWallet.id,
               type: "REFUND",
-              amount: parentOrder.totalPrice,
+              amount: refundAmount.toFixed(2),
               relatedOrderId: parentOrder.id,
               status: "COMPLETED",
               notes: `استرداد تلقائي - إلغاء الطلب #${parentOrder.id.slice(0, 8)} بواسطة الإدارة`,
@@ -577,17 +619,15 @@ export async function registerRoutes(
 
             // A refund credits the customer's wallet — ledger type must be "DEPOSIT"
             // (same convention as cancelSubOrder in order.service.ts and rejectWithdrawal).
-            // BUG-FIX: Was incorrectly using type "WITHDRAWAL" for a credit entry, which is
-            // semantically wrong and inconsistent with all other refund ledger entries in the codebase.
             await tx.insert(ledger).values({
               referenceId: parentOrder.id,
               debitUserId: null,
               creditUserId: parentOrder.customerId,
-              amount: parentOrder.totalPrice,
+              amount: refundAmount.toFixed(2),
               type: "DEPOSIT",
             });
 
-            console.log(`[Admin] Refunded ${parentOrder.totalPrice} to customer ${parentOrder.customerId} for cancelled order ${id}`);
+            console.log(`[Admin] Refunded ${refundAmount.toFixed(2)} to customer ${parentOrder.customerId} for cancelled order ${id}`);
           }
         }
       });
@@ -628,6 +668,17 @@ export async function registerRoutes(
   app.patch("/api/admin/users/:id/approve", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
     try {
       const id = req.params.id as string;
+
+      // BUG-FIX: The endpoint previously approved any user regardless of role, including
+      // CUSTOMER and ADMIN accounts which are auto-approved on registration.
+      // Now validates the user exists and requires approval before updating.
+      const [existingUser] = await db.select().from(users).where(eq(users.id, id));
+      if (!existingUser) return res.status(404).json({ message: "User not found" });
+
+      if (!["STORE_OWNER", "DRIVER"].includes(existingUser.role)) {
+        return res.status(400).json({ message: "هذا المستخدم لا يحتاج إلى موافقة" });
+      }
+
       const [user] = await db.update(users)
         .set({ isApproved: true, updatedAt: new Date() })
         .where(eq(users.id, id))

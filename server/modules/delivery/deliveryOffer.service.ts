@@ -409,8 +409,15 @@ export class DeliveryOfferService {
   // Legacy: driver self-accepts (kept for backward compatibility but no longer used for customer flow)
   async acceptTask(subOrderId: string, driverId: string) {
     return await db.transaction(async (tx) => {
+      // BUG-FIX: Missing status and approval checks — previously a driver could accept a
+      // sub-order in PENDING/DELIVERED/CANCELLED state and bypass customer acceptance flow
+      // (no delivery fee deducted). Also missing driver approval check.
+      const [driver] = await tx.select().from(users).where(eq(users.id, driverId));
+      if (!driver || !driver.isApproved) throw new Error("DRIVER_NOT_APPROVED");
+
       const [subOrder] = await tx.select().from(subOrders).where(eq(subOrders.id, subOrderId)).for("update");
       if (!subOrder) throw new Error("NOT_FOUND");
+      if (subOrder.status !== "ACCEPTED") throw new Error("TASK_NOT_AVAILABLE");
       if (subOrder.assignedDriverId) throw new Error("ALREADY_ASSIGNED");
 
       const [updatedSubOrder] = await tx

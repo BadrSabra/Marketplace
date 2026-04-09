@@ -79,8 +79,12 @@ export function initChatSocket(httpServer: HttpServer) {
 
 export function emitSystemMessage(roomId: string, content: string) {
   if (!io) return;
+  // BUG-FIX: Using Date.now() alone risks duplicate IDs if two system messages fire
+  // within the same millisecond (e.g., during bulk order processing), causing React
+  // key prop collisions and rendering glitches. Append a random suffix to guarantee uniqueness.
+  const uniqueId = `system-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   io.to(roomId).emit("new_message", {
-    id: `system-${Date.now()}`,
+    id: uniqueId,
     roomId,
     senderId: null,
     content,
