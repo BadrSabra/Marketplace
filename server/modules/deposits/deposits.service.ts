@@ -7,14 +7,26 @@ import { notifyUser } from "../notifications/push.service";
 
 // Q: هل جدول `deposits` يُنشأ تلقائياً عند بدء تشغيل السيرفر؟
 // A: لا — جدول `deposits` مُعرَّف في ملف منفصل `shared/deposits.schema.ts` ولم
-//    يُدرَج ضمن سكريبت التحقق التلقائي `server/autoVerifyDb.ts` الذي يُنشئ
-//    الجداول عند الإقلاع. هذا يعني:
-//    1. إذا استُدعيت دالة `depositService.approveDeposit` ستفشل بـ "relation does not exist".
-//    2. نظام الإيداع الفعلي يعمل عبر جدول `wallet_transactions` في `walletService`، 
-//       وهذا الـ `DepositService` هو كود ميت لا يُستدعى من أي مسار حالي.
-//    الإصلاح المطلوب: إما دمج `deposits.schema.ts` في `schema.ts` الرئيسي وإضافة
-//    الجدول لسكريبت التحقق، أو حذف هذا الـ service كلياً إذا لم يكن مطلوباً.
-//    ⚠️ تحذير: استدعاء أي دالة هنا سيُسبب خطأ 500 في الإنتاج.
+//    يُدرَج ضمن سكريبت التحقق التلقائي `server/bootstrap/db-auto-verify.ts`.
+//    استدعاء أي دالة في هذا الـ service سيفشل بخطأ PostgreSQL:
+//    'relation "deposits" does not exist'.
+//
+// Q: هل هذا الـ DepositService مُستخدَم من أي مسار حالي؟
+// A: لا — هذا كود ميت كامل (Dead Code). نظام الإيداع الفعلي يعمل عبر:
+//    1. `walletService.createDeposit()` → ينشئ سجل في `wallet_transactions`
+//    2. `walletService.approveDeposit()` → يُحدّث `wallet_transactions` ويزيد الرصيد
+//    3. `walletService.getPendingDeposits()` → يجلب السجلات المعلقة
+//    كل هذه العمليات تعمل على جدول `wallet_transactions` الموجود، وليس على `deposits`.
+//    deposits.controller.ts يستورد walletService مباشرةً ولا يُشير لـ depositService.
+//
+// Q: ما الخطر إذا أُضيف استدعاء لـ depositService في كود مستقبلي بالخطأ؟
+// A: سيُسبب كارثة في الإنتاج:
+//    1. PostgreSQL يُرجع `ERROR: relation "deposits" does not exist`
+//    2. الخطأ يُسبب HTTP 500 لجميع طلبات الإيداع
+//    3. لا توجد migration أو rollback جاهزة لإنشاء الجدول بسرعة
+//    الإصلاح الآمن: إضافة `⚠️ DEAD CODE - DO NOT CALL` في كل دالة لمنع الاستخدام
+//    العرضي، مع تعليق واضح يشير للـ walletService كبديل صحيح.
+//    ⚠️ تحذير: استدعاء أي دالة هنا سيُسبب خطأ 500 مباشراً لأن جدول deposits غير موجود في DB.
 export class DepositService {
   async approveDeposit(depositId: string, adminId: string, force = false, notes?: string) {
 

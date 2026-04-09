@@ -900,38 +900,18 @@ export async function registerRoutes(
 
   // Q: هل يجب الإبقاء على /api/admin/reports/stats كنقطة نهاية مستقلة؟
   // A: لا — هذه النقطة تُعيد مجموعة فرعية مكررة من نفس البيانات الموجودة في
-  //    /api/admin/stats (totalUsers, totalStores, totalOrders, totalRevenue).
-  //    وجود نقطتَي نهاية لبيانات متداخلة يُنشئ مشكلتين:
-  //    1. عندما يُحدَّث /api/admin/stats (كما حدث سابقاً)، قد تُنسى /api/admin/reports/stats
-  //       مما يُسبب تناقضاً في البيانات التي تظهر لمختلف واجهات الأدمن.
-  //    2. المستهلك لا يعرف أيهما "المرجعية الرسمية" — وهذا يُشير إلى مشكلة بنيوية.
-  //    الإصلاح: تحويل /api/admin/reports/stats إلى alias يُعيد توجيه الطلب
-  //    لـ /api/admin/stats بدلاً من تشغيل استعلامات DB مستقلة.
-  app.get("/api/admin/reports/stats", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
-    try {
-      const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
-      const [storeCount] = await db.select({ count: sql<number>`count(*)` }).from(stores);
-      const [orderCount] = await db.select({ count: sql<number>`count(*)` }).from(orders);
-      const [totalRevenue] = await db.select({ sum: sql<string>`sum(total_price)` }).from(orders).where(eq(orders.paymentStatus, "PAID"));
-      const [pendingCount] = await db.select({ count: sql<number>`count(*)` }).from(orders).where(eq(orders.overallStatus, "PENDING"));
-      const [cancelledCount] = await db.select({ count: sql<number>`count(*)` }).from(orders).where(eq(orders.overallStatus, "CANCELLED"));
-      const [deliveredCount] = await db.select({ count: sql<number>`count(*)` }).from(orders).where(eq(orders.overallStatus, "DELIVERED"));
-
-      // Q: هل يجب إرجاع نفس بنية /api/admin/stats هنا لضمان التوافق؟
-      // A: نعم — تنسيق الاستجابة الموحّد يضمن أن أي frontend يستدعي أي من
-      //    المسارين يحصل على نفس الحقول دون مفاجآت.
-      res.json({
-        totalUsers: Number(userCount.count),
-        totalStores: Number(storeCount.count),
-        totalOrders: Number(orderCount.count),
-        totalRevenue: totalRevenue.sum || "0.00",
-        pendingOrders: Number(pendingCount.count),
-        cancelledOrders: Number(cancelledCount.count),
-        deliveredOrders: Number(deliveredCount.count),
-      });
-    } catch (err) {
-      res.status(500).json({ message: "Internal error" });
-    }
+  //    /api/admin/stats. الاستعلامات المكررة تُسبب مشكلتين:
+  //    1. أي تحديث في /api/admin/stats (كإضافة حقل جديد) لن ينعكس هنا تلقائياً،
+  //       مما يُسبب تناقضاً في البيانات بين المسارين.
+  //    2. كل طلب يُشغّل 7 استعلامات DB مستقلة بدلاً من إعادة استخدام حساب جاهز.
+  //    الإصلاح المطبّق: تحويل /api/admin/reports/stats إلى 302 redirect لـ
+  //    /api/admin/stats بحيث يوجد مصدر حقيقي واحد للبيانات.
+  // Q: هل redirect 302 مناسب لـ GET endpoint من نفس الدومين؟
+  // A: نعم — 302 مناسب لـ "هذا المسار لا يزال متاحاً لكن انتقل لهذا العنوان".
+  //    المستدعون (admin frontend) يتبعون الـ redirect تلقائياً. لو أردنا إزالة
+  //    المسار تماماً في المستقبل نُحوّله إلى 301 ثم نحذفه بعد دورة نشر.
+  app.get("/api/admin/reports/stats", authenticate, authorizeRole(["ADMIN"]), (req, res) => {
+    res.redirect(302, "/api/admin/stats");
   });
 
   // NOTE: GET /api/ledger/transactions is handled by ledgerRouter (mounted above via

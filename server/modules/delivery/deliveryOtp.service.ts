@@ -125,6 +125,15 @@ export class DeliveryOtpService {
     // the sub-order was already marked DELIVERED in the database. The fix catches ALREADY_PROCESSED
     // and logs it instead of re-throwing, since idempotency is the desired behaviour here.
     // Any other unexpected error is still re-thrown so real failures are not silently swallowed.
+    //
+    // Q: هل تُعالَج العمولات عند استدعاء verifyOtp بدون subOrderId؟
+    // A: لا — processCommissions تحتاج subOrderId بشكل أساسي (جلب الطلب الفرعي، السائق
+    //    المُسنَد، ومبلغ التوصيل). بدون subOrderId لا يمكن معرفة أي السائقين وأصحاب
+    //    المتاجر يستحقون العمولة، فلا تُعالَج العمولات إطلاقاً.
+    //    الوضع الحالي: deliveryOtp.controller.ts يُمرّر subOrderId دائماً عند التحقق من
+    //    التسليم، لذا هذه الحالة نظرية ولا تحدث في الإنتاج.
+    //    الإصلاح الدفاعي: تسجيل تحذير صريح عند تشغيل verifyOtp بدون subOrderId لتنبيه
+    //    المطورين بأن العمولات ستُفوَّت بصمت إذا غُيِّر مسار الاستدعاء مستقبلاً.
     if (subOrderId) {
       try {
         await ledgerService.processCommissions(subOrderId);
@@ -135,6 +144,8 @@ export class DeliveryOtpService {
           throw err;
         }
       }
+    } else {
+      console.warn(`[OTP] verifyOtp called without subOrderId for orderId=${orderId}. Commissions will NOT be processed. Verify this is intentional.`);
     }
 
     console.log(JSON.stringify({

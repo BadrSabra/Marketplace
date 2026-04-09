@@ -256,6 +256,16 @@ export async function autoVerifyDatabase() {
     }
 
     // 3. Verify Columns & Indexes
+    // Q: لماذا توجد أعمدة في columnChecks بينما هي موجودة بالفعل في تعريف CREATE TABLE؟
+    // A: بعض هذه الأعمدة (كـ related_order_id في wallet_transactions) أُضيفت لاحقاً
+    //    بعد نشر قاعدة البيانات الأولى، ولم تكن موجودة في تعريف CREATE TABLE الأصلي.
+    //    الـ columnChecks تعمل كـ "migration تلقائية" لقواعد البيانات القائمة فعلاً:
+    //    - قواعد البيانات الجديدة: تجد الأعمدة موجودة بالفعل من CREATE TABLE → لا تعديل
+    //    - قواعد البيانات القديمة: تجد الأعمدة ناقصة → تُضيفها بـ ALTER TABLE
+    //    الوضع الحالي: فحص wallet_transactions.related_order_id مُكرَّر (موجود في CREATE
+    //    TABLE وفي columnChecks) — يُشغّل استعلام information_schema زيادةً عن الحاجة
+    //    في كل إقلاع، لكنه غير ضار. الإصلاح المستقبلي: حذفه من columnChecks بعد التأكد
+    //    من أن جميع بيئات الإنتاج تحمل النسخة الحديثة من قاعدة البيانات.
     const columnChecks = [
       { table: 'delivery_otps', column: 'otp_code', type: 'TEXT NOT NULL' },
       { table: 'delivery_otps', column: 'status', type: 'TEXT NOT NULL DEFAULT \'PENDING\'' },
@@ -267,6 +277,9 @@ export async function autoVerifyDatabase() {
       { table: 'products', column: 'image_url', type: 'TEXT' },
       { table: 'stores', column: 'image_url', type: 'TEXT' },
       { table: 'wallet_transactions', column: 'receipt_url', type: 'TEXT' },
+      // Q: هل فحص related_order_id هنا زائد عن الحاجة؟
+      // A: نعم لقواعد البيانات الجديدة (موجود في CREATE TABLE أعلاه)، لكن لا يزال
+      //    ضرورياً لقواعد البيانات القديمة التي أُنشئت قبل إضافة هذا العمود.
       { table: 'wallet_transactions', column: 'related_order_id', type: 'UUID' },
       { table: 'wallet_transactions', column: 'notes', type: 'TEXT' },
       { table: 'delivery_offers', column: 'counter_offered_fee', type: 'DECIMAL(10,2)' }
