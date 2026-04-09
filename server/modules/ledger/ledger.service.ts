@@ -1,5 +1,5 @@
 import { db } from "../../db";
-import { ledger, subOrders, wallets, walletTransactions, stores, users } from "@shared/schema";
+import { ledger, subOrders, wallets, walletTransactions, stores, users, orders } from "@shared/schema";
 import { eq, and, sql, gte, lte, desc } from "drizzle-orm";
 import { auditService } from "../../services/auditService";
 
@@ -251,6 +251,22 @@ export class LedgerService {
         .set({ balance: storeNewBalance, updatedAt: new Date() })
         .where(eq(wallets.id, storeWallet.id));
 
+      // Q: هل يجب تسجيل العمولة كسجل walletTransaction لصاحب المتجر؟
+      // A: نعم — بدون هذا السجل، يرى صاحب المتجر رصيده يرتفع في المحفظة لكن
+      //    عند فتحه لسجل المعاملات يجد قائمة فارغة دون أي سبب للزيادة. الكود القديم
+      //    كان يُسجّل فقط في جدول ledger (للحسابات الداخلية) وجدول audit_logs
+      //    (للمراجعة الإدارية)، لكن لا شيء في walletTransactions (للمستخدم العادي).
+      //    الإصلاح: إضافة DEPOSIT/COMPLETED لـ walletTransactions مع ملاحظة "عمولة متجر".
+      const [parentOrderForStore] = await tx.select({ id: orders.id }).from(orders).where(eq(orders.id, subOrder.orderId)).limit(1);
+      await tx.insert(walletTransactions).values({
+        walletId: storeWallet.id,
+        type: "DEPOSIT",
+        amount: storeAmount.toFixed(2),
+        relatedOrderId: parentOrderForStore?.id ?? subOrder.orderId,
+        status: "COMPLETED",
+        notes: `عمولة متجر - طلب #${subOrderId.slice(0, 8)}`,
+      });
+
       await auditService.logEvent({
         actionType: "COMMISSION_PROCESSED",
         entityType: "wallet",
@@ -283,6 +299,20 @@ export class LedgerService {
           .set({ balance: driverNewBalance, updatedAt: new Date() })
           .where(eq(wallets.id, driverWallet.id));
 
+        // Q: هل يجب تسجيل عمولة السائق كسجل walletTransaction؟
+        // A: نعم — بنفس المبرر كعمولة صاحب المتجر: السائق يرى رصيده يرتفع
+        //    بعد التوصيل لكن لا يجد سجلاً يشرح من أين جاء المبلغ في سجل معاملاته.
+        //    الإصلاح: إضافة DEPOSIT/COMPLETED لـ walletTransactions مع ملاحظة "عمولة توصيل".
+        const [parentOrderForDriver] = await tx.select({ id: orders.id }).from(orders).where(eq(orders.id, subOrder.orderId)).limit(1);
+        await tx.insert(walletTransactions).values({
+          walletId: driverWallet.id,
+          type: "DEPOSIT",
+          amount: driverAmount.toFixed(2),
+          relatedOrderId: parentOrderForDriver?.id ?? subOrder.orderId,
+          status: "COMPLETED",
+          notes: `عمولة توصيل - طلب #${subOrderId.slice(0, 8)}`,
+        });
+
         await auditService.logEvent({
           actionType: "COMMISSION_PROCESSED",
           entityType: "wallet",
@@ -300,6 +330,12 @@ export class LedgerService {
   }
 
   async verifyLedgerConsistency(userId: string) {
+    // Q: هل تعمل verifyLedgerConsistency بشكل صحيح إذا استُخدمت adminOverride على المحفظة؟
+    // A: نعم — adminOverride تُنشئ سجل ledger بـ type=DEPOSIT/WITHDRAWAL مع creditUserId
+    //    أو debitUserId مضبوطَيْن على userId المستهدف، لذا يُحسَب التعديل في الرصيد.
+    //    لكن: adminOverride لا تُنشئ سجل walletTransactions مما يعني أن المستخدم لا يرى
+    //    التعديل الإداري في تاريخ معاملاته — الرصيد يتغير بصمت بلا تفسير.
+    //    الإصلاح: إضافة walletTransactions في adminOverride بنوع DEPOSIT/WITHDRAWAL وملاحظة "تعديل إداري".
     const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, userId));
     if (!wallet) throw new Error("Wallet not found");
 

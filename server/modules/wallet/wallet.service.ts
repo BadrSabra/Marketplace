@@ -208,6 +208,19 @@ export class WalletService {
         type: amountNum > 0 ? "DEPOSIT" : "WITHDRAWAL",
       });
 
+      // Q: هل يجب إنشاء سجل walletTransactions للتعديل الإداري على المحفظة؟
+      // A: نعم — بدون هذا السجل، يرى المستخدم رصيده يتغير في المحفظة دون أي سبب
+      //    مُدرَج في سجل معاملاته. هذا يُسبب ارتباكاً ويُضعف شفافية النظام المالي.
+      //    الإصلاح: إنشاء walletTransactions بنوع DEPOSIT أو WITHDRAWAL بملاحظة "تعديل إداري"
+      //    مع إدراج السبب (reason) الذي أدخله المشرف ليكون مرئياً في تاريخ المعاملات.
+      await tx.insert(walletTransactions).values({
+        walletId: wallet.id,
+        type: amountNum > 0 ? "DEPOSIT" : "WITHDRAWAL",
+        amount: Math.abs(amountNum).toFixed(2),
+        status: "COMPLETED",
+        notes: `تعديل إداري: ${reason}`,
+      });
+
       await auditService.logEvent({
         actionType: "ADMIN_OVERRIDE",
         entityType: "wallet",
