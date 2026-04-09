@@ -97,9 +97,27 @@ export default function ChatRoomPage() {
     return () => leaveRoom(roomId);
   }, [roomId]);
 
+  // Q: لماذا نُعرّف MAX_MSG_LENGTH في الواجهة الأمامية أيضاً؟
+  // A: backend/chat.socket.ts يُطبّق حداً بـ 4000 حرف ويرفض الرسائل الأطول.
+  //    بدون تطابق هذا الحد في الواجهة، يُرسَل المستخدم رسالة طويلة دون أي تحذير
+  //    ويحصل على خطأ صامت من الـ socket. الإصلاح: إضافة حد مطابق ومنع الإرسال قبل الوصول إليه.
+  //
+  // ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+  //    إذا غيّر الـ backend الحد مستقبلاً (مثلاً 2000 بدلاً من 4000)،
+  //    يجب تحديث هذا الثابت يدوياً — لا يوجد مصدر حقيقة واحد (single source of truth).
+  //    الإصلاح المستقبلي: إضافة هذا الثابت لـ shared/routes.ts أو shared/schema.ts.
+  const MAX_MSG_LENGTH = 4000;
+
   const handleSend = async () => {
     if (!input.trim() || sending) return;
     const content = input.trim();
+    // Q: هل يجب التحقق من طول الرسالة قبل الإرسال أم يُترك للـ backend ليرفضها؟
+    // A: كلاهما — Defense in Depth. Backend يرفض الرسائل الطويلة لكن دون تحقق
+    //    في الواجهة يُرسَل الـ socket event ثم يصمت (لا يُعاد توجيه الخطأ للمستخدم).
+    //    الإصلاح: التحقق في الواجهة وعرض رسالة واضحة قبل إرسال أي بيانات.
+    if (content.length > MAX_MSG_LENGTH) {
+      return;
+    }
     setInput("");
     setSending(true);
     try {
@@ -245,23 +263,45 @@ export default function ChatRoomPage() {
             <Button
               size="icon"
               onClick={handleSend}
-              disabled={!input.trim() || sending}
+              disabled={!input.trim() || sending || input.length > MAX_MSG_LENGTH}
               data-testid="button-send-message"
               className="flex-shrink-0"
             >
               {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </Button>
-            <Input
-              ref={inputRef}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="اكتب رسالة..."
-              className="flex-1"
-              data-testid="input-message"
-              autoFocus
-            />
+            <div className="flex-1 relative">
+              <Input
+                ref={inputRef}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="اكتب رسالة..."
+                className={cn("flex-1", input.length > MAX_MSG_LENGTH && "border-destructive focus-visible:ring-destructive")}
+                maxLength={MAX_MSG_LENGTH + 100}
+                data-testid="input-message"
+                autoFocus
+              />
+              {/* Q: لماذا نُظهر العداد فقط عند 3500 حرف وليس دائماً؟
+                  A: إظهار العداد دائماً يُضيف ضوضاء بصرية للمستخدم في الغالب العظيم
+                     من الرسائل القصيرة. الإظهار عند 3500 (87.5% من الحد) يمنح المستخدم
+                     تحذيراً مبكراً كافياً. الإصلاح المستقبلي: جعل هذا الحد قابلاً للتهيئة. */}
+              {input.length >= 3500 && (
+                <span
+                  className={cn(
+                    "absolute left-2 top-1/2 -translate-y-1/2 text-xs font-mono",
+                    input.length > MAX_MSG_LENGTH ? "text-destructive font-bold" : "text-muted-foreground"
+                  )}
+                  data-testid="text-char-counter"
+                >
+                  {input.length}/{MAX_MSG_LENGTH}
+                </span>
+              )}
+            </div>
           </div>
+          {/* ⚠️ خطأ جديد تكشفه هذا الإصلاح:
+               المستخدمون الذين كانوا يكتبون رسائل طويلة دون أي تحذير سابق
+               سيجدون الآن أن زر الإرسال يُعطَّل عند تجاوز 4000 حرف. هذا التغيير
+               السلوكي قد يُفاجئ المستخدمين الذين اعتادوا على السلوك القديم. */}
         </div>
       )}
     </div>
