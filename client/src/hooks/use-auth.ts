@@ -27,14 +27,15 @@ export function useAuth() {
 
   const registerMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Q: هل الشرط `if (!res.ok)` ضروري بعد apiFetch()؟
+      // A: لا — apiFetch() تُرمي خطأً تلقائياً عند أي استجابة غير ناجحة (!res.ok)،
+      //    لذا عند نجاح apiFetch() دون رمي خطأ، يكون res.ok دائماً true.
+      //    الإصلاح: حذف الشرط الميت لتوضيح التدفق الفعلي.
       const res = await apiFetch(api.auth.register.path, {
         method: api.auth.register.method,
         body: JSON.stringify(data),
       });
       const resData = await res.json();
-      if (!res.ok) {
-        throw new Error(resData.message || "Registration failed");
-      }
       const parsed = api.auth.register.responses[201].parse(resData);
 
       if (parsed.pendingApproval) {
@@ -54,14 +55,15 @@ export function useAuth() {
   const loginMutation = useMutation({
     mutationFn: async (credentials: z.infer<typeof api.auth.login.input>) => {
       const validated = api.auth.login.input.parse(credentials);
+      // Q: لماذا حُذف الشرط `if (!res.ok)` هنا؟
+      // A: apiFetch() تُرمي خطأً تلقائياً عند أي استجابة غير ناجحة (4xx, 5xx)
+      //    مع استخراج رسالة الخطأ من JSON إن وُجدت. الشرط بعدها كان كوداً ميتاً
+      //    يُوهم بوجود مسار خطأ إضافي لا يُنفَّذ أبداً.
       const res = await apiFetch(api.auth.login.path, {
         method: api.auth.login.method,
         body: JSON.stringify(validated),
       });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || "فشل تسجيل الدخول");
-      }
       const parsed = api.auth.login.responses[200].parse(data);
       
       localStorage.setItem("jwt_token", parsed.token);

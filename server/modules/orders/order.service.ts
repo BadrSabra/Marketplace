@@ -109,11 +109,19 @@ export class OrderService {
           }))
         );
 
-        // Deduct stock for each product
+        // Q: هل يجب استخدام حساب JavaScript (product.stock - quantity) أم تعبير SQL
+        //    لتحديث المخزون عند إنشاء الطلب؟
+        // A: تعبير SQL أصح لثلاثة أسباب:
+        //    1. يُجري الحساب على مستوى DB مباشرةً بدلاً من في الذاكرة، مما يتجنب
+        //       أي تفاوت محتمل بين القيمة المقروءة والقيمة المُحدَّثة.
+        //    2. يتوافق مع نفس النمط المستخدم في suborder.service.ts (سطر 92) وفي
+        //       routes.ts (الإلغاء الإداري)، مما يضمن اتساق الكود.
+        //    3. في حال تعديل منطق FOR UPDATE مستقبلاً، SQL expression يظل آمناً
+        //       بينما القيمة الحسابية في JavaScript قد تُسبب race condition.
         for (const { product, quantity } of storeItems) {
           if (product.stock !== null) {
             await tx.update(products)
-              .set({ stock: product.stock - quantity })
+              .set({ stock: sql`stock - ${quantity}` })
               .where(eq(products.id, product.id));
           }
         }
