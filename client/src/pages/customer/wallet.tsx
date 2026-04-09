@@ -468,7 +468,13 @@ export default function CustomerWallet() {
                 <SelectItem value="ALL">{t('customer.wallet.all_types')}</SelectItem>
                 <SelectItem value="DEPOSIT">{t('customer.wallet.types.DEPOSIT')}</SelectItem>
                 <SelectItem value="WITHDRAWAL">{t('customer.wallet.types.WITHDRAWAL')}</SelectItem>
-                <SelectItem value="COMMISSION">{t('customer.wallet.types.COMMISSION')}</SelectItem>
+                {/* Q: لماذا كان خيار COMMISSION هنا وليس REFUND؟
+                    A: العملاء لا يحصلون على عمولات (COMMISSION) — هذا النوع خاص
+                       بأصحاب المتاجر والسائقين. في المقابل، العملاء يحصلون على
+                       مبالغ مستردة (REFUND) عند إلغاء الطلبات. عرض COMMISSION
+                       بلا نتائج يُربك المستخدم، وإخفاء REFUND يمنعه من تتبع استرداداته.
+                       الإصلاح: استبدال COMMISSION بـ REFUND في قائمة الفلتر. */}
+                <SelectItem value="REFUND">{t('customer.wallet.types.REFUND')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -502,12 +508,18 @@ export default function CustomerWallet() {
                     <TableCell className="font-medium text-right">
                       {t(`customer.wallet.types.${tx.type}`)}
                     </TableCell>
+                    {/* Q: هل REFUND يجب أن يظهر بالأخضر أم الأحمر؟
+                        A: بالأخضر — REFUND هو قيد دائن (ائتمان) للعميل، أي إضافة
+                           لرصيده وليس خصماً. كان الكود يعرض COMMISSION بالأخضر
+                           (وهو غير ذي صلة بالعملاء) ويعرض REFUND بالأحمر (خطأ).
+                           الإصلاح: DEPOSIT و REFUND كلاهما ائتمان → أخضر + إشارة +؛
+                           WITHDRAWAL فقط خصم → أحمر + إشارة -. */}
                     <TableCell className={`text-right ${
-                      tx.type === 'DEPOSIT' || tx.type === 'COMMISSION' 
+                      tx.type === 'DEPOSIT' || tx.type === 'REFUND' 
                         ? 'text-green-600 font-medium' 
                         : 'text-red-600 font-medium'
                     }`}>
-                      {tx.type === 'DEPOSIT' || tx.type === 'COMMISSION' ? '+' : '-'}{parseFloat(tx.amount).toFixed(2)} ج.م
+                      {tx.type === 'DEPOSIT' || tx.type === 'REFUND' ? '+' : '-'}{parseFloat(tx.amount).toFixed(2)} ج.م
                     </TableCell>
                     <TableCell className="text-right">
                       {/* BUG-FIX: Was rendering tx.status as raw English ("COMPLETED", "PENDING").

@@ -229,6 +229,19 @@ export async function autoVerifyDatabase() {
         reviewed_by_admin_id UUID REFERENCES users(id),
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )`,
+      // Q: هل جدول support_messages موجود في bootstrap؟
+      // A: لا — كان مفقوداً تماماً رغم وجوده في schema.ts. أي قاعدة بيانات جديدة
+      //    ستفشل فور محاولة إرسال أو استقبال رسالة دعم، إذ ستُرجع PostgreSQL
+      //    خطأ "relation 'support_messages' does not exist" وتُعطّل ميزة دعم العملاء.
+      //    الإصلاح: إضافة تعريف الجدول إلى قائمة التحقق التلقائي.
+      support_messages: `CREATE TABLE support_messages (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        customer_id UUID NOT NULL REFERENCES users(id),
+        sender_role TEXT NOT NULL,
+        message TEXT NOT NULL,
+        is_read BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
       )`
     };
 

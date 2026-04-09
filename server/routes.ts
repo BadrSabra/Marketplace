@@ -1037,9 +1037,14 @@ export async function registerRoutes(
 
   // Attempt to seed data
   await ensureAdminAccount();
-  // Only seed test data in development environment
+  // Q: هل يجب انتظار seedDatabase() بـ await؟
+  // A: نعم — استدعاء seedDatabase() بدون await في السابق يعني انتهاء
+  //    registerRoutes() قبل اكتمال إنشاء بيانات الاختبار. في حالة اختبار
+  //    أو تشغيل request مبكر يعتمد على هذه البيانات، لن تكون البيانات
+  //    جاهزة بعد وقد يُعرض خطأ 404 أو نتيجة فارغة بشكل غير متوقع.
+  //    الإصلاح: await لضمان اكتمال عملية الـ seed قبل بدء قبول الطلبات.
   if (process.env.NODE_ENV !== "production") {
-    seedDatabase();
+    await seedDatabase();
   }
 
   return httpServer;

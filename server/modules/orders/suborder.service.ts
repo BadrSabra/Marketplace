@@ -1,6 +1,6 @@
 import { db } from "../../db";
 import { subOrders, stores, orderItems, products, deliveryOffers, users, orders, deliveryOtps, wallets, walletTransactions, ledger } from "@shared/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, gt } from "drizzle-orm";
 import type { User } from "@shared/schema";
 import { auditService } from "../../services/auditService";
 import { allowedTransitions, type SubOrderStatus } from "./suborder.types";
@@ -268,10 +268,21 @@ export class SubOrderService {
       .innerJoin(products, eq(orderItems.productId, products.id))
       .where(eq(orderItems.subOrderId, activeSubOrder.id));
 
+    // Q: هل يجب تصفية OTP بالحالة PENDING فقط عند جلب التوصيل النشط؟
+    // A: نعم — الكود السابق كان يجلب أي OTP للطلب الفرعي بغض النظر عن حالتها،
+    //    مما يعني أن السائق قد يرى OTP منتهية الصلاحية (EXPIRED) أو مُتحقق منها
+    //    (VERIFIED) بدلاً من الـ OTP النشطة الصالحة. hasOtp=true مع OTP منتهية
+    //    يُوهم الواجهة بأن OTP متاحة فيما هي غير صالحة للاستخدام.
+    //    الإصلاح: تصفية OTP بحالة PENDING فقط.
+    const now = new Date();
     const [otpRecord] = await db
       .select()
       .from(deliveryOtps)
-      .where(eq(deliveryOtps.subOrderId, activeSubOrder.id))
+      .where(and(
+        eq(deliveryOtps.subOrderId, activeSubOrder.id),
+        eq(deliveryOtps.status, "PENDING"),
+        gt(deliveryOtps.expiresAt, now)
+      ))
       .limit(1);
 
     return {
