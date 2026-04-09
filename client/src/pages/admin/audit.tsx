@@ -26,16 +26,18 @@ import {
   History, User, Box, Clock, ChevronDown, ChevronUp 
 } from "lucide-react";
 
-// BUG-FIX: Was using format(date, "dd/MM/yyyy HH:mm:ss") from date-fns (Western numerals).
-// Use ar-EG locale for consistent Arabic date/time display across the app.
-function formatArabicDateTime(dateStr: string): string {
+// Q: هل يجب أن تقبل formatArabicDateTime نوع Date بالإضافة إلى string؟
+// A: نعم — AuditLog من Drizzle يُعيد createdAt كـ Date وليس string. قبول string فقط
+//    يُسبب خطأ TypeScript TS2345 عند تمرير log.createdAt مباشرةً. الإصلاح: قبول
+//    string | Date وتحويل Date إلى string عبر toISOString() قبل إنشاء كائن Date.
+function formatArabicDateTime(dateStr: string | Date): string {
   try {
-    const d = new Date(dateStr);
+    const d = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
     const date = d.toLocaleDateString("ar-EG", { day: "2-digit", month: "2-digit", year: "numeric" });
     const time = d.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
     return `${date} - ${time}`;
   } catch {
-    return dateStr;
+    return String(dateStr);
   }
 }
 

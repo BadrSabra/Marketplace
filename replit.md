@@ -375,3 +375,11 @@ Clicking a notification navigates to the relevant page based on type and user ro
 86. **🟠 Store order detail page date format in English** — `client/src/pages/customer/store/order/[id].tsx`: `format(date, "MMM dd, yyyy HH:mm")` → English. **Fixed: replaced with Arabic locale.**
 
 87. **🟠 Customer transactions page date format in English** — `client/src/pages/customer/transactions.tsx`: `format(date, "MMM dd, yyyy HH:mm")` → English. **Fixed: replaced with Arabic locale.**
+
+88. **🔴 TypeScript TS2345 in `audit.tsx` — `formatArabicDateTime` received `Date` not `string`** — `client/src/pages/admin/audit.tsx`: Function signature declared `dateStr: string` but `AuditLog.createdAt` from Drizzle is typed as `Date`. **Fixed: changed param type to `string | Date` with safe `typeof` branch.**
+
+89. **🔴 TypeScript TS2345 in `users.tsx` — `formatArabicDate` received `Date` not `string`** — `client/src/pages/admin/users.tsx`: Same issue — `User.createdAt` is `Date` from Drizzle, but function accepted only `string`. **Fixed: changed param type to `string | Date` with safe `typeof` branch.**
+
+90. **🔴 `tsconfig.json` excluded `*.test.ts` but not `*.test.tsx` or `*.spec.ts`** — Test files (`inventory.test.tsx`, `audit.spec.ts`, etc.) were included in main compilation, causing cascading errors from missing `@types/jest` and `@testing-library/react`. **Fixed: added `**/*.test.tsx`, `**/*.spec.ts`, `**/*.spec.tsx` to the `exclude` array.**
+
+91. **🟠 `audit.spec.ts` used `sql` from `drizzle-orm` without importing it** — Line 31 called `sql\`${auditLogs.createdAt} DESC\`` inside `orderBy` but `sql` was not imported, causing a `ReferenceError` at runtime. **Fixed: added `sql` to the `drizzle-orm` import.**

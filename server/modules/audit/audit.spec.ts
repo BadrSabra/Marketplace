@@ -1,7 +1,11 @@
 import { auditService } from "./audit.service";
 import { db } from "../../db";
 import { auditLogs, users } from "@shared/schema";
-import { eq } from "drizzle-orm";
+// Q: هل يجب استيراد sql من drizzle-orm؟
+// A: نعم — السطر 31 يستخدم sql`${auditLogs.createdAt} DESC` داخل orderBy لكن sql
+//    لم يكن مستورداً، مما يتسبب في ReferenceError عند تشغيل الاختبار. الإصلاح:
+//    إضافة sql إلى قائمة الاستيرادات من drizzle-orm.
+import { eq, sql } from "drizzle-orm";
 
 async function testAudit() {
   console.log("Starting Audit Infrastructure Tests...");

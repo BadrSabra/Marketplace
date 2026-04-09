@@ -4,13 +4,16 @@ import { Spinner } from "@/components/ui/spinner";
 import { Mail, Phone, Shield, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-// BUG-FIX: Was using format(date, "MMM d, yyyy") from date-fns which produces English month
-// names like "Apr 9, 2026". The entire app is Arabic-first. Replaced with Arabic locale date.
-function formatArabicDate(dateStr: string): string {
+// Q: هل يجب أن تقبل formatArabicDate نوع Date بالإضافة إلى string؟
+// A: نعم — User من Drizzle يُعيد createdAt كـ Date وليس string. قبول string فقط
+//    يُسبب خطأ TypeScript TS2345 عند تمرير user.createdAt مباشرةً للدالة.
+//    الإصلاح: قبول string | Date والتحويل الآمن قبل بناء التاريخ.
+function formatArabicDate(dateStr: string | Date): string {
   try {
-    return new Date(dateStr).toLocaleDateString("ar-EG", { year: "numeric", month: "2-digit", day: "2-digit" });
+    const d = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
+    return d.toLocaleDateString("ar-EG", { year: "numeric", month: "2-digit", day: "2-digit" });
   } catch {
-    return dateStr;
+    return String(dateStr);
   }
 }
 
