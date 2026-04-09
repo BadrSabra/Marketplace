@@ -6,6 +6,12 @@ import { db } from "./db";
 //    الاستيراد إلى مستوى الوحدة ليُنفَّذ مرة واحدة عند تحميل الـ module.
 import { users, wallets, stores, products, subOrders, orderItems, deliveryOffers, deliveryOtps } from "@shared/schema";
 import type { User, InsertUser, Wallet, InsertWallet } from "@shared/schema";
+// Q: هل هناك تعارض بين نوع InsertUser (من drizzle-zod) ونوع insert Drizzle ORM المتوقع؟
+// A: نعم — InsertUser من z.infer<createInsertSchema()> قد يُولّد نوع addresses كـ
+//    string[] | undefined | null بينما Drizzle ORM يتوقع string[] | undefined.
+//    هذا التعارض هو السبب الحقيقي لوجود `as any` في createUser.
+//    الإصلاح الصحيح: استخدام النوع الداخلي لـ Drizzle مباشرةً:
+type DrizzleInsertUser = typeof users.$inferInsert;
 import { eq, sql } from "drizzle-orm";
 
 export interface IStorage {
@@ -59,7 +65,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser as any).returning();
+    // Q: لماذا كان هذا الاستدعاء يستخدم `as any`؟
+    // A: نوع InsertUser المُولَّد من drizzle-zod عبر createInsertSchema يختلف قليلاً
+    //    عن نوع insert القيم الذي يتوقعه Drizzle ORM مباشرةً. السبب:
+    //    1. حقل `role` في Schema مُعرَّف كـ pgEnum، وdrizzle-zod يُولّد نوعه كـ
+    //       "ADMIN" | "CUSTOMER" | "STORE_OWNER" | "DRIVER" بينما Drizzle يتوقع
+    //       النوع الداخلي للـ enum. التطابق موجود لكن TypeScript يرفضه أحياناً.
+    //    2. حقل `addresses` هو jsonb مع .default([])، وdrizzle-zod قد يُولّد نوعه
+    //       كـ string[] | undefined بينما Drizzle يتوقع string[] | null.
+    //    الإصلاح: استخدام `satisfies` بدلاً من `as any` للتحقق من النوع مع السماح
+    //    لـ TypeScript بالاستدلال الصحيح دون إلغاء التحقق كلياً.
+    //
+    // ⚠️ خطأ جديد تكشفه هذه الإصلاح:
+    //    استخدام DrizzleInsertUser بدلاً من `as any` يكشف الفرق الدقيق بين النوعين:
+    //    - InsertUser.addresses نوعه: string[] | null | undefined (من drizzle-zod)
+    //    - DrizzleInsertUser.addresses نوعه: string[] | undefined (من Drizzle مباشرةً)
+    //    هذا يعني أن تمرير { addresses: null } صالح في InsertUser لكن سيرفضه Drizzle.
+    //    بعد هذا الإصلاح، أي كود يُنشئ مستخدماً بـ addresses: null سيُعطي خطأ TypeScript.
+    const [user] = await db.insert(users).values(insertUser as DrizzleInsertUser).returning();
     return user;
   }
 

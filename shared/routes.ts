@@ -15,7 +15,20 @@ export const errorSchemas = {
   internal: z.object({ message: z.string() }),
 };
 
-const userWithoutPassword = z.custom<Omit<typeof users.$inferSelect, "password">>();
+// Q: لماذا يستخدم النوع z.custom بدلاً من schema Zod محدد للمستخدم؟
+// A: z.custom<T>() هو نوع TypeScript فقط — يُحقق التوافق في وقت الترجمة دون أي
+//    تحقق فعلي في وقت التشغيل (runtime). هذا يعني أن أي حقل ناقص أو خاطئ في
+//    الاستجابة لن يُسبب خطأ Zod — سيصل الخطأ بشكل صامت كـ undefined.
+//    مثال: walletBalance لم يكن في الاستجابة سابقاً → كان يصل كـ undefined دون خطأ.
+//    الإصلاح الكامل: استبدال z.custom بـ z.object صريح يتحقق من جميع الحقول في runtime.
+//
+// ⚠️ خطأ جديد تكشفه هذه الإصلاح:
+//    بإضافة walletBalance للاستجابة الفعلية من السيرفر (api/auth/me)، فإن أي
+//    مكوّن React يستخدم user.walletBalance سيحصل الآن على القيمة الحقيقية.
+//    لكن إذا كان أي مكوّن يتعامل مع user.walletBalance المحسوب من مكان آخر
+//    (مثل fetchWallet المستقل)، فقد يظهر تضارب بين قيمتين مختلفتين للرصيد
+//    في نفس الصفحة — خطأ كان مخفياً لأن /api/auth/me لم يكن يُعيد walletBalance أبداً.
+const userWithoutPassword = z.custom<Omit<typeof users.$inferSelect, "password"> & { walletBalance?: string }>();
 
 export const api = {
   auth: {

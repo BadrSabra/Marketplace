@@ -277,10 +277,31 @@ export async function registerRoutes(
   });
 
   app.get(api.auth.me.path, authenticate, async (req, res) => {
+    // Q: لماذا يُفقد رصيد المحفظة (walletBalance) عند تحديث الصفحة رغم أنه يظهر بعد تسجيل الدخول مباشرةً؟
+    // A: عند تسجيل الدخول (POST /api/auth/login) يُضاف walletBalance للاستجابة مباشرةً من
+    //    جدول wallets. لكن عند إعادة تحميل الصفحة يستدعي الـ frontend هذا المسار (/api/auth/me)
+    //    لاستعادة بيانات المستخدم — وهذا المسار كان يُعيد بيانات المستخدم فقط دون رصيد المحفظة.
+    //    النتيجة: المستخدم يرى رصيدَه "undefined" أو "0" في كل الصفحات حتى يزور صفحة المحفظة.
+    //    الإصلاح: جلب رصيد المحفظة وإضافته للاستجابة هنا تماماً كما يفعل مسار تسجيل الدخول.
+    //
+    // ⚠️ خطأ جديد تكشفه هذه الإصلاح:
+    //    إذا كان المستخدم لا يملك محفظة في DB (حالة نادرة بسبب خلل في بيانات قديمة)،
+    //    فإن wallet?.balance سيكون undefined ونُعيد "0.00" كقيمة افتراضية.
+    //    هذا يعني أن بعض المستخدمين قد يرون رصيداً صحيحاً لأول مرة، وبعضهم "0.00"
+    //    رغم أن رصيدهم الفعلي موجود في DB — وهو خطأ خفي كان مخفياً قبل هذا الإصلاح.
+    //    الإصلاح الكامل: استدعاء walletService.getOrCreateWallet(user.id) بدلاً من
+    //    storage.getWalletByUserId لضمان وجود المحفظة دائماً.
     const user = await storage.getUser((req as any).user.id);
     if (!user) return res.status(401).json({ message: "User not found" });
     const { password, ...userWithoutPassword } = user;
-    res.json(userWithoutPassword);
+
+    // Q: هل يجب استخدام storage.getWalletByUserId أم walletService.getOrCreateWallet هنا؟
+    // A: walletService.getOrCreateWallet هو الأكثر أماناً — يُعيد المحفظة إن وُجدت
+    //    أو يُنشئها تلقائياً إن لم تكن موجودة. getWalletByUserId قد يُعيد undefined
+    //    مما يتسبب في إعادة walletBalance: "0.00" للمستخدم وهو مضلل إذا كان له رصيد
+    //    في DB لكن المحفظة لا تُجلب بسبب خلل. getOrCreateWallet تحل هذه الحالة بأمان.
+    const wallet = await walletService.getOrCreateWallet(user.id);
+    res.json({ ...userWithoutPassword, walletBalance: wallet?.balance ?? "0.00" });
   });
 
   // --- USERS MODULE ---

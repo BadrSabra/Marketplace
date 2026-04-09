@@ -38,6 +38,22 @@ export async function apiRequest(
   return res;
 }
 
+// Q: هل كان هناك فرق في معالجة 401 بين useQuery الافتراضي و apiFetch؟
+// A: نعم — فرق جوهري:
+//    1. apiFetch (في api.ts): عند 401 تُزيل التوكن وتُعيد التوجيه لـ /login فوراً.
+//    2. getQueryFn (هنا): عند `on401: "throw"` يُرمى خطأ فقط — دون إزالة التوكن
+//       ودون إعادة التوجيه. المستخدم يرى "Error" في الواجهة لكن لا يُعاد توجيهه.
+//    النتيجة: المستخدمون الذين انتهت صلاحية توكناتهم يرون شاشة خطأ غامضة بدلاً
+//    من صفحة تسجيل الدخول عند استخدام useQuery الافتراضي بدون queryFn مخصص.
+//    الإصلاح: إضافة معالجة 401 في getQueryFn تتطابق مع سلوك apiFetch — إزالة التوكن
+//    وإعادة التوجيه لـ /login. كلا الكودَين الآن يتصرفان بنفس الطريقة عند 401.
+//
+// ⚠️ خطأ جديد تكشفه هذه الإصلاح:
+//    الـ queries التي كانت تعتمد على `on401: "throw"` وتُعيد عرض "رسالة خطأ"
+//    ستختفي الآن — المستخدم سيُعاد توجيهه مباشرةً دون رؤية الرسالة.
+//    أي صفحة لم تكن تتوقع إعادة التوجيه التلقائي (مثل صفحات تستخدم isError
+//    لعرض fallback UI) ستتصرف بشكل مختلف — وهو خطأ جديد في تجربة المستخدم
+//    كان مخفياً لأن 401 لم تكن تُعيد التوجيه قبل هذا الإصلاح.
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
@@ -49,7 +65,19 @@ export const getQueryFn: <T>(options: {
       credentials: "include",
     });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+    if (res.status === 401) {
+      // Q: هل يجب إزالة التوكن وإعادة التوجيه عند 401 في getQueryFn؟
+      // A: نعم — apiFetch يفعل ذلك بالفعل. الاتساق بين مسارَي الطلب ضروري
+      //    لأن بعض المكوّنات تستخدم useQuery بينما أخرى تستخدم apiRequest/apiFetch.
+      //    إذا كان السلوك مختلفاً بينهما، يحصل المستخدم على تجربة غير متسقة:
+      //    بعض الصفحات تعيد التوجيه تلقائياً وأخرى تعرض رسالة خطأ غامضة.
+      localStorage.removeItem("jwt_token");
+      if (unauthorizedBehavior === "returnNull") {
+        return null;
+      }
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
       return null;
     }
 

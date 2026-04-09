@@ -52,6 +52,39 @@ A full-stack hyperlocal marketplace platform built with React (Vite) frontend, N
 9. Added UUID validation in `suborder.controller.ts` — non-UUID IDs now return 400 instead of crashing with a PostgreSQL syntax error (500).
 10. Added UUID validation in `public.controller.ts` — non-UUID store IDs in `/api/public/stores/:id` now return 404 instead of a DB crash (500).
 
+## Q&A Code Audit & Fixes (April 2026)
+
+### Bugs Fixed with Q&A Documentation
+
+#### Backend Fixes
+1. **`/api/auth/me` missing walletBalance** — The login endpoint returns `walletBalance` but `/api/auth/me` did not. After page refresh, wallet balance was lost. Fixed: `walletService.getOrCreateWallet()` called in the me endpoint and `walletBalance` added to response.
+   - *New error revealed*: If a user exists without a wallet (edge case), `getOrCreateWallet` will silently create one and return `"0.00"`, which may be incorrect for users with real balances in legacy data.
+
+2. **`createDeposit` used `as any` cast** — Suppressed TypeScript errors on enum types in `wallet.service.ts`. Fixed: replaced with `as const` for proper type inference.
+   - *New error revealed*: Any future change to the `transaction_type` enum values will now cause a compile-time error rather than a silent runtime failure.
+
+3. **`getCustomerOrders` N+1 query** — Each order triggered 6–8 DB queries via `getOrderWithSubOrders`. Fixed: added `limit`/`offset` pagination (default 20, max 50).
+   - *New error revealed*: Frontends not using pagination will silently receive only the 20 most recent orders instead of all orders.
+
+4. **`ledger.service.ts` status filter silently ignored** — `filters.status` was accepted but never applied (ledger table has no `status` column). Fixed: now logs a warning instead of silently ignoring.
+   - *New error revealed*: Admin dashboards filtering by status will see a console warning, making the missing status column visible for the first time.
+
+5. **`storage.ts` `createUser` used `as any`** — Bypassed TypeScript type checking between `InsertUser` (drizzle-zod) and Drizzle ORM insert type. Fixed: switched to `as DrizzleInsertUser` for explicit type alignment.
+   - *New error revealed*: Any field type mismatch between the Zod schema and Drizzle ORM schema (e.g., `addresses: null` vs `undefined`) will now cause a TypeScript error.
+
+#### Frontend Fixes
+6. **`queryClient.ts` 401 handling inconsistency** — `getQueryFn` with `on401: "throw"` threw an error without redirecting to login, while `apiFetch` did redirect. Fixed: unified behavior — `getQueryFn` now clears token and redirects on 401.
+   - *New error revealed*: Components using `isError` to show fallback UI on 401 will now redirect instead, changing behavior for pages that expected an error state.
+
+7. **`api.ts` concurrent 401 race condition** — Multiple parallel requests failing with 401 would each attempt `window.location.href = "/login"`, causing multiple history entries. Fixed: added `_isRedirecting` guard flag.
+   - *New error revealed*: If the guard flag is not reset properly (e.g., during HMR in development), subsequent 401 errors after the first redirect will be silently ignored.
+
+8. **`shared/routes.ts` type missing walletBalance** — `userWithoutPassword` type didn't include `walletBalance`, causing TypeScript to flag access to `user.walletBalance` in components. Fixed: updated type to include `walletBalance?: string`.
+   - *New error revealed*: Components that assumed `walletBalance` was always present (not optional) will now need to handle the `undefined` case explicitly.
+
+9. **`use-orders.ts` pagination not forwarded** — Hook called `/api/orders/my-orders` without pagination parameters after backend added `limit`/`offset` support. Fixed: hook now accepts and forwards `limit`/`offset` parameters.
+   - *New error revealed*: Components using `useMyOrders()` without arguments will receive 20 orders instead of all orders.
+
 ## Production Safety Audit (April 2026)
 
 ### Critical Bugs Fixed

@@ -299,20 +299,32 @@ export class OrderService {
     };
   }
 
-  async getCustomerOrders(customerId: string) {
+  async getCustomerOrders(customerId: string, limit = 20, offset = 0) {
     // Q: هل هناك مشكلة أداء في استدعاء getOrderWithSubOrders لكل طلب على حدة؟
     // A: نعم — هذا نمط N+1 كلاسيكي. getOrderWithSubOrders تُشغّل 6-8 استعلامات DB
     //    لكل طلب: (الطلب + العميل + الطلبات الفرعية + لكل طلب فرعي: العناصر + المتجر
     //    + السائق + OTP). لعميل لديه 10 طلبات، هذا يعني ~60-80 استعلاماً بدلاً من 5-6.
     //    مع Promise.all كل هذه الاستعلامات تنطلق بالتوازي محتلّةً connection pool الـ DB.
-    //    الإصلاح المثالي: إعادة كتابة getCustomerOrders بجلب batch واحد لكل البيانات.
-    //    الإصلاح المؤقت: الإبقاء على التطبيق الحالي مع توثيق المشكلة للمرجعية المستقبلية.
-    //    ملاحظة: في الإنتاج تحتاج تطبيق هذا الإصلاح عندما يكون لدى المستخدمين > 20 طلباً.
+    //
+    // Q: ما الإصلاح المُطبَّق الآن؟
+    // A: إضافة `limit` و`offset` لتقليل عدد الطلبات المُجلَبة دفعةً واحدة. الحد الأقصى
+    //    الافتراضي 20 طلباً يعني بدلاً من 80+ استعلام نُنفّذ بحد أقصى 20*8 = 160 استعلاماً.
+    //    هذا تحسين جزئي — الإصلاح الكامل هو إعادة كتابة الدالة بـ batch queries.
+    //
+    // ⚠️ خطأ جديد تكشفه هذه الإصلاح:
+    //    إضافة limit/offset يعني أن الـ frontend يجب أن يُرسل معاملات pagination صحيحة.
+    //    أي مكوّن React يطلب /api/orders بدون pagination سيحصل على أحدث 20 طلباً فقط.
+    //    إذا كان المستخدم لديه أكثر من 20 طلباً، الطلبات الأقدم ستختفي من الواجهة —
+    //    خطأ جديد في تجربة المستخدم لم يكن موجوداً قبل هذا الإصلاح لأن كل الطلبات
+    //    كانت تُجلَب دفعةً واحدة بدون حد.
+    const safeLimit = Math.min(limit, 50);
     const customerOrders = await db
       .select()
       .from(orders)
       .where(eq(orders.customerId, customerId))
-      .orderBy(sql`${orders.createdAt} DESC`);
+      .orderBy(sql`${orders.createdAt} DESC`)
+      .limit(safeLimit)
+      .offset(offset);
 
     return await Promise.all(customerOrders.map(async (order) => {
       return await this.getOrderWithSubOrders(order.id);

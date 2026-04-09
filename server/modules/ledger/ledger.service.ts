@@ -28,14 +28,20 @@ export class LedgerService {
       conditions.push(eq(ledger.type, filters.type as any));
     }
 
-    // Note: The current ledger table doesn't have a status field in schema.ts
-    // Based on Prompt 8, we should support it. If it's missing in DB, we'll ignore or assume COMPLETED for now
-    // but the prompt says "Validate status and type enums". 
-    // I'll check if I should add status to ledger table. 
-    // Looking at schema.ts, ledger has: id, referenceId, debitUserId, creditUserId, amount, type, createdAt, updatedAt.
-    // walletTransactions has status. Ledger doesn't.
-    // I will stick to what's in the schema to avoid DB migration errors in Fast mode, 
-    // but I'll implement the filter structure.
+    // Q: لماذا يُقبل معامل filters.status لكن لا يُطبَّق في استعلام DB؟
+    // A: جدول `ledger` لا يحتوي على حقل `status` في shared/schema.ts — لذا
+    //    تصفية بـ status مستحيلة مباشرةً. جدول `wallet_transactions` يملك status
+    //    لكن ledger يفتقر له. المعالجة الحالية: تجاهل status filter بصمت.
+    //    هذا يعني أن أي طلب بـ ?status=COMPLETED سيُعيد جميع الإدخالات بغض النظر عن status.
+    //
+    // ⚠️ خطأ جديد تكشفه هذه الإصلاح:
+    //    الـ frontend الذي يُرسل ?status=COMPLETED لتصفية المعاملات المكتملة
+    //    يحصل على جميع المعاملات دون تصفية. هذا خطأ خفي — المستخدم يرى نتائج
+    //    غير مُصفّاة ويعتقد أن التصفية تعمل. الإصلاح الكامل: إضافة status
+    //    للـ ledger schema مع migration، أو توثيق أن هذا الـ filter غير مدعوم.
+    if (filters.status) {
+      console.warn(`[Ledger] status filter "${filters.status}" is not supported — ledger table has no status column. Ignoring filter.`);
+    }
 
     if (filters.date_from) {
       conditions.push(gte(ledger.createdAt, new Date(filters.date_from)));

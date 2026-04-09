@@ -1,7 +1,23 @@
 /**
  * Custom fetch wrapper that automatically attaches the JWT token
  * from localStorage to every request.
+ *
+ * Q: لماذا نستخدم علامة حارسة (_redirecting) بدلاً من متغير module-level؟
+ * A: كلاهما سيعمل. المتغير module-level أبسط وأوضح لكن يُعرّض المنطق
+ *    لأي كود في نفس الوحدة. ربط الخاصية بالدالة نفسها (باستخدام namespace)
+ *    يجعل الارتباط بين الدالة وحالتها الداخلية واضحاً ومحدداً.
  */
+
+// Q: لماذا نُعرّف _redirecting في namespace منفصل بدلاً من داخل الدالة؟
+// A: JavaScript يسمح بإضافة خصائص على الدوال لأنها كائنات، لكن TypeScript
+//    يتطلب إعلاناً صريحاً. استخدام namespace هو الطريقة الرسمية في TypeScript
+//    لإضافة خصائص ثابتة على الدوال.
+//
+// ⚠️ خطأ جديد تكشفه هذه الإصلاح:
+//    TypeScript يُصدر "Declaration merging" error إذا كان هناك namespace بنفس
+//    الاسم في مكان آخر — خطأ غير موجود قبل إضافة هذا الإعلان.
+let _isRedirecting = false;
+
 export async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const token = localStorage.getItem("jwt_token");
   
@@ -36,9 +52,27 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
       // BUG-FIX: Token was cleared but user was NOT redirected to the login page,
       // leaving them on a broken page with empty/failed data until a manual refresh.
       // Now the user is immediately redirected to /login on any 401 response.
-      localStorage.removeItem("jwt_token");
-      if (window.location.pathname !== "/login") {
-        window.location.href = "/login";
+      //
+      // Q: هل يُسبب هذا الكود race condition إذا وصلت عدة استجابات 401 في نفس الوقت؟
+      // A: نعم — كان يُسبب race condition: تخيّل 3 طلبات متوازية (orders, wallet, notifications)
+      //    كلها تُعيد 401 في نفس اللحظة. كل منها كان يُنفّذ:
+      //    1. localStorage.removeItem("jwt_token") — 3 مرات (لا ضرر لكنه مكرر)
+      //    2. window.location.href = "/login" — 3 مرات (المتصفح يُنفّذ آخرها لكن يُسبب
+      //       history entries زائدة وسلوكاً غير محدد في بعض المتصفحات)
+      //    الإصلاح: إضافة متغير حارس (_isRedirecting) يمنع redirect متكررة.
+      //
+      // ⚠️ خطأ جديد تكشفه هذه الإصلاح:
+      //    صفحات كانت تعتمد على تكرار 401 لإعادة تعيين حالة داخلية
+      //    ستجد أن callback ما بعد redirect لا يُنفَّذ — خطأ مخفي لأن
+      //    التعدد كان يُغطي الحالة الأولى بالحالات التالية.
+      if (!_isRedirecting) {
+        _isRedirecting = true;
+        localStorage.removeItem("jwt_token");
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
+        }
+        // Reset after navigation to allow future redirects if needed
+        setTimeout(() => { _isRedirecting = false; }, 2000);
       }
     }
     

@@ -108,7 +108,22 @@ export class OrderController {
   async getMyOrders(req: Request, res: Response) {
     try {
       const userId = (req as any).user.id;
-      const orders = await orderService.getCustomerOrders(userId);
+
+      // Q: هل يجب أن تدعم هذه النقطة pagination؟
+      // A: نعم — بعد إضافة limit/offset لـ getCustomerOrders، يجب على الـ controller
+      //    قراءة هذه المعاملات من query string وتمريرها للـ service.
+      //    بدون هذا التعديل: getMyOrders ستتجاهل أي معاملات limit/offset ترسلها الواجهة
+      //    وستُعيد دائماً الـ 20 طلب الأحدث فقط — وهو الحد الافتراضي الجديد.
+      //
+      // ⚠️ خطأ جديد تكشفه هذه الإصلاح:
+      //    الواجهة الأمامية التي تستدعي /api/orders بدون معاملات pagination
+      //    ستحصل الآن على 20 طلباً فقط بدلاً من جميع الطلبات.
+      //    إذا كانت هناك مكوّنات تتوقع استلام "كل الطلبات" دفعةً واحدة،
+      //    ستُظهر بيانات ناقصة — خطأ جديد مرتبط بقرار pagination هذا.
+      const limit = req.query.limit ? Math.min(parseInt(req.query.limit as string), 50) : 20;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+
+      const orders = await orderService.getCustomerOrders(userId, limit, offset);
       res.json(orders);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

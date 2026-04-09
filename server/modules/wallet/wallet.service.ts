@@ -38,13 +38,23 @@ export class WalletService {
       throw new Error("Amount must be greater than 0");
     }
 
+    // Q: لماذا كان هذا الاستدعاء يستخدم `as any`؟
+    // A: `as any` كان يُخفي خطأ TypeScript حقيقياً: نوع حقل `type` في Drizzle ORM
+    //    هو PgEnumColumn<"transaction_type"> الذي يتوقع نوعاً محدداً في وقت الترجمة.
+    //    إزالة `as any` تُظهر الخطأ المخفي: TypeScript يرفض "DEPOSIT" كـ string عادي
+    //    ويتطلب تحديد النوع بـ `as const` أو `satisfies` لضمان توافق نوع enum.
+    //
+    // ⚠️ خطأ جديد تكشفه هذه الإصلاح:
+    //    إذا تغيّر اسم أي قيمة في enum `transaction_type` مستقبلاً (مثل: DEPOSIT → CREDIT)،
+    //    فإن الكود بدون `as any` سيفشل في وقت الترجمة مباشرةً بدلاً من الفشل بصمت في runtime.
+    //    هذا سلوك صحيح — لكنه يعني أن أي migration مستقبلي للـ enum يتطلب تعديل الكود أيضاً.
     const [transaction] = await db.insert(walletTransactions).values({
       walletId: wallet.id,
-      type: "DEPOSIT",
+      type: "DEPOSIT" as const,
       amount,
       receiptUrl,
-      status: "PENDING",
-    } as any).returning();
+      status: "PENDING" as const,
+    }).returning();
 
     if (user) {
       await notificationService.notifyDepositSubmitted(user.email, amount);
