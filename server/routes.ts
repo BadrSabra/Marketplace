@@ -163,12 +163,18 @@ export async function registerRoutes(
         token, 
         user: { ...userWithoutPassword, walletBalance: wallet.balance } 
       });
-    } catch (err) {
+    } catch (err: any) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({
           message: err.errors[0].message,
           field: err.errors[0].path.join('.'),
         });
+      }
+      // BUG-FIX: Handle PostgreSQL unique constraint violation (race condition on concurrent registration).
+      // Previously, concurrent registrations with the same email would both pass the pre-check
+      // and then one would get a 500 from the DB unique constraint. Now returns a proper 400.
+      if (err?.code === "23505" || err?.message?.includes("unique")) {
+        return res.status(400).json({ message: "البريد الإلكتروني أو رقم الهاتف مسجّل بالفعل" });
       }
       console.error("Registration error:", err);
       res.status(500).json({ message: "Internal server error" });
@@ -483,6 +489,20 @@ export async function registerRoutes(
       const [deliveredCount] = await db.select({ count: sql<number>`count(*)` }).from(orders).where(eq(orders.overallStatus, "DELIVERED"));
       const [commissionSum] = await db.select({ sum: sql<string>`sum(amount)` }).from(ledger).where(eq(ledger.type, "COMMISSION"));
 
+      // BUG-FIX: storeEarnings and driverEarnings were hardcoded to "0.00".
+      // Now calculated from ledger by joining with users table to distinguish roles.
+      const [storeEarningsRow] = await db
+        .select({ sum: sql<string>`sum(${ledger.amount})` })
+        .from(ledger)
+        .innerJoin(users, eq(ledger.creditUserId, users.id))
+        .where(and(eq(ledger.type, "COMMISSION"), eq(users.role, "STORE_OWNER")));
+
+      const [driverEarningsRow] = await db
+        .select({ sum: sql<string>`sum(${ledger.amount})` })
+        .from(ledger)
+        .innerJoin(users, eq(ledger.creditUserId, users.id))
+        .where(and(eq(ledger.type, "COMMISSION"), eq(users.role, "DRIVER")));
+
       res.json({
         totalUsers: Number(userCount.count),
         totalStores: Number(storeCount.count),
@@ -493,8 +513,8 @@ export async function registerRoutes(
         cancelledOrders: Number(cancelledCount.count),
         deliveredOrders: Number(deliveredCount.count),
         platformCommissions: commissionSum.sum || "0.00",
-        storeEarnings: "0.00",
-        driverEarnings: "0.00"
+        storeEarnings: storeEarningsRow?.sum || "0.00",
+        driverEarnings: driverEarningsRow?.sum || "0.00"
       });
     } catch (err) {
       res.status(500).json({ message: "Internal error" });

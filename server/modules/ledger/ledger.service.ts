@@ -135,7 +135,7 @@ export class LedgerService {
         .for("update");
 
       if (existingLedger) {
-        throw new Error("DUPLICATE_TRANSACTION: Commission already processed for this sub-order");
+        throw new Error("ALREADY_PROCESSED");
       }
 
       // 1. Lock sub-order row for concurrency protection

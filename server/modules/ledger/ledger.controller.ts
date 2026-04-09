@@ -8,7 +8,7 @@ const router = Router();
 
 const querySchema = z.object({
   user_id: z.string().uuid().optional(),
-  type: z.enum(["DEPOSIT", "WITHDRAWAL", "COMMISSION", "REFUND"]).optional(),
+  type: z.enum(["DEPOSIT", "WITHDRAWAL", "COMMISSION"]).optional(),
   status: z.enum(["PENDING", "COMPLETED", "FAILED"]).optional(),
   date_from: z.string().optional(),
   date_to: z.string().optional(),
@@ -66,7 +66,7 @@ router.get("/admin/ledger", authenticate, authorizeRole(["ADMIN"]), async (req, 
     await auditService.logEvent({
       actionType: "ADMIN_LEDGER_LIST_ACCESS",
       entityType: "ledger",
-      entityId: "SYSTEM",
+      entityId: (req as any).user.id,
       performedByUserId: (req as any).user.id,
       performedByRole: "ADMIN",
       metadata: { filters }
@@ -106,7 +106,7 @@ router.get("/admin/ledger/:id", authenticate, authorizeRole(["ADMIN"]), async (r
   }
 });
 
-router.post("/process-commission/:subOrderId", async (req, res) => {
+router.post("/process-commission/:subOrderId", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
   try {
     const { subOrderId } = req.params;
     const { force } = req.body;
