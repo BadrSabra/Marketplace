@@ -574,6 +574,14 @@ export async function registerRoutes(
       const [parentOrder] = await db.select().from(orders).where(eq(orders.id, id));
       if (!parentOrder) return res.status(404).json({ message: "Order not found" });
 
+      // Fetch the sub-orders that are NOT already in a final state BEFORE the transaction,
+      // so we can process commissions for newly-DELIVERED ones after the transaction commits.
+      const subOrdersToProcess = status === "DELIVERED"
+        ? await db.select({ id: subOrders.id })
+            .from(subOrders)
+            .where(and(eq(subOrders.orderId, id), sql`${subOrders.status} NOT IN ('DELIVERED', 'CANCELLED')`))
+        : [];
+
       await db.transaction(async (tx) => {
         await tx.update(subOrders).set({ status, updatedAt: new Date() }).where(eq(subOrders.orderId, id));
         await tx.update(orders)
@@ -665,6 +673,25 @@ export async function registerRoutes(
           }
         }
       });
+
+      // BUG-FIX: Admin force-delivering an order never triggered commission processing.
+      // The only previous path to commissions was OTP verification (deliveryOtp.service.ts).
+      // If an admin bypassed OTP and forced DELIVERED, store owners and drivers never received
+      // their earnings. Now iterate over the newly-delivered sub-orders and process commissions
+      // for each one. ALREADY_PROCESSED is handled gracefully for idempotency.
+      if (status === "DELIVERED" && subOrdersToProcess.length > 0) {
+        for (const so of subOrdersToProcess) {
+          try {
+            await ledgerService.processCommissions(so.id);
+          } catch (err: any) {
+            if (err.message === "ALREADY_PROCESSED") {
+              console.log(`[Admin] Commissions already processed for sub-order ${so.id} — skipping.`);
+            } else {
+              console.error(`[Admin] Failed to process commissions for sub-order ${so.id}:`, err);
+            }
+          }
+        }
+      }
 
       res.json({ message: `Order and all sub-orders marked as ${status}` });
     } catch (err) {

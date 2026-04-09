@@ -5,6 +5,7 @@ import type { User } from "@shared/schema";
 import { auditService } from "../../services/auditService";
 import { allowedTransitions, type SubOrderStatus } from "./suborder.types";
 import { notifyUser, notifyAllDrivers } from "../notifications/push.service";
+import { ledgerService } from "../ledger/ledger.service";
 
 export class SubOrderService {
 
@@ -54,6 +55,14 @@ export class SubOrderService {
         // assigned). Now strictly requires the driver to be the one assigned to this sub-order.
         if (subOrder.assignedDriverId !== actorUser.id) {
           throw new Error("UNAUTHORIZED: Driver not assigned to this sub-order");
+        }
+        // BUG-FIX: Drivers could bypass OTP verification entirely by calling this endpoint with
+        // status=DELIVERED. The system requires OTP to confirm delivery (security + customer
+        // protection). Only the OTP verification flow (deliveryOtp.service.ts) should set
+        // a sub-order to DELIVERED — it is the single source of truth for delivery confirmation.
+        // Without this guard, commissions were also never triggered for driver-forced deliveries.
+        if (newStatus === "DELIVERED") {
+          throw new Error("UNAUTHORIZED: Drivers must use OTP verification to confirm delivery");
         }
       } else if (!isAdmin) {
         throw new Error("UNAUTHORIZED: Insufficient role");
@@ -194,6 +203,24 @@ export class SubOrderService {
         "طلب جديد متاح للتوصيل، قدّم عرضك الآن",
         { subOrderId }
       ).catch(console.error);
+    }
+
+    // BUG-FIX: When an ADMIN manually sets a sub-order to DELIVERED via this endpoint,
+    // commissions were never processed. The only path that triggered commissions was OTP
+    // verification (deliveryOtp.service.ts). If an admin force-delivers without OTP, the
+    // store owner and driver never receive their earnings. Now process commissions here for
+    // the admin-forced DELIVERED case. ALREADY_PROCESSED is handled gracefully to ensure
+    // idempotency — if OTP verification already ran commissions, this is a no-op.
+    if (newStatus === "DELIVERED") {
+      try {
+        await ledgerService.processCommissions(subOrderId);
+      } catch (err: any) {
+        if (err.message === "ALREADY_PROCESSED") {
+          console.log(`[SubOrderService] Commissions already processed for sub-order ${subOrderId} — skipping.`);
+        } else {
+          console.error(`[SubOrderService] Failed to process commissions for DELIVERED sub-order ${subOrderId}:`, err);
+        }
+      }
     }
 
     return result;

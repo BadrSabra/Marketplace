@@ -118,9 +118,23 @@ export class DeliveryOtpService {
       }
     });
 
-    // Trigger commissions OUTSIDE the transaction to avoid nested-transaction deadlock
+    // Trigger commissions OUTSIDE the transaction to avoid nested-transaction deadlock.
+    // BUG-FIX: processCommissions was not wrapped in a try/catch. If it threw ALREADY_PROCESSED
+    // (e.g., due to a concurrent call or a retry), the error propagated all the way to the HTTP
+    // handler and the driver received HTTP 500 even though OTP verification already succeeded and
+    // the sub-order was already marked DELIVERED in the database. The fix catches ALREADY_PROCESSED
+    // and logs it instead of re-throwing, since idempotency is the desired behaviour here.
+    // Any other unexpected error is still re-thrown so real failures are not silently swallowed.
     if (subOrderId) {
-      await ledgerService.processCommissions(subOrderId);
+      try {
+        await ledgerService.processCommissions(subOrderId);
+      } catch (err: any) {
+        if (err.message === "ALREADY_PROCESSED") {
+          console.log(`[OTP] Commissions already processed for sub-order ${subOrderId} — skipping.`);
+        } else {
+          throw err;
+        }
+      }
     }
 
     console.log(JSON.stringify({
