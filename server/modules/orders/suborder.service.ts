@@ -64,7 +64,12 @@ export class SubOrderService {
           .where(eq(wallets.userId, parentOrder.customerId))
           .for("update");
 
-        if (customerWallet) {
+        // BUG-FIX: Was using `if (customerWallet)` (soft check) which silently skips the
+        // entire refund if the wallet row is missing — money paid by the customer vanishes.
+        // Throw instead so the transaction rolls back and no state is committed without refund.
+        if (!customerWallet) throw new Error("WALLET_NOT_FOUND: Cannot refund cancelled sub-order — customer wallet missing");
+
+        {
           const refundAmount = parseFloat(subOrder.subtotal);
           const deliveryFeeRefund = subOrder.expectedDeliveryFee ? parseFloat(subOrder.expectedDeliveryFee) : 0;
           const totalRefund = refundAmount + deliveryFeeRefund;

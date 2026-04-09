@@ -3,6 +3,7 @@ import { depositService } from "./deposits.service";
 import { authenticate, authorizeRole } from "../../middleware/auth";
 import { walletService } from "../wallet/wallet.service";
 import { notifyUser } from "../notifications/push.service";
+import { auditService } from "../../services/auditService";
 import { db } from "../../db";
 import { walletTransactions, wallets, users } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
@@ -83,6 +84,23 @@ router.post("/admin/deposits/:id/reject", authenticate, authorizeRole(["ADMIN"])
         `تم رفض طلب الإيداع بمبلغ ${txBefore.amount} جنيه. يرجى التواصل مع الدعم`,
         { amount: txBefore.amount }
       ).catch(console.error);
+
+      // BUG-FIX: Deposit rejection had no audit log. Every financial administrative action
+      // must be recorded for compliance and traceability. Approval had an audit log via
+      // walletService.approveDeposit(), but rejection bypassed auditService entirely.
+      const adminId = (req as any).user?.id;
+      if (adminId) {
+        auditService.logEvent({
+          actionType: "DEPOSIT_REJECTED",
+          entityType: "wallet_transaction",
+          entityId: id,
+          performedByUserId: adminId,
+          performedByRole: "ADMIN",
+          oldValue: { status: "PENDING" },
+          newValue: { status: "FAILED" },
+          metadata: { amount: txBefore.amount, userId: txBefore.userId },
+        }).catch(console.error);
+      }
     }
 
     res.json(updated);

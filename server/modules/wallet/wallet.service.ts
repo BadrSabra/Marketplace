@@ -321,6 +321,18 @@ export class WalletService {
         type: "WITHDRAWAL",
       });
 
+      // BUG-FIX: The wallet transaction created as PENDING on withdrawal request was never
+      // updated to COMPLETED on approval. Funds were deducted but the transaction stayed PENDING
+      // forever, causing ledger.service.ts heldFunds calculation to permanently count approved
+      // withdrawals as "held" and inflating reported held funds.
+      await tx.update(walletTransactions)
+        .set({ status: "COMPLETED" })
+        .where(and(
+          eq(walletTransactions.walletId, request.walletId),
+          eq(walletTransactions.type, "WITHDRAWAL"),
+          eq(walletTransactions.status, "PENDING")
+        ));
+
       const [updatedRequest] = await tx.update(withdrawalRequests)
         .set({ status: "APPROVED", reviewedByAdminId: adminId, updatedAt: new Date() })
         .where(eq(withdrawalRequests.id, requestId))
@@ -386,6 +398,18 @@ export class WalletService {
         amount: request.amount,
         type: "DEPOSIT",
       });
+
+      // BUG-FIX: The wallet transaction created as PENDING on withdrawal request was never
+      // updated to FAILED on rejection. It stayed PENDING forever, causing the heldFunds
+      // calculation to permanently show rejected withdrawals as "held" and the wallet
+      // transaction history to show a ghost PENDING withdrawal indefinitely.
+      await tx.update(walletTransactions)
+        .set({ status: "FAILED" })
+        .where(and(
+          eq(walletTransactions.walletId, request.walletId),
+          eq(walletTransactions.type, "WITHDRAWAL"),
+          eq(walletTransactions.status, "PENDING")
+        ));
 
       const [updatedRequest] = await tx.update(withdrawalRequests)
         .set({ status: "REJECTED", reviewedByAdminId: adminId, adminNote: note || null, updatedAt: new Date() })

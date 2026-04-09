@@ -503,9 +503,18 @@ export async function registerRoutes(
           const [customerWallet] = await tx
             .select()
             .from(wallets)
-            .where(eq(wallets.userId, parentOrder.customerId));
+            .where(eq(wallets.userId, parentOrder.customerId))
+            .for("update");
 
-          if (customerWallet) {
+          // BUG-FIX: Was using `if (customerWallet)` (soft check) which silently skips
+          // the refund if the wallet row is missing. Money paid by the customer would vanish.
+          // Throw instead to roll back the transaction — no state should be committed
+          // if the refund cannot be completed.
+          if (!customerWallet) {
+            throw new Error("WALLET_NOT_FOUND: Cannot refund order — customer wallet missing");
+          }
+
+          {
             const refundAmount = parseFloat(parentOrder.totalPrice);
             const newBalance = (parseFloat(customerWallet.balance) + refundAmount).toFixed(2);
             await tx
@@ -522,15 +531,16 @@ export async function registerRoutes(
               notes: `استرداد تلقائي - إلغاء الطلب #${parentOrder.id.slice(0, 8)} بواسطة الإدارة`,
             });
 
-            // BUG-FIX-5: Missing ledger entry for refund — broke double-entry accounting.
-            // Money credited back to the customer must be recorded in the ledger as a WITHDRAWAL
-            // (platform debits, customer credits) to maintain ledger integrity.
+            // A refund credits the customer's wallet — ledger type must be "DEPOSIT"
+            // (same convention as cancelSubOrder in order.service.ts and rejectWithdrawal).
+            // BUG-FIX: Was incorrectly using type "WITHDRAWAL" for a credit entry, which is
+            // semantically wrong and inconsistent with all other refund ledger entries in the codebase.
             await tx.insert(ledger).values({
               referenceId: parentOrder.id,
               debitUserId: null,
               creditUserId: parentOrder.customerId,
               amount: parentOrder.totalPrice,
-              type: "WITHDRAWAL",
+              type: "DEPOSIT",
             });
 
             console.log(`[Admin] Refunded ${parentOrder.totalPrice} to customer ${parentOrder.customerId} for cancelled order ${id}`);

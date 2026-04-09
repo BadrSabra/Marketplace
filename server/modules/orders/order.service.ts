@@ -10,10 +10,15 @@ export class OrderService {
     return await db.transaction(async (tx) => {
       // 1. Fetch all products in one query
       const productIds = items.map(i => i.productId);
+      // BUG-FIX: Products were fetched without FOR UPDATE lock, creating a TOCTOU race
+      // condition where two concurrent orders could both read the same stock value, both
+      // pass the stock check, and both decrement — resulting in negative stock (overselling).
+      // FOR UPDATE ensures exclusive row-level locks are held for the duration of the transaction.
       const fetchedProducts = await tx
         .select()
         .from(products)
-        .where(inArray(products.id, productIds));
+        .where(inArray(products.id, productIds))
+        .for("update");
 
       if (fetchedProducts.length !== productIds.length) {
         throw new Error("One or more products not found");
