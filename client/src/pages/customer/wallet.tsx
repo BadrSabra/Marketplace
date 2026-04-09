@@ -460,8 +460,7 @@ export default function CustomerWallet() {
               <SelectContent>
                 <SelectItem value="ALL">{t('customer.wallet.all_types')}</SelectItem>
                 <SelectItem value="DEPOSIT">{t('customer.wallet.types.DEPOSIT')}</SelectItem>
-                <SelectItem value="PAYMENT">{t('customer.wallet.types.PAYMENT')}</SelectItem>
-                <SelectItem value="REFUND">{t('customer.wallet.types.REFUND')}</SelectItem>
+                <SelectItem value="WITHDRAWAL">{t('customer.wallet.types.WITHDRAWAL')}</SelectItem>
                 <SelectItem value="COMMISSION">{t('customer.wallet.types.COMMISSION')}</SelectItem>
               </SelectContent>
             </Select>
@@ -510,7 +509,7 @@ export default function CustomerWallet() {
                         {tx.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs font-mono text-right">{tx.referenceId || "-"}</TableCell>
+                    <TableCell className="text-xs font-mono text-right">{tx.related_order_id ? tx.related_order_id.slice(0, 8) : "-"}</TableCell>
                   </TableRow>
                 ))
               )}

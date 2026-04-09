@@ -251,3 +251,19 @@ Clicking a notification navigates to the relevant page based on type and user ro
 34. **🔴 Driver license upload overwrites avatar image** — `client/src/pages/driver/profile.tsx` + `server/routes.ts`: The license upload (`handleLicenseUpload`) called `POST /api/profile/avatar` which updates `users.avatarUrl` in the DB, not `users.driversLicenseUrl`. This silently replaced the driver's profile photo with their license image. **Fixed: added a new dedicated `POST /api/profile/license` endpoint that saves to `driversLicenseUrl`; updated the frontend to call this new endpoint and read `data.driversLicenseUrl` from the response.**
 
 35. **🟠 `getActiveDeliveryForDriver` included unreachable `ACCEPTED` status** — `suborder.service.ts`: The active delivery query filtered by `inArray(subOrders.status, ["ACCEPTED", "IN_TRANSIT"])`. A driver is only assigned (`assignedDriverId` set) when the status transitions to `IN_TRANSIT` — never in `ACCEPTED`. The `ACCEPTED` filter was dead code that could never match any real row. **Fixed: simplified to `eq(subOrders.status, "IN_TRANSIT")` and removed unused `inArray` import.**
+
+## Bug Audit Round 6 (April 2026)
+
+### Bugs Fixed
+
+36. **🔴 Customer wallet filter "PAYMENT" never returns results** — `client/src/pages/customer/wallet.tsx`: The filter dropdown had `<SelectItem value="PAYMENT">` but the `ledger` table uses type `"WITHDRAWAL"` for order payments — `"PAYMENT"` is not a valid ledger type and will never match any record. Every customer who selected the "دفع" filter would see an empty list. **Fixed: changed value to `"WITHDRAWAL"`.**
+
+37. **🔴 Missing `WITHDRAWAL` translation key** — `client/src/locales/ar/translation.json`: The `customer.wallet.types` section only contained `DEPOSIT`, `PAYMENT`, `REFUND`, `COMMISSION`. Since `PAYMENT` was renamed to `WITHDRAWAL` and the translation for `WITHDRAWAL` was missing, every transaction of type `WITHDRAWAL` would display its raw key `customer.wallet.types.WITHDRAWAL` in the UI instead of Arabic text. **Fixed: replaced `"PAYMENT": "دفع"` with `"WITHDRAWAL": "سحب/دفع"` and removed `REFUND` (not a valid ledger type).**
+
+38. **🔴 Customer wallet filter "REFUND" never returns results** — `client/src/pages/customer/wallet.tsx`: The filter had `<SelectItem value="REFUND">`. The `ledger` table does not have a `REFUND` type — refunds are recorded as `DEPOSIT` entries. Selecting "REFUND" always returned an empty list. **Fixed: removed the REFUND filter option entirely.**
+
+39. **🔴 Order ID column always shows "-" in wallet transaction history** — `client/src/pages/customer/wallet.tsx`: The table cell rendered `{tx.referenceId || "-"}` but the `ledger.service.ts` API returns the field as `related_order_id` (not `referenceId`). The property was always `undefined`, so every transaction showed "-" in the Order ID column. **Fixed: changed to `tx.related_order_id ? tx.related_order_id.slice(0, 8) : "-"`.**
+
+40. **🟡 Missing rating range validation (1–5)** — `shared/schema.ts`: `insertRatingSchema` was generated directly from Drizzle's `createInsertSchema` with no additional constraints. The `rating` column only has a comment `// Should be 1-5` but no enforcement — any integer (0, -1, 100) could be stored. **Fixed: added `.extend({ rating: z.number().int().min(1).max(5) })` to enforce the 1–5 range at the schema level.**
+
+41. **🟠 `/api/wallet/pending` fetched ALL users' deposits then filtered in memory** — `server/routes.ts`: The route called `walletService.getPendingDeposits()` (which returns every user's pending deposits), then filtered the result array in JavaScript with `deposits.filter(d => d.user.id === userId)`. As the platform grows, this loads unbounded data into memory on every request. **Fixed: replaced with a direct DB query scoped to the current user's wallet using `eq(wallets.userId, userId)` in the WHERE clause.**

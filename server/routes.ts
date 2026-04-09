@@ -788,9 +788,18 @@ export async function registerRoutes(
   app.get("/api/wallet/pending", authenticate, async (req, res) => {
     try {
       const userId = (req as any).user.id;
-      // Filter pending deposits for the specific user
-      const deposits = await walletService.getPendingDeposits();
-      const userDeposits = deposits.filter(d => d.user.id === userId);
+      const userDeposits = await db.select({
+        transaction: walletTransactions,
+        user: users,
+      })
+        .from(walletTransactions)
+        .innerJoin(wallets, eq(walletTransactions.walletId, wallets.id))
+        .innerJoin(users, eq(wallets.userId, users.id))
+        .where(and(
+          eq(wallets.userId, userId),
+          eq(walletTransactions.type, "DEPOSIT"),
+          eq(walletTransactions.status, "PENDING")
+        ));
       res.json(userDeposits);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

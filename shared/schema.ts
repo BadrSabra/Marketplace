@@ -273,7 +273,9 @@ export const insertProductSchema = createInsertSchema(products).omit({ id: true,
 export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertSubOrderSchema = createInsertSchema(subOrders).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertDeliveryOfferSchema = createInsertSchema(deliveryOffers).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertRatingSchema = createInsertSchema(ratings).omit({ id: true, createdAt: true });
+export const insertRatingSchema = createInsertSchema(ratings).omit({ id: true, createdAt: true }).extend({
+  rating: z.number().int().min(1, "التقييم يجب أن يكون بين 1 و 5").max(5, "التقييم يجب أن يكون بين 1 و 5"),
+});
 export const insertDeliveryOtpSchema = createInsertSchema(deliveryOtps).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ id: true, createdAt: true });
 

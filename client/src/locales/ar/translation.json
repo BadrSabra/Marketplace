@@ -115,8 +115,7 @@
       "failed_deposit_title": "فشل الإيداع",
       "types": {
         "DEPOSIT": "إيداع",
-        "PAYMENT": "دفع",
-        "REFUND": "استرداد",
+        "WITHDRAWAL": "سحب/دفع",
         "COMMISSION": "عمولة"
       }
     },
