@@ -21,12 +21,18 @@ function formatArabicDate(dateStr: string): string {
   }
 }
 
+// Q: هل "READY" و"PICKED_UP" موجودتان في orderStatusEnum في shared/schema.ts؟
+// A: لا — orderStatusEnum يحتوي فقط على:
+//    PENDING | ACCEPTED | IN_TRANSIT | DELIVERED | CANCELLED
+//    "READY" غير موجودة إطلاقاً في الـ schema (dead code).
+//    "PICKED_UP" موجودة في deliveryStatusEnum وليس في orderStatusEnum،
+//    ولأن subOrder.status يتبع orderStatusEnum، لن تُطابق أي سجل أبداً.
+//    إبقاؤهما يُشوّش الكود ويُربك المطورين الجدد.
+//    الإصلاح: حذفهما والاكتفاء بالحالات الفعلية الخمس في الـ schema.
 const statusColors: Record<string, string> = {
   PENDING: "bg-yellow-100 text-yellow-800 border-yellow-200",
   ACCEPTED: "bg-blue-100 text-blue-800 border-blue-200",
-  READY: "bg-purple-100 text-purple-800 border-purple-200",
   IN_TRANSIT: "bg-cyan-100 text-cyan-800 border-cyan-200",
-  PICKED_UP: "bg-cyan-100 text-cyan-800 border-cyan-200",
   DELIVERED: "bg-green-100 text-green-800 border-green-200",
   CANCELLED: "bg-red-100 text-red-800 border-red-200",
 };
@@ -34,9 +40,7 @@ const statusColors: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   PENDING: "في الانتظار",
   ACCEPTED: "تم القبول",
-  READY: "جاهز للتوصيل",
   IN_TRANSIT: "في الطريق",
-  PICKED_UP: "تم الاستلام",
   DELIVERED: "تم التوصيل",
   CANCELLED: "ملغي",
 };
@@ -44,9 +48,7 @@ const statusLabels: Record<string, string> = {
 const statusIcons: Record<string, any> = {
   PENDING: Clock,
   ACCEPTED: CheckCircle2,
-  READY: Package,
   IN_TRANSIT: Truck,
-  PICKED_UP: Truck,
   DELIVERED: CheckCircle2,
   CANCELLED: XCircle,
 };

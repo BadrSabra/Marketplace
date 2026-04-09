@@ -1,6 +1,6 @@
 import { db } from "../../db";
 import { products, stores } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
 import { ProductDTO, CreateProductDTO, UpdateProductDTO } from "./products.types";
 import { auditService } from "../../services/auditService";
 
@@ -62,6 +62,12 @@ export class ProductsService {
   }
 
   async getProducts(filters: { store_id?: string; category?: string; page?: number; limit?: number }): Promise<ProductDTO[]> {
+    // Q: هل يجب إضافة ORDER BY لاستعلام المنتجات؟
+    // A: نعم — PostgreSQL لا يضمن أي ترتيب ثابت بدون ORDER BY. بدونه:
+    //    1. تظهر منتجات مختلفة في نفس الصفحة عند إعادة التحميل (تجربة مستخدم سيئة).
+    //    2. التصفح عبر الصفحات غير موثوق: نفس المنتج قد يظهر في صفحتين مختلفتين
+    //       أو يختفي بالكامل إذا تغيّر ترتيب الصفوف بين استعلامين.
+    //    الإصلاح: الترتيب بـ createdAt تصاعدياً (الأقدم أولاً) لضمان ثبات الصفحات.
     let query = db.select().from(products);
     
     const conditions = [];
@@ -76,7 +82,8 @@ export class ProductsService {
     const limit = filters.limit || 200;
     const offset = ((filters.page || 1) - 1) * limit;
     
-    const results = await query.limit(limit).offset(offset);
+    // @ts-ignore
+    const results = await query.orderBy(asc(products.createdAt)).limit(limit).offset(offset);
     return results.map((p) => this.mapToDTO(p));
   }
 

@@ -64,7 +64,20 @@ export async function registerRoutes(
     app.post("/api/delivery/otp/generate/:id", authenticate, authorizeRole(["DRIVER"]), deliveryOtpController.generateOtp.bind(deliveryOtpController));
     app.post("/api/delivery/otp/verify/:id", authenticate, authorizeRole(["DRIVER"]), otpLimiter, deliveryOtpController.verify.bind(deliveryOtpController));
   app.post("/api/delivery/suborders/:id/offer", authenticate, authorizeRole(["DRIVER"]), deliveryOfferController.submitOffer);
-  app.patch("/api/delivery/suborders/:id/accept", authenticate, authorizeRole(["DRIVER"]), deliveryOfferController.acceptTask);
+  // Q: هل يجب إبقاء مسار acceptTask القديم (PATCH /api/delivery/suborders/:id/accept) فعّالاً؟
+  // A: لا — هذا المسار يتحايل على نظام رسوم التوصيل الكامل:
+  //    1. لا يخصم رسوم التوصيل من محفظة العميل
+  //    2. لا يُسجّل قيداً في ledger — تُعطّل محاسبة العمولات
+  //    3. لا يُنشئ غرفة دردشة بين العميل والسائق
+  //    التدفق الصحيح الوحيد هو: السائق يُقدّم عرضاً ← العميل يقبله.
+  //    الواجهة الأمامية لا تستدعي هذا المسار في أي صفحة حالية.
+  //    الإصلاح: إرجاع 410 Gone لأي استدعاء يصل هذا المسار بدلاً من تنفيذ المنطق المعيب.
+  app.patch("/api/delivery/suborders/:id/accept", authenticate, authorizeRole(["DRIVER"]), (_req, res) => {
+    res.status(410).json({
+      error: "DEPRECATED",
+      message: "هذا المسار غير مدعوم. استخدم تدفق تقديم العروض: POST /api/delivery/suborders/:id/offer ثم POST /api/delivery/offers/:offerId/accept",
+    });
+  });
   // Customer: view and act on delivery offers
   app.get("/api/delivery/suborders/:id/offers", authenticate, authorizeRole(["CUSTOMER"]), deliveryOfferController.getOffersForSubOrder.bind(deliveryOfferController));
   app.post("/api/delivery/offers/:offerId/accept", authenticate, authorizeRole(["CUSTOMER"]), deliveryOfferController.customerAcceptOffer.bind(deliveryOfferController));
