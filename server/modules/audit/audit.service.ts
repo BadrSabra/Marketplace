@@ -2,6 +2,17 @@ import { db } from "../../db";
 import { auditLogs } from "@shared/schema";
 import type { AuditLog } from "@shared/schema";
 
+// Q: لماذا توجد خدمتا AuditService في المشروع وأيهما يجب استخدامها؟
+// A: المشروع يحتوي على خدمتين مختلفتين لتسجيل أحداث المراجعة:
+//    1) هذه الخدمة (server/modules/audit/audit.service.ts) — تُستخدم من قِبَل
+//       audit.middleware.ts ولديها UUID احتياطي "00000000-0000-0000-0000-000000000000"
+//       عندما يكون userId غير معروف. إذا لم يكن هذا UUID موجوداً في جدول users،
+//       ستفشل عملية الإدراج بـ FK violation لكنها تُبلَع بصمت بواسطة try/catch.
+//    2) server/services/auditService.ts — تُستخدم من باقي الوحدات (orders, wallet,
+//       deposits, products). تطلب performedByUserId صريحاً دون fallback.
+//    السبب الجذري: نمت قاعدة الكود بمرور الوقت وأُنشئت الخدمة الثانية بدون توحيدهما.
+//    في الوقت الحالي الخطأ غير مؤثر (middleware لا تُطلَق إلا على مسارات محمية بمصادقة
+//    حيث userId دائماً متوفر) لكن يُوصى بتوحيدهما في المستقبل.
 export class AuditService {
   async insertAuditLog(entry: {
     userId?: string;

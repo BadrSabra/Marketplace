@@ -11,6 +11,18 @@ export interface AuditRequest extends Request {
   };
 }
 
+// Q: هل audit.middleware يعمل فعلاً؟ هل يُسجَّل أي حدث من خلاله؟
+// A: لا — هذا كود ميت كامل. المنطق مشروط على `req.audit` (السطر 20)،
+//    لكن بالبحث في كامل الكودبيس (server/routes.ts وجميع controllers)
+//    لا يوجد ولو مسار واحد يُعيِّن `req.audit`. النتيجة:
+//    - middleware مُسجَّل كـ app.use() في routes.ts (السطر 42)
+//    - يُضيف overhead بتبديل res.send لكل طلب
+//    - لكن الجملة الشرطية (if req.audit) لا تتحقق أبداً
+//    - لا يُدرَج أي سجل مراجعة من خلاله
+//    التسجيل الفعلي يتم مباشرةً في كل وحدة عبر auditService.logEvent()
+//    (server/services/auditService.ts). هذا النمط يغني عن الـ middleware تماماً.
+//    للإصلاح: إما إزالة auditMiddleware من routes.ts أو استخدامه فعلياً
+//    بتعيين req.audit في المسارات المهمة بدلاً من الاستدعاء المباشر.
 export function auditMiddleware(req: AuditRequest, res: Response, next: NextFunction) {
   const originalSend = res.send;
 
