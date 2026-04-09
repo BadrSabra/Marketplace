@@ -117,7 +117,6 @@ export default function DriverEarnings() {
                 <SelectItem value="ALL">{t('driver.earnings.filters.all')}</SelectItem>
                 <SelectItem value="DEPOSIT">{t('customer.wallet.types.DEPOSIT')}</SelectItem>
                 <SelectItem value="COMMISSION">{t('customer.wallet.types.COMMISSION')}</SelectItem>
-                <SelectItem value="REFUND">{t('customer.wallet.types.REFUND')}</SelectItem>
                 <SelectItem value="WITHDRAWAL">{t('customer.wallet.types.WITHDRAWAL')}</SelectItem>
               </SelectContent>
             </Select>
@@ -146,7 +145,7 @@ export default function DriverEarnings() {
                   <TableRow key={tx.id} data-testid={`row-transaction-${tx.id}`} className="flex-row-reverse">
                     <TableCell className="text-right">{format(new Date(tx.createdAt), "MMM d, yyyy HH:mm")}</TableCell>
                     <TableCell className="font-medium text-right">{t(`customer.wallet.types.${tx.type}`)}</TableCell>
-                    <TableCell className="text-xs font-mono text-right">{tx.referenceId || "-"}</TableCell>
+                    <TableCell className="text-xs font-mono text-right">{tx.related_order_id ? tx.related_order_id.slice(0, 8) : "-"}</TableCell>
                     <TableCell className={cn(
                       "font-medium text-right",
                       tx.type === 'DEPOSIT' || tx.type === 'COMMISSION' ? 'text-green-600' : 'text-red-600'

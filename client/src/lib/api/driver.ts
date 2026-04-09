@@ -12,6 +12,7 @@ export type AvailableTask = {
   created_at: string;
   status: string;
   assigned_driver_id: string | null;
+  driver_offer_id?: string | null;
   driver_offer_status?: string | null;
   driver_offered_fee?: string | null;
   driver_counter_offered_fee?: string | null;
@@ -64,6 +65,14 @@ export async function submitOffer(subOrderId: string, proposedFee: number) {
   const res = await apiFetch(`/api/delivery/suborders/${subOrderId}/offer`, {
     method: "POST",
     body: JSON.stringify({ proposedFee }),
+  });
+  return res.json();
+}
+
+export async function acceptCounterOffer(offerId: string) {
+  const res = await apiFetch(`/api/delivery/offers/${offerId}/accept-counter`, {
+    method: "POST",
+    body: JSON.stringify({}),
   });
   return res.json();
 }

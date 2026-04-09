@@ -37,6 +37,21 @@ export function usePlaceOffer() {
   return useSubmitOffer();
 }
 
+export function useAcceptCounterOffer() {
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: (offerId: string) => driverApi.acceptCounterOffer(offerId),
+    onSuccess: () => {
+      toast({ title: "تم قبول العرض المضاد بنجاح", description: "سيتم تحديث حالة الطلب قريبًا." });
+      queryClient.invalidateQueries({ queryKey: ["/api/delivery/available-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/suborders/active"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "فشل قبول العرض المضاد", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
 export function useVerifyOtp() {
   const { toast } = useToast();
   return useMutation({

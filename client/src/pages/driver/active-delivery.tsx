@@ -112,7 +112,7 @@ export default function ActiveDelivery() {
               <CardDescription>{t('driver.active_delivery.estimated_delivery', { time: formatTime(timeLeft) })}</CardDescription>
             </div>
             <div className="text-left">
-              <div className="text-2xl font-bold text-primary">${task.subtotal}</div>
+              <div className="text-2xl font-bold text-primary">{task.subtotal} ج.م</div>
               <div className="text-xs text-muted-foreground">{t('driver.active_delivery.total_value')}</div>
             </div>
           </div>

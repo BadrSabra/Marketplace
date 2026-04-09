@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useDriverTasks, useAvailableOffers, useSubmitOffer, useVerifyOtp } from "@/hooks/use-driver";
+import { useDriverTasks, useAvailableOffers, useSubmitOffer, useAcceptCounterOffer, useVerifyOtp } from "@/hooks/use-driver";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -132,6 +132,7 @@ function TaskCard({ task }: { task: ActiveDelivery }) {
 
 function OfferCard({ offer }: { offer: AvailableTask }) {
   const submitOfferMutation = useSubmitOffer();
+  const acceptCounterMutation = useAcceptCounterOffer();
   const { toast } = useToast();
   const [isOfferOpen, setIsOfferOpen] = useState(false);
   const [feeInput, setFeeInput] = useState("");
@@ -156,6 +157,14 @@ function OfferCard({ offer }: { offer: AvailableTask }) {
         toast({ title: "فشل تقديم العرض", description: error.message, variant: "destructive" });
       }
     });
+  };
+
+  const handleAcceptCounter = () => {
+    if (!offer.driver_offer_id) {
+      toast({ title: "خطأ", description: "لا يمكن العثور على رقم العرض", variant: "destructive" });
+      return;
+    }
+    acceptCounterMutation.mutate(offer.driver_offer_id);
   };
 
   return (
@@ -216,13 +225,11 @@ function OfferCard({ offer }: { offer: AvailableTask }) {
           ) : offerCountered ? (
             <Button
               className="w-full bg-amber-500 hover:bg-amber-600 text-white"
-              onClick={() => {
-                setFeeInput(offer.driver_counter_offered_fee || "");
-                setIsOfferOpen(true);
-              }}
+              onClick={handleAcceptCounter}
+              disabled={acceptCounterMutation.isPending}
               data-testid={`button-accept-counter-${offer.sub_order_id}`}
             >
-              <Tag className="w-4 h-4 ml-2" />
+              {acceptCounterMutation.isPending ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <Tag className="w-4 h-4 ml-2" />}
               قبول اقتراح العميل ({offer.driver_counter_offered_fee} ج.م)
             </Button>
           ) : (

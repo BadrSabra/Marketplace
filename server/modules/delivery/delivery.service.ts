@@ -72,11 +72,12 @@ export class DeliveryService {
 
     // Fetch driver's existing offers for these sub-orders
     const subOrderIds = results.map((r: any) => r.sub_order_id);
-    let driverOffersMap: Record<string, { status: string; offeredFee: string; counterOfferedFee: string | null }> = {};
+    let driverOffersMap: Record<string, { id: string; status: string; offeredFee: string; counterOfferedFee: string | null }> = {};
 
     if (subOrderIds.length > 0) {
       const driverExistingOffers = await db
         .select({
+          id: deliveryOffers.id,
           subOrderId: deliveryOffers.subOrderId,
           status: deliveryOffers.status,
           offeredFee: deliveryOffers.offeredFee,
@@ -92,6 +93,7 @@ export class DeliveryService {
 
       for (const o of driverExistingOffers) {
         driverOffersMap[o.subOrderId] = {
+          id: o.id,
           status: o.status,
           offeredFee: o.offeredFee,
           counterOfferedFee: o.counterOfferedFee,
@@ -135,6 +137,7 @@ export class DeliveryService {
         created_at: res.created_at.toISOString(),
         status: res.status as any,
         assigned_driver_id: res.assigned_driver_id,
+        driver_offer_id: existingOffer?.id ?? null,
         driver_offer_status: existingOffer?.status ?? null,
         driver_offered_fee: existingOffer?.offeredFee ?? null,
         driver_counter_offered_fee: existingOffer?.counterOfferedFee ?? null,
