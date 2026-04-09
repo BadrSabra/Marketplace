@@ -74,15 +74,15 @@ export default function StoresPage() {
     <AdminLayout>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Stores</h1>
-          <p className="text-muted-foreground mt-1">Manage vendor stores and locations.</p>
+          <h1 className="text-3xl font-bold text-foreground">المتاجر</h1>
+          <p className="text-muted-foreground mt-1">إدارة متاجر أصحاب المتاجر والمواقع.</p>
         </div>
         <button 
           onClick={() => setIsDialogOpen(true)}
           className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl font-medium shadow-md shadow-primary/20 hover:shadow-lg hover:-translate-y-0.5 transition-all"
         >
           <Plus className="w-5 h-5" />
-          Add Store
+          إضافة متجر
         </button>
       </div>
 
@@ -92,7 +92,7 @@ export default function StoresPage() {
         ) : !stores || stores.length === 0 ? (
           <div className="p-12 text-center text-muted-foreground flex flex-col items-center">
             <StoreIcon className="w-12 h-12 mb-4 opacity-20" />
-            <p>No stores registered yet.</p>
+            <p>لا توجد متاجر مسجلة بعد.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 p-6">
@@ -117,7 +117,7 @@ export default function StoresPage() {
                 </div>
                 <h3 className="text-lg font-bold text-foreground mb-1">{store.name}</h3>
                 <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                  {store.description || "No description provided."}
+                  {store.description || "لا يوجد وصف."}
                 </p>
                 <div className="flex items-center gap-2 text-xs font-medium text-foreground/80 bg-secondary/50 p-2 rounded-lg">
                   <MapPin className="w-3.5 h-3.5 text-primary" />
@@ -133,16 +133,15 @@ export default function StoresPage() {
       <AlertDialog open={!!storeToDelete} onOpenChange={(open) => !open && setStoreToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the store
-              and remove its data from our servers.
+              لا يمكن التراجع عن هذا الإجراء. سيتم حذف المتجر نهائياً وإزالة جميع بياناته.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+              حذف
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -152,10 +151,10 @@ export default function StoresPage() {
       {isDialogOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-card w-full max-w-lg rounded-3xl premium-shadow border border-border p-6 md:p-8 relative animate-in fade-in zoom-in-95 duration-200">
-            <h2 className="text-2xl font-bold mb-6">Register New Store</h2>
+            <h2 className="text-2xl font-bold mb-6">تسجيل متجر جديد</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1.5">Store Name</label>
+                <label className="block text-sm font-medium mb-1.5">اسم المتجر</label>
                 <input 
                   type="text" 
                   value={formData.name}
@@ -165,18 +164,18 @@ export default function StoresPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1.5">Location</label>
+                <label className="block text-sm font-medium mb-1.5">الموقع</label>
                 <input 
                   type="text" 
                   value={formData.locationText}
                   onChange={e => setFormData({...formData, locationText: e.target.value})}
                   className="w-full px-4 py-3 bg-background border-2 border-border/80 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all"
-                  placeholder="e.g. 123 Main St, City"
+                  placeholder="مثال: 123 شارع التحرير، القاهرة"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1.5">Description (Optional)</label>
+                <label className="block text-sm font-medium mb-1.5">الوصف (اختياري)</label>
                 <textarea 
                   value={formData.description}
                   onChange={e => setFormData({...formData, description: e.target.value})}
@@ -189,14 +188,14 @@ export default function StoresPage() {
                   onClick={() => setIsDialogOpen(false)}
                   className="flex-1 px-4 py-3 rounded-xl font-medium bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
                 >
-                  Cancel
+                  إلغاء
                 </button>
                 <button 
                   type="submit"
                   disabled={createStore.isPending}
                   className="flex-1 px-4 py-3 rounded-xl font-medium bg-primary text-primary-foreground shadow-md hover:shadow-lg disabled:opacity-50 transition-all"
                 >
-                  {createStore.isPending ? "Creating..." : "Create Store"}
+                  {createStore.isPending ? "جارٍ الإنشاء..." : "إنشاء المتجر"}
                 </button>
               </div>
             </form>
