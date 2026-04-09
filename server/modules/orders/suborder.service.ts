@@ -1,6 +1,6 @@
 import { db } from "../../db";
 import { subOrders, stores, orderItems, products, deliveryOffers, users, orders, deliveryOtps, wallets, walletTransactions, ledger } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import type { User } from "@shared/schema";
 import { auditService } from "../../services/auditService";
 import { allowedTransitions, type SubOrderStatus } from "./suborder.types";
@@ -64,6 +64,26 @@ export class SubOrderService {
         .set({ status: newStatus, updatedAt: new Date() })
         .where(eq(subOrders.id, subOrderId))
         .returning();
+
+      // Q: عند إلغاء طلب فرعي هنا، هل يُستعاد المخزون المخصوم عند إنشاء الطلب؟
+      // A: لا — هذا خطأ فادح. عند إنشاء الطلب في order.service.ts يتم خصم المخزون
+      //    فوراً. عند الإلغاء عبر orderService.cancelSubOrder() يتم استعادة المخزون
+      //    صراحةً، لكن عند الإلغاء من هنا (من قِبل صاحب المتجر أو الدرايفر أو الأدمن
+      //    عبر PATCH /api/suborders/:id/status) لم يكن هناك أي استعادة للمخزون!
+      //    النتيجة: مخزون المنتجات يتناقص بشكل دائم عند كل إلغاء من غير المسار الأصلي.
+      //    الإصلاح: جلب جميع عناصر الطلب الفرعي وإعادة إضافة كمياتها للمخزون.
+      if (newStatus === "CANCELLED") {
+        const cancelledItems = await tx
+          .select({ productId: orderItems.productId, quantity: orderItems.quantity })
+          .from(orderItems)
+          .where(eq(orderItems.subOrderId, subOrderId));
+
+        for (const item of cancelledItems) {
+          await tx.update(products)
+            .set({ stock: sql`stock + ${item.quantity}` })
+            .where(eq(products.id, item.productId));
+        }
+      }
 
       if (newStatus === "CANCELLED" && parentOrder.paymentStatus === "PAID") {
         const [customerWallet] = await tx

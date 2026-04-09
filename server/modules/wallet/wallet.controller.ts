@@ -58,7 +58,14 @@ export class WalletController {
   async approveDeposit(req: Request, res: Response) {
     try {
       const id = req.params.id as string;
-      const transaction = await walletService.approveDeposit(id);
+      // Q: هل يجب تمرير adminId إلى walletService.approveDeposit()؟
+      // A: نعم بالتأكيد. walletService.approveDeposit() تقبل معامل اختياري adminId
+      //    وتستخدمه لتسجيل في audit trail أي مشرف وافق على الإيداع. بدون تمريره
+      //    يُسجَّل طلب الإيداع كأن المستخدم نفسه وافق على إيداعه (self-approval)
+      //    لأن الكود يرجع إلى user?.id بدل adminId — مما يُفسد سجلات المراجعة.
+      //    الإصلاح: استخراج adminId من req.user وتمريره للخدمة.
+      const adminId = (req as any).user.id;
+      const transaction = await walletService.approveDeposit(id, adminId);
       res.json(transaction);
     } catch (error: any) {
       res.status(400).json({ message: error.message });

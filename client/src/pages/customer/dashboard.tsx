@@ -103,20 +103,33 @@ const subOrderStatusLabels: Record<string, string> = {
   CANCELLED: "ملغي",
 };
 
+// Q: هل جميع قيم الحالات الممكنة موجودة في هذا الـ map؟
+// A: لا — "DELIVERED" و"CANCELLED" مفقودتان تماماً، وهما حالتان حقيقيتان موجودتان في
+//    orderStatusEnum في shared/schema.ts. عند عرض طلب بحالة DELIVERED أو CANCELLED
+//    داخل ActiveOrdersBanner، يُرجع المصطلح `subOrderStatusColors[sub.status]` قيمة
+//    undefined، فتصبح className تحتوي على النص الحرفي "undefined" مما يُفسد التصميم.
+//    كذلك "READY" لا وجود لها في orderStatusEnum — وهي dead code لن تُطابق أي سجل.
+//    الإصلاح: إضافة DELIVERED و CANCELLED وإزالة READY غير الموجودة في الـ schema.
 const subOrderStatusColors: Record<string, string> = {
   PENDING: "text-yellow-700 bg-yellow-50 border-yellow-200",
   ACCEPTED: "text-blue-700 bg-blue-50 border-blue-200",
-  READY: "text-purple-700 bg-purple-50 border-purple-200",
   IN_TRANSIT: "text-amber-700 bg-amber-50 border-amber-200",
+  DELIVERED: "text-green-700 bg-green-50 border-green-200",
+  CANCELLED: "text-red-700 bg-red-50 border-red-200",
 };
 
 function ActiveOrdersBanner({ orders }: { orders: any[] }) {
 
+  // Q: هل الحالات المُدرجة هنا صحيحة ومتطابقة مع orderStatusEnum في shared/schema.ts؟
+  // A: لا — "READY" ليست ضمن orderStatusEnum بالإطلاق. الحالات الحقيقية هي:
+  //    PENDING | ACCEPTED | IN_TRANSIT | DELIVERED | CANCELLED
+  //    إدراج "READY" كان dead code لا يُطابق أي سجل في قاعدة البيانات أبداً.
+  //    الإصلاح: حذف "READY" من القائمة لتعكس الحالات الفعلية الموجودة في الـ schema.
   const activeSubOrders = useMemo(() => {
     const result: Array<{ orderId: string; subOrder: any }> = [];
     orders.forEach((order) => {
       order.subOrders?.forEach((sub: any) => {
-        if (["PENDING", "ACCEPTED", "READY", "IN_TRANSIT"].includes(sub.status)) {
+        if (["PENDING", "ACCEPTED", "IN_TRANSIT"].includes(sub.status)) {
           result.push({ orderId: order.id, subOrder: sub });
         }
       });
@@ -218,14 +231,18 @@ export default function CustomerDashboard() {
     queryKey: ["/api/products"],
   });
 
+  // Q: هل شرط `activeCategory === "الكل"` داخل الـ filter منطقي؟
+  // A: لا — إنه كود ميت (dead code) لن يُنفَّذ أبداً. السبب: نحن بالفعل داخل
+  //    الـ if block الذي يتحقق من `activeCategory !== "الكل"`، مما يعني أن
+  //    `activeCategory === "الكل"` ستكون دائماً false داخله. وجوده مُضلِّل
+  //    ويوحي بأن الفلتر قد يتجاوز التصفية، وهو ما لا يحدث فعلاً.
+  //    الإصلاح: حذف هذه الشرط الميت وإبقاء الشرط الفعلي الوحيد.
   const filteredProducts = useMemo(() => {
     if (!products) return [];
     let result = products;
     if (activeCategory !== "الكل") {
       result = result.filter(
-        (p) =>
-          p.category?.toLowerCase().includes(activeCategory.toLowerCase()) ||
-          activeCategory === "الكل"
+        (p) => p.category?.toLowerCase().includes(activeCategory.toLowerCase())
       );
     }
     if (searchTerm.trim()) {
