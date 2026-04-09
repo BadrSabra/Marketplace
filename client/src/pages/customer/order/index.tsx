@@ -473,7 +473,14 @@ export default function CustomerOrderDetails() {
                   </Table>
                   <div className="mt-4 flex justify-between items-center">
                     <p className="text-sm font-bold">الإجمالي الفرعي: {parseFloat(sub.subtotal).toFixed(2)} جنيه</p>
-                    {["PENDING"].includes(sub.status) && (
+                    {/* BUG-FIX: Was only showing cancel button for PENDING sub-orders.
+                        The backend cancelSubOrder allows cancellation from both PENDING and
+                        ACCEPTED states (only blocking IN_TRANSIT, DELIVERED, CANCELLED).
+                        A customer whose sub-order was accepted by the store but has no driver
+                        yet assigned (ACCEPTED + no assignedDriverId) was silently trapped —
+                        the UI hid the cancel button even though the backend fully supported it.
+                        Fix: allow cancel for both PENDING and ACCEPTED statuses. */}
+                    {["PENDING", "ACCEPTED"].includes(sub.status) && (
                       <Button
                         variant="destructive"
                         size="sm"
