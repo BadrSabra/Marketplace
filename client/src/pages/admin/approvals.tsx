@@ -1,7 +1,6 @@
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { useUsers, useApproveUser } from "@/hooks/use-users";
 import { Spinner } from "@/components/ui/spinner";
-import { format } from "date-fns";
 import { UserCheck, Store, Truck, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 

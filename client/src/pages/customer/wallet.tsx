@@ -12,7 +12,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, Plus, Wallet as WalletIcon, History, Filter, ChevronLeft, ChevronRight, Clock, Upload, ImageIcon, X, ArrowDownCircle, MessageCircle, CheckCircle2, Banknote, Info } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { apiFetch } from "@/lib/api";
-import { format } from "date-fns";
 import { useState, useRef } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";

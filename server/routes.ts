@@ -485,11 +485,15 @@ export async function registerRoutes(
   });
 
   // --- PRODUCTS MODULE ---
+  // BUG-FIX: POST, PATCH, DELETE had no role restriction — any authenticated user (CUSTOMER,
+  // DRIVER) could attempt to create/update/delete products. The service validates ownership,
+  // but customers and drivers would still trigger DB queries before getting rejected.
+  // Add authorizeRole to enforce the correct roles at the route layer.
   app.get("/api/products", productsController.getAll);
-  app.post("/api/products", authenticate, productsController.create);
+  app.post("/api/products", authenticate, authorizeRole(["STORE_OWNER", "ADMIN"]), productsController.create);
   app.get("/api/products/:id", productsController.getOne);
-  app.patch("/api/products/:id", authenticate, productsController.update);
-  app.delete("/api/products/:id", authenticate, productsController.delete);
+  app.patch("/api/products/:id", authenticate, authorizeRole(["STORE_OWNER", "ADMIN"]), productsController.update);
+  app.delete("/api/products/:id", authenticate, authorizeRole(["STORE_OWNER", "ADMIN"]), productsController.delete);
   app.post(
     "/api/products/:id/image",
     authenticate,

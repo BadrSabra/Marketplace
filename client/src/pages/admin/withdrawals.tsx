@@ -9,8 +9,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle, XCircle, Clock, ArrowDownLeft } from "lucide-react";
-import { format } from "date-fns";
 import { useState } from "react";
+
+// BUG-FIX: Was using format(date, "dd/MM/yyyy HH:mm") from date-fns (Western numerals).
+// Use ar-EG locale for consistent Arabic date display across the app.
+function formatArabicDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    const date = d.toLocaleDateString("ar-EG", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const time = d.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit", hour12: false });
+    return `${date} - ${time}`;
+  } catch {
+    return dateStr;
+  }
+}
 
 export default function AdminWithdrawalsPage() {
   const { toast } = useToast();
@@ -109,7 +121,7 @@ export default function AdminWithdrawalsPage() {
                         </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm text-right">
-                        {format(new Date(w.request.createdAt), "dd/MM/yyyy HH:mm")}
+                        {formatArabicDate(w.request.createdAt)}
                       </TableCell>
                       <TableCell className="text-right">
                         <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 gap-1">

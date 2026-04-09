@@ -19,12 +19,25 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { format } from "date-fns";
 import type { AuditLog } from "@shared/schema";
+
 import { 
   Loader2, Search, ChevronLeft, ChevronRight, ShieldAlert, 
   History, User, Box, Clock, ChevronDown, ChevronUp 
 } from "lucide-react";
+
+// BUG-FIX: Was using format(date, "dd/MM/yyyy HH:mm:ss") from date-fns (Western numerals).
+// Use ar-EG locale for consistent Arabic date/time display across the app.
+function formatArabicDateTime(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    const date = d.toLocaleDateString("ar-EG", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const time = d.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+    return `${date} - ${time}`;
+  } catch {
+    return dateStr;
+  }
+}
 
 export default function AdminAudit() {
   const [userId, setUserId] = useState("");
@@ -190,7 +203,7 @@ export default function AdminAudit() {
                         <TableCell className="text-xs text-muted-foreground">
                           <div className="flex items-center gap-1 whitespace-nowrap">
                             <Clock className="h-3 w-3" />
-                            {format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss")}
+                            {formatArabicDateTime(log.createdAt)}
                           </div>
                         </TableCell>
                         <TableCell>

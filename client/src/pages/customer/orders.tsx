@@ -7,7 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Package, ChevronLeft, Clock, CheckCircle2, Truck, XCircle } from "lucide-react";
-import { format } from "date-fns";
+
+// BUG-FIX: Was using format(date, "dd/MM/yyyy - HH:mm") from date-fns (Western numerals).
+// Use ar-EG locale for consistent Arabic date display across the app.
+function formatArabicDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    const date = d.toLocaleDateString("ar-EG", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const time = d.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit", hour12: false });
+    return `${date} - ${time}`;
+  } catch {
+    return dateStr;
+  }
+}
 
 const statusColors: Record<string, string> = {
   PENDING: "bg-yellow-100 text-yellow-800 border-yellow-200",
@@ -137,7 +149,7 @@ export default function CustomerOrders() {
                         </div>
 
                         <p className="text-xs text-muted-foreground mb-3">
-                          {format(new Date(order.createdAt), "dd/MM/yyyy - HH:mm")}
+                          {formatArabicDate(order.createdAt)}
                         </p>
 
                         {order.subOrders && order.subOrders.length > 0 && (

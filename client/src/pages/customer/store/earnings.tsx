@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, TrendingUp, Wallet, ArrowUpCircle, ArrowDownCircle, Info, Search, ArrowDownToLine } from "lucide-react";
-import { format } from "date-fns";
 import { useAuth } from "@/hooks/use-auth";
 import { LedgerTransaction } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";

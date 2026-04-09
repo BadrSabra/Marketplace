@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Check, Package, X, Clock, ArrowLeft, User, MapPin, Phone, Mail, CreditCard, Wallet, ArrowDownToLine, ExternalLink } from "lucide-react";
-import { format } from "date-fns";
 import { StoreLayout } from "@/components/layout/store-layout";
 import { useAuth } from "@/hooks/use-auth";
 import { t } from '@/i18n';

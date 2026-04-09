@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Check, Package, X, Clock, AlertTriangle, Search, Filter } from "lucide-react";
-import { format } from "date-fns";
 import { StoreLayout } from "@/components/layout/store-layout";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useMemo } from "react";

@@ -1,7 +1,6 @@
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { useQuery } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
-import { format } from "date-fns";
 import { TrendingUp, TrendingDown, DollarSign, ArrowUpRight, ArrowDownLeft, RotateCcw, Percent } from "lucide-react";
 
 interface LedgerEntry {

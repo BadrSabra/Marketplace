@@ -8,8 +8,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle, XCircle, Eye, Clock } from "lucide-react";
-import { format } from "date-fns";
 import { useState } from "react";
+
+// BUG-FIX: Was using format(date, "dd/MM/yyyy HH:mm") from date-fns (Western numerals).
+// The entire app is Arabic-first. Use ar-EG locale for consistent Arabic date display.
+function formatArabicDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    const date = d.toLocaleDateString("ar-EG", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const time = d.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit", hour12: false });
+    return `${date} - ${time}`;
+  } catch {
+    return dateStr;
+  }
+}
 
 export default function AdminDepositsPage() {
   const { toast } = useToast();
@@ -100,7 +112,7 @@ export default function AdminDepositsPage() {
                         </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {format(new Date(d.transaction.createdAt), "dd/MM/yyyy HH:mm")}
+                        {formatArabicDate(d.transaction.createdAt)}
                       </TableCell>
                       <TableCell>
                         {d.transaction.receiptUrl ? (

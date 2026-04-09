@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, Package, Truck, Phone, ChevronRight, ArrowRight, CheckCircle, XCircle, Tag, ArrowLeftRight, Clock, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import Navbar from "@/components/layout/Navbar";
@@ -379,7 +378,8 @@ export default function CustomerOrderDetails() {
               </Badge>
             </h1>
             <p className="text-muted-foreground text-sm mt-1">
-              تم تقديم الطلب في {format(new Date(order.createdAt), "dd/MM/yyyy")}
+              {/* BUG-FIX: Was format(date, "dd/MM/yyyy") from date-fns (Western numerals). */}
+              تم تقديم الطلب في {new Date(order.createdAt).toLocaleDateString("ar-EG", { day: "2-digit", month: "2-digit", year: "numeric" })}
             </p>
           </div>
           <Badge className={`${statusColors[effectiveStatus] || "bg-gray-100"} text-sm px-4 py-1`}>

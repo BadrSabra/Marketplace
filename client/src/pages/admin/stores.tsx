@@ -2,7 +2,6 @@ import { useState } from "react";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { useStores, useCreateStore, useDeleteStore } from "@/hooks/use-stores";
 import { Spinner } from "@/components/ui/spinner";
-import { format } from "date-fns";
 import { Plus, Store as StoreIcon, MapPin, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
