@@ -383,3 +383,9 @@ Clicking a notification navigates to the relevant page based on type and user ro
 90. **🔴 `tsconfig.json` excluded `*.test.ts` but not `*.test.tsx` or `*.spec.ts`** — Test files (`inventory.test.tsx`, `audit.spec.ts`, etc.) were included in main compilation, causing cascading errors from missing `@types/jest` and `@testing-library/react`. **Fixed: added `**/*.test.tsx`, `**/*.spec.ts`, `**/*.spec.tsx` to the `exclude` array.**
 
 91. **🟠 `audit.spec.ts` used `sql` from `drizzle-orm` without importing it** — Line 31 called `sql\`${auditLogs.createdAt} DESC\`` inside `orderBy` but `sql` was not imported, causing a `ReferenceError` at runtime. **Fixed: added `sql` to the `drizzle-orm` import.**
+
+92. **🔴 No "reject" action on Approvals page** — Admin could only approve STORE_OWNER/DRIVER applicants. There was no way to reject an unsuitable applicant without directly deleting from DB. **Fixed: added `DELETE /api/admin/users/:id` backend endpoint (protected: only unapproved STORE_OWNER/DRIVER, deletes store + wallet in a transaction) + `useRejectUser` hook + reject button with confirmation dialog on `admin/approvals.tsx`.**
+
+93. **🟠 Approvals page showed no role-specific details** — Transport type for drivers and store name for STORE_OWNER were missing from the approval list, forcing admin to look up each applicant manually. **Fixed: `approvals.tsx` now fetches stores via `useStores`, joins them client-side to show store name for STORE_OWNER rows, and shows Arabic transport type label for DRIVER rows.**
+
+94. **🟠 Dead code: `notification.emitter.ts` + emitter listener in `notification.service.ts`** — `NotificationService` subscribed to a `notificationEmitter` that was never triggered from anywhere in the codebase. The real notification system uses `push.service.ts` directly. **Fixed: removed the emitter listener from `notification.service.ts`, deleted the orphaned `notification.emitter.ts` file entirely.**

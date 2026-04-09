@@ -741,6 +741,40 @@ export async function registerRoutes(
     }
   });
 
+  // Q: هل يجب أن يكون هناك نقطة نهاية لرفض وحذف مستخدم لم تتم الموافقة عليه؟
+  // A: نعم — بدون هذه النقطة لا يمكن للأدمن رفض طلبات STORE_OWNER أو DRIVER غير
+  //    المناسبة إلا بحذف المستخدم يدوياً من DB. الإصلاح: إضافة DELETE محمية تتحقق
+  //    أولاً أن المستخدم في حالة انتظار (isApproved=false) ودوره يحتاج موافقة، ثم
+  //    تحذف المتجر المرتبط به (إن وُجد) داخل transaction واحدة لضمان الاتساق.
+  app.delete("/api/admin/users/:id", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
+    try {
+      const id = req.params.id as string;
+      const [existingUser] = await db.select().from(users).where(eq(users.id, id));
+      if (!existingUser) return res.status(404).json({ message: "المستخدم غير موجود" });
+      if (!["STORE_OWNER", "DRIVER"].includes(existingUser.role)) {
+        return res.status(400).json({ message: "لا يمكن حذف مستخدمي CUSTOMER أو ADMIN من هنا" });
+      }
+      if (existingUser.isApproved) {
+        return res.status(400).json({ message: "لا يمكن رفض مستخدم تمت الموافقة عليه بالفعل" });
+      }
+      await db.transaction(async (tx) => {
+        // Delete associated store first (FK constraint)
+        await tx.delete(stores).where(eq(stores.ownerId, id));
+        // Delete the wallet transactions → wallet → user
+        const [wallet] = await tx.select().from(wallets).where(eq(wallets.userId, id));
+        if (wallet) {
+          await tx.delete(walletTransactions).where(eq(walletTransactions.walletId, wallet.id));
+          await tx.delete(wallets).where(eq(wallets.id, wallet.id));
+        }
+        await tx.delete(users).where(eq(users.id, id));
+      });
+      res.json({ success: true, message: "تم رفض وحذف المستخدم بنجاح" });
+    } catch (err: any) {
+      console.error("Reject user error:", err);
+      res.status(500).json({ message: "Internal error" });
+    }
+  });
+
   app.patch("/api/admin/users/:id/approve", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
     try {
       const id = req.params.id as string;

@@ -1,17 +1,48 @@
+import { useState } from "react";
 import { AdminLayout } from "@/components/layout/admin-layout";
-import { useUsers, useApproveUser } from "@/hooks/use-users";
+import { useUsers, useApproveUser, useRejectUser } from "@/hooks/use-users";
+import { useStores } from "@/hooks/use-stores";
 import { Spinner } from "@/components/ui/spinner";
-import { UserCheck, Store, Truck, Clock } from "lucide-react";
+import { UserCheck, Store, Truck, Clock, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+const TRANSPORT_LABELS: Record<string, string> = {
+  CAR: "سيارة",
+  BIKE: "دراجة",
+  MOTORCYCLE: "دراجة نارية",
+  SCOOTER: "سكوتر",
+  TRUCK: "شاحنة",
+};
 
 export default function ApprovalsPage() {
-  const { data: users, isLoading } = useUsers();
+  const { data: users, isLoading: usersLoading } = useUsers();
+  const { data: stores, isLoading: storesLoading } = useStores();
   const approveUser = useApproveUser();
+  const rejectUser = useRejectUser();
   const { toast } = useToast();
+  const [userToReject, setUserToReject] = useState<{ id: string; name: string } | null>(null);
+
+  const isLoading = usersLoading || storesLoading;
 
   const pendingApprovals = (users ?? []).filter(
     (u) => !u.isApproved && ["STORE_OWNER", "DRIVER"].includes(u.role)
   );
+
+  const getStoreName = (ownerId: string): string | null => {
+    if (!stores) return null;
+    const store = (stores as any[]).find((s: any) => s.ownerId === ownerId);
+    return store?.name ?? null;
+  };
 
   const handleApprove = async (id: string, name: string) => {
     try {
@@ -22,9 +53,21 @@ export default function ApprovalsPage() {
     }
   };
 
+  const handleRejectConfirm = async () => {
+    if (!userToReject) return;
+    try {
+      await rejectUser.mutateAsync(userToReject.id);
+      toast({ title: "تم الرفض", description: `تم رفض وحذف حساب ${userToReject.name}.` });
+    } catch (err: any) {
+      toast({ title: "خطأ", description: err.message, variant: "destructive" });
+    } finally {
+      setUserToReject(null);
+    }
+  };
+
   const roleConfig: Record<string, { label: string; icon: React.ComponentType<any>; colorClass: string }> = {
-    STORE_OWNER: { label: "صاحب متجر", icon: Store,  colorClass: "text-purple-600 bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400" },
-    DRIVER:      { label: "سائق",      icon: Truck,  colorClass: "text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400" },
+    STORE_OWNER: { label: "صاحب متجر", icon: Store, colorClass: "text-purple-600 bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400" },
+    DRIVER: { label: "سائق", icon: Truck, colorClass: "text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400" },
   };
 
   return (
@@ -60,6 +103,11 @@ export default function ApprovalsPage() {
             {pendingApprovals.map((user) => {
               const config = roleConfig[user.role];
               const IconComp = config?.icon ?? UserCheck;
+              const storeName = user.role === "STORE_OWNER" ? getStoreName(user.id) : null;
+              const transportLabel = user.role === "DRIVER" && (user as any).transportType
+                ? TRANSPORT_LABELS[(user as any).transportType] ?? (user as any).transportType
+                : null;
+
               return (
                 <div
                   key={user.id}
@@ -76,20 +124,42 @@ export default function ApprovalsPage() {
                       {user.phone && (
                         <div className="text-xs text-muted-foreground">{user.phone}</div>
                       )}
+                      {storeName && (
+                        <div className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400 mt-0.5">
+                          <Store className="w-3 h-3" />
+                          <span>{storeName}</span>
+                        </div>
+                      )}
+                      {transportLabel && (
+                        <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 mt-0.5">
+                          <Truck className="w-3 h-3" />
+                          <span>{transportLabel}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4 flex-shrink-0">
+                  <div className="flex items-center gap-3 flex-shrink-0">
                     <div className="hidden sm:block text-right">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${config?.colorClass ?? ""}`}>
                         <IconComp className="w-3.5 h-3.5" />
                         {config?.label ?? user.role}
                       </span>
                       <div className="text-xs text-muted-foreground mt-1">
-                        {/* BUG-FIX: "dd MMM yyyy" → English month name. Replaced with Arabic locale. */}
                         {new Date(user.createdAt).toLocaleDateString("ar-EG", { year: "numeric", month: "2-digit", day: "2-digit" })}
                       </div>
                     </div>
+
+                    <button
+                      onClick={() => setUserToReject({ id: user.id, name: user.name })}
+                      disabled={rejectUser.isPending}
+                      data-testid={`button-reject-${user.id}`}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-xl text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-destructive/20"
+                      title="رفض وحذف"
+                    >
+                      <X className="w-4 h-4" />
+                      رفض
+                    </button>
 
                     <button
                       onClick={() => handleApprove(user.id, user.name)}
@@ -107,6 +177,27 @@ export default function ApprovalsPage() {
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!userToReject} onOpenChange={(open) => !open && setUserToReject(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد رفض الطلب</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من رفض وحذف حساب <strong>{userToReject?.name}</strong>؟ لا يمكن التراجع عن هذا الإجراء وسيتم حذف جميع بيانات الحساب المرتبطة به.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRejectConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-reject"
+            >
+              رفض وحذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 }
