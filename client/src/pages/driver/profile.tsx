@@ -89,6 +89,12 @@ export default function DriverProfilePage() {
       if (!res.ok) throw new Error("فشل رفع الملف");
       const data = await res.json();
       form.setValue("driversLicenseUrl", data.driversLicenseUrl);
+      // Q: هل يجب إبطال كاش بيانات المستخدم بعد رفع الرخصة بنجاح؟
+      // A: نعم — بدون هذا يظل الكاش يعرض قيمة driversLicenseUrl القديمة (أو null)
+      //    حتى انتهاء صلاحية الكاش تلقائياً، مما يعني أن الرخصة الجديدة لا تظهر فور
+      //    التحميل في باقي الواجهة. الإصلاح: إبطال ["/api/auth/me"] فور نجاح الرفع،
+      //    تماماً كما يحدث عند رفع الصورة الشخصية في handleAvatarUpload.
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast({ title: "تم رفع الرخصة بنجاح" });
     } catch (error: any) {
       toast({ title: "فشل رفع الرخصة", description: error.message, variant: "destructive" });

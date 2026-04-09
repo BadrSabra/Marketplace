@@ -327,7 +327,12 @@ export async function registerRoutes(
   app.patch("/api/driver/profile", authenticate, authorizeRole(["DRIVER"]), handleProfileUpdate);
 
   // Receipt upload endpoint for deposits
-  app.post("/api/wallet/deposit/receipt", authenticate, (req, res) => {
+  // Q: هل يجب تقييد رفع إيصال الإيداع للعملاء فقط؟
+  // A: نعم — بدون authorizeRole يستطيع أي مستخدم مُسجَّل (DRIVER أو STORE_OWNER أو ADMIN)
+  //    رفع ملفات إلى مجلد /uploads/receipts/ وهو مجلد خاص بإيصالات الإيداع.
+  //    السائقون وأصحاب المتاجر لا يودعون رصيداً عبر هذا المسار، لذا لا يحق لهم
+  //    استخدامه. الإصلاح: إضافة authorizeRole(["CUSTOMER"]) لتقييد المسار للعملاء فقط.
+  app.post("/api/wallet/deposit/receipt", authenticate, authorizeRole(["CUSTOMER"]), (req, res) => {
     receiptUpload.single("receipt")(req, res, (err: any) => {
       if (err) {
         return res.status(400).json({ message: err.message || "Upload failed" });
@@ -725,10 +730,10 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/admin/stores", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
-    const allStores = await db.select().from(stores);
-    res.json(allStores);
-  });
+  // Q: هل يجب الإبقاء على مسار GET /api/admin/stores المنفصل؟
+  // A: لا — المسار GET /api/stores (سطر 411) يعيد بالفعل جميع المتاجر للأدمن عبر
+  //    نفس المنطق (actor.role === "ADMIN" → يُرجع جميع المتاجر). وجود مسارين
+  //    لنفس الوظيفة يُربك المطورين ويُصعّب الصيانة. الإصلاح: حذف المسار المكرر.
 
   app.get("/api/admin/audit", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
     try {
@@ -870,7 +875,11 @@ export async function registerRoutes(
 
   const { healthController } = await import("./modules/admin/health.controller");
   app.get("/api/admin/health", authenticate, authorizeRole(["ADMIN"]), healthController.getHealth);
-  app.get("/api/admin/system-health", authenticate, authorizeRole(["ADMIN"]), healthController.getHealth);
+  // Q: هل يجب الإبقاء على /api/admin/system-health كمسار منفصل؟
+  // A: لا — كلا المسارين يستدعيان healthController.getHealth بالضبط. تسجيل نفس
+  //    المعالج على مسارين مختلفين يُنشئ نقطتَي نهاية لوظيفة واحدة، مما يُربك توثيق
+  //    API ويزيد مساحة الهجوم دون أي فائدة. الإصلاح: حذف المسار المكرر.
+  //    المرجعية الوحيدة يجب أن تكون /api/admin/health.
 
   app.get("/api/admin/reports/stats", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
     try {

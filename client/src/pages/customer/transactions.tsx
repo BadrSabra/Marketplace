@@ -87,7 +87,12 @@ export default function CustomerTransactions() {
   };
 
   const getAmountColor = (type: string) => {
-    if (["DEPOSIT", "COMMISSION", "REFUND"].includes(type)) {
+    // Q: هل يجب تضمين COMMISSION في ألوان المبالغ لصفحة معاملات العميل؟
+    // A: لا — العملاء لا يتلقون عمولات قط. نوع COMMISSION خاص فقط بأصحاب المتاجر
+    //    والسائقين الذين يحصلون على حصصهم من الطلبات. تضمينه هنا يُلوّن معاملات
+    //    لن تظهر أبداً للعميل ويُشير إلى سوء فهم منطق العمل.
+    //    الإصلاح: إزالة COMMISSION والإبقاء على DEPOSIT و REFUND فقط كأنواع دائنة.
+    if (["DEPOSIT", "REFUND"].includes(type)) {
       return "text-green-600 dark:text-green-400";
     }
     return "text-red-600 dark:text-red-400";
@@ -244,7 +249,10 @@ export default function CustomerTransactions() {
                         {t_row.related_order_id ? t_row.related_order_id.slice(0, 8) + "..." : "-"}
                       </TableCell>
                       <TableCell className={`font-bold text-right ${getAmountColor(t_row.type)}`}>
-                        {["DEPOSIT", "COMMISSION", "REFUND"].includes(t_row.type) ? "+" : "-"}
+                        {/* Q: هل يجب عرض إشارة "+" لنوع COMMISSION في معاملات العميل؟
+                            A: لا — العملاء لا يتلقون عمولات أبداً، لذا يكفي DEPOSIT و REFUND
+                               كأنواع تُعرض برصيد دائن (إشارة +). إزالة COMMISSION هنا. */}
+                        {["DEPOSIT", "REFUND"].includes(t_row.type) ? "+" : "-"}
                         {Math.abs(parseFloat(t_row.amount)).toFixed(2)} ج.م
                       </TableCell>
                       <TableCell className="text-right">
