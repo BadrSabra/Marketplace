@@ -236,10 +236,15 @@ export default function CartPage() {
                 <p className="text-xs text-muted-foreground text-center">
                   سيُخصم مبلغ المنتجات من محفظتك الآن، ورسوم التوصيل تُحدَّد بعد موافقة السائق
                 </p>
+                {/* Q: هل يجب تعطيل زر تأكيد الطلب عند غياب العنوان؟
+                    A: نعم — الكود السابق كان يُظهر toast فقط دون تعطيل الزر.
+                       هذا يعني أن المستخدم يستطيع النقر عليه مراراً أثناء الرسالة
+                       وإن أغلق Toast مبكراً لن يلاحظ المنع. تعطيل الزر عند غياب
+                       العنوان أوضح بصرياً ويمنع النقرات المكررة. */}
                 <Button
                   className="w-full h-12 text-base font-bold rounded-xl shadow-md"
                   onClick={handlePlaceOrder}
-                  disabled={isPlacingOrder}
+                  disabled={isPlacingOrder || !hasAddress}
                   data-testid="button-place-order"
                 >
                   {isPlacingOrder ? (

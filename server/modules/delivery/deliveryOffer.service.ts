@@ -451,8 +451,19 @@ export class DeliveryOfferService {
     });
   }
 
+  // Q: هل acceptTask (Legacy) آمن للاستخدام في تدفق التوصيل الحالي؟
+  // A: لا — هذه الدالة تحتوي على ثغرتين هامتين رغم إصلاحات الـ status checks:
+  //    1. لا تخصم رسوم التوصيل من محفظة العميل — تضع السائق في IN_TRANSIT
+  //       مباشرةً دون أن تُقيّد مبلغاً مقابل رسوم التوصيل الموعودة. نتيجة ذلك:
+  //       إذا رفض العميل الدفع لاحقاً أو أُلغي الطلب، لا يوجد مبلغ محجوز.
+  //    2. لا تسجّل قيداً في ledger مقابل رسوم التوصيل — يُعطّل محاسبة العمولات.
+  //    التدفق الصحيح هو customerAcceptOffer() التي تفعل كل ذلك بشكل صحيح.
+  //    الإصلاح المؤقت: إبقاء الدالة كـ fallback طارئ فقط مع تسجيل تحذير.
+  //    الإصلاح الكامل: حذف endpoint /api/delivery/suborders/:id/accept من routes.ts
+  //    وتوجيه كل تدفقات القبول عبر /api/delivery/offers/:offerId/accept.
   // Legacy: driver self-accepts (kept for backward compatibility but no longer used for customer flow)
   async acceptTask(subOrderId: string, driverId: string) {
+    console.warn(`[LEGACY] acceptTask called for subOrder=${subOrderId} driver=${driverId}. This bypasses delivery fee deduction. Use customerAcceptOffer flow instead.`);
     return await db.transaction(async (tx) => {
       // BUG-FIX: Missing status and approval checks — previously a driver could accept a
       // sub-order in PENDING/DELIVERED/CANCELLED state and bypass customer acceptance flow

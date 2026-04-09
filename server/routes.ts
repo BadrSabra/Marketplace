@@ -951,7 +951,13 @@ export async function registerRoutes(
 
   app.patch("/api/admin/wallets/:walletId/override", authenticate, authorizeRole(["ADMIN"]), walletController.adminOverride);
 
-  app.post("/api/wallet/deposit", authenticate, depositLimiter, walletController.deposit);
+  // Q: هل يجب تقييد endpoint الإيداع للعملاء فقط؟
+  // A: نعم — السائقون وأصحاب المتاجر يحصلون على أموالهم حصراً عبر العمولات
+  //    التي تُحوَّل لهم تلقائياً بعد التوصيل. لا يوجد سبب تقني أو تجاري يسمح
+  //    لهم بتقديم طلبات إيداع يدوية عبر هذا المسار. السماح لهم بذلك يُربك
+  //    سجلات المحاسبة ويفتح بابًا لطلبات زائفة. الإصلاح: إضافة
+  //    authorizeRole(["CUSTOMER"]) لقصر الإيداع على العملاء فقط.
+  app.post("/api/wallet/deposit", authenticate, authorizeRole(["CUSTOMER"]), depositLimiter, walletController.deposit);
   app.post("/api/wallet/withdraw", authenticate, authorizeRole(["DRIVER", "STORE_OWNER"]), walletController.withdraw.bind(walletController));
 
   // Admin withdrawal requests

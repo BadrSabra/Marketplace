@@ -136,7 +136,17 @@ export class OrderService {
         }
       }
 
-      return { order, subOrdersCreated, customerId: customer?.id };
+      // Q: لماذا نستخدم customerId (معامل الدالة) بدلاً من customer?.id؟
+      // A: customer?.id قد يكون undefined إذا فشل استعلام DB في إيجاد المستخدم
+      //    (تلف بيانات، سباق حذف، خطأ عابر). في هذه الحالة:
+      //    1. chatService.createRoom يُستدعى بـ [undefined, ownerId] مما قد يُنشئ
+      //       غرفة دردشة بدون عضو صالح أو يُطلق استثناءً غير متوقعاً.
+      //    2. notifyUser(customerId) في الـ .then() يُرسل إشعاراً لـ undefined
+      //       ويُخفق بصمت بسبب try/catch الخارجي.
+      //    استخدام معامل الدالة customerId (UUID موثوق منه قبل بدء المعاملة)
+      //    يضمن أن الغرف والإشعارات تعمل دائماً بصرف النظر عن نتيجة SELECT.
+      //    الإصلاح: إرجاع customerId (المعامل) بدلاً من customer?.id.
+      return { order, subOrdersCreated, customerId };
     }).then(async ({ order, subOrdersCreated, customerId }) => {
       // Create ORDER_STORE chat rooms after transaction commits
       for (const { subOrderId, ownerId, storeName } of subOrdersCreated) {

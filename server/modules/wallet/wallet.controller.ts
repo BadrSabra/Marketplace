@@ -76,7 +76,20 @@ export class WalletController {
       const transaction = await walletService.approveDeposit(id, adminId);
       res.json(transaction);
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      // Q: هل يجب إرجاع 400 لجميع أخطاء approveDeposit؟
+      // A: لا — الكود السابق كان يُرجع 400 لكل خطأ بما فيها أخطاء DB الداخلية
+      //    (مثل: انتهاء مهلة الاتصال أو فقدان قاعدة البيانات). أخطاء البيانات
+      //    التجارية (INVALID أو ALREADY_PROCESSED أو BUSINESS_RULE) تستحق 400،
+      //    لكن أي خطأ آخر غير متوقع يجب أن يُرجع 500 حتى يتمكن المشرف من
+      //    التمييز بين خطأ في المدخلات وخطأ في البنية التحتية.
+      //    الإصلاح: تمييز أخطاء الأعمال (400/409) عن أخطاء السيرفر (500).
+      const msg: string = error.message || "";
+      const isBusinessError =
+        msg.includes("Invalid") ||
+        msg.includes("already processed") ||
+        msg.includes("BUSINESS_RULE_VIOLATION") ||
+        msg.includes("ALREADY_PROCESSED");
+      res.status(isBusinessError ? 400 : 500).json({ message: msg });
     }
   }
 
