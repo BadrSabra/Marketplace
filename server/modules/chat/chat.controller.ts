@@ -18,10 +18,15 @@ export class ChatController {
       const roomId = req.params.roomId as string;
       const before = req.query.before as string | undefined;
       const limit = req.query.limit as string | undefined;
+      // Q: ما الذي يحدث لو مرّر المستخدم limit غير رقمي مثل "abc"؟
+      // A: parseInt("abc") = NaN — يصل NaN إلى getMessages الذي يُدرجه مباشرةً
+      //    في "LIMIT NaN" فيُسبب خطأ SQL 500. الإصلاح: استخدام القيمة الافتراضية
+      //    عند حصول parseInt على NaN.
+      const parsedLimit = limit ? parseInt(limit, 10) : 50;
       const messages = await chatService.getMessages(
         roomId,
         userId,
-        limit ? parseInt(limit) : 50,
+        Number.isNaN(parsedLimit) ? 50 : parsedLimit,
         before
       );
       res.json(messages);

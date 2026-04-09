@@ -121,6 +121,13 @@ export class ChatService {
   async getMessages(roomId: string, userId: string, limit = 50, before?: string) {
     await this.assertParticipant(roomId, userId);
 
+    // Q: هل يجب التحقق من قيمة limit قبل إدراجها في نص SQL؟
+    // A: نعم — تمرير NaN (ناتج parseInt("abc")) أو قيمة سالبة أو ضخمة جداً
+    //    مباشرةً إلى LIMIT ${limit} يُسبب خطأ SQL أو استهلاكاً مفرطاً للذاكرة.
+    //    parseInt("abc") = NaN والـ "LIMIT NaN" عبارة SQL غير صالحة تُسبب 500.
+    //    الإصلاح: تقييد limit بين 1 و 100 بعد التحقق من أنه رقم صحيح صالح.
+    const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 100) : 50;
+
     let query = `
       SELECT cm.id, cm.room_id, cm.sender_id, cm.content, cm.type, cm.created_at,
              u.name AS sender_name, u.role AS sender_role, u.avatar_url AS sender_avatar
@@ -135,7 +142,7 @@ export class ChatService {
       query += ` AND cm.created_at < (SELECT created_at FROM chat_messages WHERE id = $${params.length})`;
     }
 
-    query += ` ORDER BY cm.created_at DESC LIMIT ${limit}`;
+    query += ` ORDER BY cm.created_at DESC LIMIT ${safeLimit}`;
 
     const result = await pool.query(query, params);
     return result.rows.reverse().map(r => ({

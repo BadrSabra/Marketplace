@@ -19,12 +19,20 @@ const verifySchema = z.object({
   otpCode: z.string().length(6).regex(/^\d+$/),
 });
 
+// UUID validation helper
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export class DeliveryOtpController {
+  // Q: هل يجب أن تُرجع دالة `generate` القديمة رمز OTP في الاستجابة؟
+  // A: هذه الدالة غير مُسجَّلة في أي مسار نشط، لكنها تُشكّل خطراً لو أُضيفت لاحقاً
+  //    بدون auth. تبقى كود داخلي فقط.
   async generate(req: Request, res: Response) {
     try {
       const { orderId, subOrderId } = generateSchema.parse(req.body);
-      const otpCode = await deliveryOtpService.generateOtp(orderId, subOrderId);
-      res.json({ otpCode });
+      await deliveryOtpService.generateOtp(orderId, subOrderId);
+      // Q: هل يجب إرجاع رمز OTP للمستدعي هنا؟
+      // A: لا — هذه الدالة تُنشئ رمزاً جديداً ليراه العميل في تطبيقه فقط.
+      res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -33,6 +41,13 @@ export class DeliveryOtpController {
   async generateOtp(req: Request, res: Response) {
     try {
       const subOrderId = req.params.id as string;
+
+      // Q: هل يجب التحقق من UUID قبل استعلام قاعدة البيانات؟
+      // A: نعم — تمرير معرّف غير صالح يُسبب خطأ PostgreSQL 500 بدلاً من 400.
+      if (!UUID_REGEX.test(subOrderId)) {
+        return res.status(400).json({ error: "معرّف الطلب الفرعي غير صالح" });
+      }
+
       const driverId = (req as any).user?.id;
 
       const [subOrder] = await db.select().from(subOrders).where(eq(subOrders.id, subOrderId));
@@ -46,8 +61,17 @@ export class DeliveryOtpController {
         return res.status(400).json({ error: "لا يمكن توليد OTP إلا للطلبات في حالة IN_TRANSIT" });
       }
 
-      const otpCode = await deliveryOtpService.generateOtp(subOrder.orderId, subOrderId);
-      res.json({ otpCode });
+      // Q: هل يجب إرسال رمز OTP للسائق عند تجديده؟
+      // A: لا — هذا يُبطل نظام الأمان بالكامل. OTP هو رمز تحقق يُظهره العميل
+      //    للسائق شفهياً أو بصرياً. لو حصل السائق على الرمز مباشرةً من هذا
+      //    المسار، يمكنه تأكيد التسليم دون أن يلتقي بالعميل أو يتسلّم الطلب
+      //    منه فعلياً — مما يُفيت الهدف الأمني بالكامل ويُتيح للسائق احتيال
+      //    العميل والادعاء بالتسليم دون القيام به.
+      //    الإصلاح: إنشاء رمز جديد (لتجديد المنتهي الصلاحية) لكن إرجاع
+      //    success فقط للسائق. العميل يرى الرمز الجديد في تطبيقه عبر
+      //    GET /api/orders/:id الذي يُرجع otpCode للعملاء فقط.
+      await deliveryOtpService.generateOtp(subOrder.orderId, subOrderId);
+      res.json({ success: true, message: "تم تجديد رمز التوصيل. يمكن للعميل الاطلاع عليه في تطبيقه." });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
@@ -56,6 +80,9 @@ export class DeliveryOtpController {
   async verify(req: Request, res: Response) {
     try {
       const subOrderId = req.params.id as string;
+      if (!UUID_REGEX.test(subOrderId)) {
+        return res.status(400).json({ error: "معرّف الطلب الفرعي غير صالح" });
+      }
       const driverId = (req as any).user?.id;
       const { otpCode } = verifySchema.parse(req.body);
 
