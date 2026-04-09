@@ -41,7 +41,7 @@ export default function AdminDepositsPage() {
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.message || "Failed to approve");
+        throw new Error(err.message || "فشلت الموافقة");
       }
       return res.json();
     },
@@ -67,7 +67,7 @@ export default function AdminDepositsPage() {
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.message || "Failed to reject");
+        throw new Error(err.message || "فشل رفض الطلب");
       }
       return res.json();
     },

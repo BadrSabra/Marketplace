@@ -156,9 +156,9 @@ export default function CustomerTransactions() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t('customer.transactions.all_status')}</SelectItem>
-                  <SelectItem value="PENDING">Pending</SelectItem>
-                  <SelectItem value="COMPLETED">Completed</SelectItem>
-                  <SelectItem value="FAILED">Failed</SelectItem>
+                  <SelectItem value="PENDING">في الانتظار</SelectItem>
+                  <SelectItem value="COMPLETED">مكتمل</SelectItem>
+                  <SelectItem value="FAILED">فشل</SelectItem>
                 </SelectContent>
               </Select>
             </div>

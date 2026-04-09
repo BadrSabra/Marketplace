@@ -17,6 +17,7 @@ import { useState } from "react";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/api";
 
 type LedgerResponse = {
   transactions: LedgerTransaction[];
@@ -60,10 +61,8 @@ export default function StoreEarnings() {
       if (searchTerm) params.append("search", searchTerm);
       if (typeFilter !== "ALL") params.append("type", typeFilter);
       
-      const res = await fetch(`/api/ledger/transactions?${params.toString()}`, {
-        headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-      });
-      if (!res.ok) throw new Error("Failed to fetch");
+      const res = await apiFetch(`/api/ledger/transactions?${params.toString()}`);
+      if (!res.ok) throw new Error("فشل تحميل المعاملات");
       return res.json();
     },
     refetchInterval: 30000,

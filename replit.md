@@ -201,3 +201,23 @@ Clicking a notification navigates to the relevant page based on type and user ro
 12. **🔴 `customerAcceptOffer` delivery fee missing ledger entry** — `deliveryOffer.service.ts`: When a customer accepted a driver's delivery offer, the fee was deducted from the customer's wallet and a `wallet_transactions` row was inserted, but no `ledger` entry was created. **Fixed: a WITHDRAWAL ledger entry is now inserted inside the transaction.**
 
 13. **🟠 `adminOverride` hid real errors behind silent `try/catch`** — `wallet.service.ts`: The ledger and audit log inserts inside `adminOverride` were wrapped in redundant `information_schema.tables` checks and broad `try/catch` blocks. This silently swallowed any real DB errors (e.g., constraint violations), making failures invisible. The tables are guaranteed to exist on startup. **Fixed: removed unnecessary existence checks and broad catches; operations now fail loudly if something goes wrong.**
+
+## Frontend Bug Audit (April 2026 - Round 4)
+
+### Bugs Fixed
+
+14. **🟠 Debug `console.log` left in production** — `driver/tasks.tsx`: A `useEffect(() => { console.log("TASKS_PAGE_MOUNTED"); }, [])` block was left in the component after debugging. Also removed the now-unused `useEffect` import. **Fixed: removed entirely.**
+
+15. **🔴 Balance displayed with `$` sign instead of `ج.م`** — `customer/wallet.tsx`: Two balance cards showed `$100.00` (literal `$` prefix before the JSX expression) instead of `100.00 ج.م`. Same bug appeared in two pending deposit and transaction table cells in the same file. **Fixed: corrected all 4 occurrences to use `{amount} ج.م`.**
+
+16. **🟠 English validation error message** — `customer/wallet.tsx`: The `depositSchema` Zod refine message was `"Amount must be a positive number"` (English) while the entire app is Arabic. **Fixed: changed to `"يجب أن يكون المبلغ رقماً موجباً"`.**
+
+17. **🔴 Earnings page: `fetch()` without auth headers** — `driver/earnings.tsx`: The ledger transactions query used the native `fetch()` with no Authorization header. Since `jwt_token` is required, all requests would return 401 and silently fail (showing empty transactions). **Fixed: replaced with `apiFetch()` which automatically attaches the `Bearer` token.**
+
+18. **🔴 Wrong WITHDRAWAL filter label** — `driver/earnings.tsx`: The `SelectItem` for `value="WITHDRAWAL"` was using the translation key `customer.wallet.types.DEPOSIT` instead of `WITHDRAWAL`, causing the "سحب" filter to be labelled "إيداع". **Fixed: corrected the key to `WITHDRAWAL`.**
+
+19. **🟠 Multiple `$` / `EGP` currency signs** — Across 9 files, amounts were displayed as `$100.00` or `100.00 EGP` instead of `100.00 ج.م`: `driver/earnings.tsx` (×3), `driver/dashboard.tsx`, `driver/wallet.tsx` (×3), `customer/orders.tsx`, `customer/transactions.tsx`, `admin/deposits.tsx`, `admin/orders.tsx`, `admin/products.tsx`, `admin/withdrawals.tsx`. **Fixed: all corrected to `{amount} ج.م`.**
+
+20. **🔴 Critical — Wrong `localStorage` key in store earnings** — `customer/store/earnings.tsx`: The ledger transactions fetch used `localStorage.getItem("token")` instead of `"jwt_token"`, which always returns `null`. Every request was sent without an Authorization header, returning 401 and silently showing no data. **Fixed: replaced raw `fetch()` + wrong key with `apiFetch()` which reads the correct `jwt_token` key.**
+
+21. **🟠 English UI text across admin pages** — Multiple admin pages had English labels, table headers, and toast messages: `admin/users.tsx` (page title "Users", table headers "Name/Contact/Role/Status/Joined/Actions", status badges "Approved/Pending", button title "Approve User", toasts "User Approved"/"Error"), `admin/stores.tsx` (toasts "Success"/"Error"/"Failed to create/delete store"), `admin/deposits.tsx` (error messages "Failed to fetch/approve/reject"), `admin/orders.tsx` ("Total: $..."), `admin/products.tsx` ("units"), `admin/audit.tsx` ("No audit logs found."), `customer/transactions.tsx` filter options ("Pending"/"Completed"/"Failed"). **Fixed: all replaced with Arabic equivalents.**

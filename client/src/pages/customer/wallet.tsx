@@ -431,7 +431,7 @@ export default function CustomerWallet() {
                   pendingDeposits?.map((d: any) => (
                     <TableRow key={d.transaction.id} className="flex-row-reverse">
                       <TableCell className="text-right">{format(new Date(d.transaction.createdAt), "MMM d, yyyy HH:mm")}</TableCell>
-                      <TableCell className="font-medium text-right">${parseFloat(d.transaction.amount).toFixed(2)}</TableCell>
+                      <TableCell className="font-medium text-right">{parseFloat(d.transaction.amount).toFixed(2)} ج.م</TableCell>
                       <TableCell className="text-right">
                         <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-200">
                           {d.transaction.status}
@@ -497,7 +497,7 @@ export default function CustomerWallet() {
                         ? 'text-green-600 font-medium' 
                         : 'text-red-600 font-medium'
                     }`}>
-                      {tx.type === 'DEPOSIT' || tx.type === 'COMMISSION' ? '+' : '-'}${parseFloat(tx.amount).toFixed(2)}
+                      {tx.type === 'DEPOSIT' || tx.type === 'COMMISSION' ? '+' : '-'}{parseFloat(tx.amount).toFixed(2)} ج.م
                     </TableCell>
                     <TableCell className="text-right">
                       <Badge variant={

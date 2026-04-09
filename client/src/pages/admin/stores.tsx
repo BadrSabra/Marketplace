@@ -41,13 +41,13 @@ export default function StoresPage() {
         ...formData,
         ownerId: user.id
       });
-      toast({ title: "Success", description: "Store created successfully." });
+      toast({ title: "تم إنشاء المتجر بنجاح" });
       setIsDialogOpen(false);
       setFormData({ name: "", description: "", locationText: "" });
     } catch (error: any) {
       toast({ 
-        title: "Error", 
-        description: error.message || "Failed to create store", 
+        title: "خطأ", 
+        description: error.message || "فشل إنشاء المتجر", 
         variant: "destructive" 
       });
     }
@@ -58,11 +58,11 @@ export default function StoresPage() {
 
     try {
       await deleteStore.mutateAsync(storeToDelete);
-      toast({ title: "Success", description: "Store deleted successfully." });
+      toast({ title: "تم حذف المتجر بنجاح" });
     } catch (error: any) {
       toast({ 
-        title: "Error", 
-        description: error.message || "Failed to delete store", 
+        title: "خطأ", 
+        description: error.message || "فشل حذف المتجر", 
         variant: "destructive" 
       });
     } finally {

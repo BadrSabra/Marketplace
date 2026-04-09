@@ -170,7 +170,7 @@ export default function AdminAudit() {
                 ) : data?.logs.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                      No audit logs found.
+                      لا توجد سجلات تدقيق.
                     </TableCell>
                   </TableRow>
                 ) : (

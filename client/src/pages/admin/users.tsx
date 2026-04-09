@@ -13,9 +13,9 @@ export default function UsersPage() {
   const handleApprove = async (id: string) => {
     try {
       await approveUser.mutateAsync(id);
-      toast({ title: "User Approved", description: "The user can now log in." });
+      toast({ title: "تمت الموافقة على المستخدم", description: "يمكن للمستخدم الآن تسجيل الدخول." });
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "خطأ", description: err.message, variant: "destructive" });
     }
   };
 
@@ -23,8 +23,8 @@ export default function UsersPage() {
     <AdminLayout>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Users</h1>
-          <p className="text-muted-foreground mt-1">Manage platform administrators, owners, and customers.</p>
+          <h1 className="text-3xl font-bold text-foreground">المستخدمون</h1>
+          <p className="text-muted-foreground mt-1">إدارة المشرفين وأصحاب المتاجر والعملاء على المنصة.</p>
         </div>
       </div>
 
@@ -32,18 +32,18 @@ export default function UsersPage() {
         {isLoading ? (
           <div className="p-12 flex justify-center"><Spinner /></div>
         ) : !users || users.length === 0 ? (
-          <div className="p-12 text-center text-muted-foreground">No users found.</div>
+          <div className="p-12 text-center text-muted-foreground">لا يوجد مستخدمون.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="bg-secondary/50 text-muted-foreground font-semibold uppercase border-b border-border/50">
                 <tr>
-                  <th className="px-6 py-4">Name</th>
-                  <th className="px-6 py-4">Contact</th>
-                  <th className="px-6 py-4">Role</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Joined</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                  <th className="px-6 py-4">الاسم</th>
+                  <th className="px-6 py-4">معلومات الاتصال</th>
+                  <th className="px-6 py-4">الدور</th>
+                  <th className="px-6 py-4">الحالة</th>
+                  <th className="px-6 py-4">تاريخ الانضمام</th>
+                  <th className="px-6 py-4 text-right">إجراءات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">
@@ -73,7 +73,7 @@ export default function UsersPage() {
                       <span className={`inline-flex px-2.5 py-1 rounded-md text-xs font-medium ${
                         user.isApproved ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
                       }`}>
-                        {user.isApproved ? "Approved" : "Pending"}
+                        {user.isApproved ? "موافق عليه" : "في الانتظار"}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-muted-foreground">
@@ -85,7 +85,7 @@ export default function UsersPage() {
                           onClick={() => handleApprove(user.id)}
                           disabled={approveUser.isPending}
                           className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
-                          title="Approve User"
+                          title="الموافقة على المستخدم"
                         >
                           <CheckCircle className="w-5 h-5" />
                         </button>
