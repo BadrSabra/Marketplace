@@ -17,14 +17,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+// Q: لماذا أُزيلت حالتا READY وPICKED_UP من القواميس؟
+// A: shared/schema.ts يُعرّف subOrderStatusEnum بالحالات الفعلية فقط:
+//    PENDING, ACCEPTED, IN_TRANSIT, DELIVERED, CANCELLED.
+//    READY وPICKED_UP لا وجود لهما في DB schema ولا في خدمات الخادم،
+//    وإبقاؤهما كود ميت يُوهم المطورين بأن هذه الحالات صالحة وقائمة.
+//    الإصلاح: حذفهما للتطابق الكامل مع schema الحقيقية.
 const statusColors: Record<string, string> = {
   PENDING: "bg-yellow-100 text-yellow-800 border-yellow-200",
   ACCEPTED: "bg-blue-100 text-blue-800 border-blue-200",
-  READY: "bg-purple-100 text-purple-800 border-purple-200",
-  PICKED_UP: "bg-cyan-100 text-cyan-800 border-cyan-200",
+  IN_TRANSIT: "bg-indigo-100 text-indigo-800 border-indigo-200",
   DELIVERED: "bg-green-100 text-green-800 border-green-200",
   CANCELLED: "bg-red-100 text-red-800 border-red-200",
-  IN_TRANSIT: "bg-indigo-100 text-indigo-800 border-indigo-200",
 };
 
 const progressSteps = ["PENDING", "ACCEPTED", "IN_TRANSIT", "DELIVERED"];
@@ -32,11 +36,9 @@ const progressSteps = ["PENDING", "ACCEPTED", "IN_TRANSIT", "DELIVERED"];
 const statusLabels: Record<string, string> = {
   PENDING: "في الانتظار",
   ACCEPTED: "تم القبول",
-  READY: "جاهز للتوصيل",
-  PICKED_UP: "تم الاستلام",
+  IN_TRANSIT: "في الطريق",
   DELIVERED: "تم التوصيل",
   CANCELLED: "ملغي",
-  IN_TRANSIT: "في الطريق",
 };
 
 function getEffectiveStatus(order: any): string {

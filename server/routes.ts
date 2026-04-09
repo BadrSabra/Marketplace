@@ -280,7 +280,15 @@ export async function registerRoutes(
       const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 
       const { password, ...userWithoutPassword } = user;
-      res.status(200).json({ token, user: userWithoutPassword });
+
+      // Q: لماذا كانت استجابة تسجيل الدخول لا تحتوي على walletBalance؟
+      // A: اتساق أُغفل — مسار التسجيل (register) يُضيف walletBalance للاستجابة،
+      //    ومسار /api/auth/me يُضيفه أيضاً، لكن مسار تسجيل الدخول أغفل ذلك.
+      //    النتيجة: المستخدم يرى رصيد "undefined" مباشرةً بعد تسجيل الدخول حتى يُعيد
+      //    تحميل الصفحة أو يزور صفحة المحفظة التي تستدعي /api/auth/me.
+      //    الإصلاح: جلب رصيد المحفظة هنا وإدراجه في استجابة تسجيل الدخول.
+      const loginWallet = await walletService.getOrCreateWallet(user.id);
+      res.status(200).json({ token, user: { ...userWithoutPassword, walletBalance: loginWallet.balance } });
     } catch (err: any) {
       // BUG-FIX: Was catching ALL errors and returning 400 "Invalid input" — including real
       // database errors (connection failures, query errors) which should be 500.

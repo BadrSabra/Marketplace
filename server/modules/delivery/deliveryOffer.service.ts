@@ -193,12 +193,16 @@ export class DeliveryOfferService {
       });
 
       // Update sub-order: assign driver, update expectedDeliveryFee, set IN_TRANSIT
-      const formattedDeliveryFee = money.format(deliveryFeeStr);
+      // Q: لماذا نستخدم deliveryFee مباشرةً بدلاً من formattedDeliveryFee منفصل؟
+      // A: deliveryFee = money.format(deliveryFeeStr) بالفعل — إنشاء formattedDeliveryFee
+      //    ثانٍ يستدعي money.format مرةً ثانيةً على نفس المدخل ويُعيد نفس القيمة.
+      //    التكرار يُشوّش القارئ ويوحي بأن القيمتين مختلفتان. الإصلاح: حذف المتغير
+      //    الزائد واستخدام deliveryFee مباشرةً.
       const [updatedSubOrder] = await tx
         .update(subOrders)
         .set({
           assignedDriverId: offer.driverId,
-          expectedDeliveryFee: formattedDeliveryFee,
+          expectedDeliveryFee: deliveryFee,
           status: "IN_TRANSIT",
           updatedAt: new Date(),
         })
@@ -437,13 +441,16 @@ export class DeliveryOfferService {
         type: "WITHDRAWAL",
       });
 
-      const formattedAgreedFee = money.format(agreedFeeStr);
+      // Q: لماذا نستخدم agreedFee مباشرةً بدلاً من formattedAgreedFee منفصل؟
+      // A: agreedFee = money.format(agreedFeeStr) بالفعل — إنشاء formattedAgreedFee ثانٍ
+      //    يستدعي money.format مرةً ثانيةً على نفس المدخل ويُعيد نفس القيمة تماماً.
+      //    التكرار يُربك القارئ ويوحي بفرق غير موجود. الإصلاح: استخدام agreedFee مباشرةً.
       // Assign driver at agreed counter fee → IN_TRANSIT
       const [updatedSubOrder] = await tx
         .update(subOrders)
         .set({
           assignedDriverId: driverId,
-          expectedDeliveryFee: formattedAgreedFee,
+          expectedDeliveryFee: agreedFee,
           status: "IN_TRANSIT",
           updatedAt: new Date(),
         })
