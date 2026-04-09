@@ -759,6 +759,15 @@ export async function registerRoutes(
   app.delete("/api/admin/users/:id", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
     try {
       const id = req.params.id as string;
+
+      // Q: هل يجب التحقق من UUID قبل استعلام حذف المستخدم؟
+      // A: نعم — تمرير معرّف غير صالح مثل "pending" أو "me" يُسبب خطأ
+      //    PostgreSQL غير معالَج بدلاً من استجابة 400 واضحة.
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!UUID_REGEX.test(id)) {
+        return res.status(400).json({ message: "معرّف المستخدم غير صالح" });
+      }
+
       const [existingUser] = await db.select().from(users).where(eq(users.id, id));
       if (!existingUser) return res.status(404).json({ message: "المستخدم غير موجود" });
       if (!["STORE_OWNER", "DRIVER"].includes(existingUser.role)) {
@@ -788,6 +797,11 @@ export async function registerRoutes(
   app.patch("/api/admin/users/:id/approve", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
     try {
       const id = req.params.id as string;
+
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!UUID_REGEX.test(id)) {
+        return res.status(400).json({ message: "معرّف المستخدم غير صالح" });
+      }
 
       // BUG-FIX: The endpoint previously approved any user regardless of role, including
       // CUSTOMER and ADMIN accounts which are auto-approved on registration.

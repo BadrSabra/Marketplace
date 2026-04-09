@@ -58,6 +58,14 @@ export class WalletController {
   async approveDeposit(req: Request, res: Response) {
     try {
       const id = req.params.id as string;
+
+      // Q: هل يجب التحقق من UUID قبل الموافقة على الإيداع؟
+      // A: نعم — تمرير معرّف غير صالح يُسبب خطأ PostgreSQL غير معالَج (500).
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!UUID_REGEX.test(id)) {
+        return res.status(400).json({ message: "معرّف المعاملة غير صالح" });
+      }
+
       // Q: هل يجب تمرير adminId إلى walletService.approveDeposit()؟
       // A: نعم بالتأكيد. walletService.approveDeposit() تقبل معامل اختياري adminId
       //    وتستخدمه لتسجيل في audit trail أي مشرف وافق على الإيداع. بدون تمريره
@@ -101,6 +109,10 @@ export class WalletController {
   async approveWithdrawal(req: Request, res: Response) {
     try {
       const id = req.params.id as string;
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!UUID_REGEX.test(id)) {
+        return res.status(400).json({ message: "معرّف طلب السحب غير صالح" });
+      }
       const adminId = (req as any).user.id;
       const request = await walletService.approveWithdrawal(id, adminId);
       res.json(request);
@@ -121,6 +133,10 @@ export class WalletController {
   async rejectWithdrawal(req: Request, res: Response) {
     try {
       const id = req.params.id as string;
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!UUID_REGEX.test(id)) {
+        return res.status(400).json({ message: "معرّف طلب السحب غير صالح" });
+      }
       const adminId = (req as any).user.id;
       const { note } = req.body;
       const request = await walletService.rejectWithdrawal(id, adminId, note);
@@ -141,6 +157,10 @@ export class WalletController {
   async adminOverride(req: Request, res: Response) {
     try {
       const walletId = req.params.walletId as string;
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!UUID_REGEX.test(walletId)) {
+        return res.status(400).json({ message: "معرّف المحفظة غير صالح" });
+      }
       const actorId = (req as any).user.id;
       const { amount, reason } = req.body;
 

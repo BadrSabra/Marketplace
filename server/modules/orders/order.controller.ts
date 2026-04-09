@@ -82,6 +82,18 @@ export class OrderController {
         if (!isCustomer && !isStoreOwner && !isDriver) {
           return res.status(403).json({ message: "Forbidden" });
         }
+
+        // Q: هل يجب إرسال رمز OTP لغير العملاء (أصحاب المتاجر والسائقين والإدمن)؟
+        // A: لا — رمز OTP سرّ يشاركه العميل مع السائق شفهياً أو بصرياً لتأكيد
+        //    استلام الطلب. لو استطاع السائق رؤية OTP مباشرةً في تفاصيل الطلب،
+        //    يمكنه تأكيد التسليم بدون الحاجة للعميل، مما يُبطل الهدف الأمني من
+        //    النظام بأكمله. الإصلاح: حذف otpCode من الاستجابة لجميع الأدوار عدا CUSTOMER.
+        if (actor.role !== "CUSTOMER") {
+          order.subOrders = order.subOrders?.map((s: any) => {
+            const { otpCode: _otp, ...rest } = s;
+            return rest;
+          });
+        }
       }
 
       res.json(order);
