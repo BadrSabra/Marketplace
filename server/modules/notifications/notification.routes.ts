@@ -78,7 +78,7 @@ router.put("/read-all", authenticate, async (req: Request, res: Response) => {
 router.put("/:id/read", authenticate, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
-    const { id } = req.params;
+    const id = req.params.id as string;
     await pushService.markAsRead(id, userId);
     res.json({ success: true });
   } catch (err: any) {

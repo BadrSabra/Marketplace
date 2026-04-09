@@ -1,4 +1,4 @@
-import { db } from "../../db";
+import { db } from "../db";
 import { wallets, ledger, auditLogs, walletTransactions } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 
@@ -9,7 +9,7 @@ export async function walletTransactionWrapper(
   operation: (tx: any) => Promise<any>
 ) {
   try {
-    return await db.transaction(async (tx) => {
+    return await db.transaction(async (tx: any) => {
       const result = await operation(tx);
       
       // Atomic ledger entry

@@ -14,7 +14,7 @@ async function recoverWallets() {
       ...debitUsers.map(u => u.userId).filter(Boolean)
     ]);
 
-    for (const userId of allUserIds) {
+    for (const userId of Array.from(allUserIds)) {
       if (!userId) continue;
 
       await db.transaction(async (tx) => {

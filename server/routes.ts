@@ -379,7 +379,7 @@ export async function registerRoutes(
 
   app.delete("/api/stores/:id", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const report = await storage.deleteStore(id);
       console.log("Store Deletion Report:", JSON.stringify(report, null, 2));
       res.json({ success: true, message: "Store and all related data deleted successfully", report });
@@ -399,7 +399,7 @@ export async function registerRoutes(
         return res.status(400).json({ message: "No file uploaded" });
       }
       try {
-        const { id } = req.params;
+        const id = req.params.id as string;
         const imageUrl = `/uploads/stores/${req.file.filename}`;
         const [updated] = await db
           .update(stores)
@@ -484,7 +484,7 @@ export async function registerRoutes(
   // Admin: force-update ALL sub_orders of a parent order to a given status
   app.patch("/api/admin/orders/:id/status", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const statusSchema = z.object({ status: z.enum(["DELIVERED", "CANCELLED"]) });
       const { status } = statusSchema.parse(req.body);
 
@@ -572,7 +572,7 @@ export async function registerRoutes(
 
   app.patch("/api/admin/users/:id/approve", authenticate, authorizeRole(["ADMIN"]), async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const [user] = await db.update(users)
         .set({ isApproved: true, updatedAt: new Date() })
         .where(eq(users.id, id))
