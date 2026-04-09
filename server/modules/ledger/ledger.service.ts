@@ -332,10 +332,14 @@ export class LedgerService {
   async verifyLedgerConsistency(userId: string) {
     // Q: هل تعمل verifyLedgerConsistency بشكل صحيح إذا استُخدمت adminOverride على المحفظة؟
     // A: نعم — adminOverride تُنشئ سجل ledger بـ type=DEPOSIT/WITHDRAWAL مع creditUserId
-    //    أو debitUserId مضبوطَيْن على userId المستهدف، لذا يُحسَب التعديل في الرصيد.
-    //    لكن: adminOverride لا تُنشئ سجل walletTransactions مما يعني أن المستخدم لا يرى
-    //    التعديل الإداري في تاريخ معاملاته — الرصيد يتغير بصمت بلا تفسير.
-    //    الإصلاح: إضافة walletTransactions في adminOverride بنوع DEPOSIT/WITHDRAWAL وملاحظة "تعديل إداري".
+    //    أو debitUserId مضبوطَيْن على userId المستهدف، لذا يُحسَب التعديل في الرصيد
+    //    ويظهر صحيحاً في verifyLedgerConsistency.
+    //    ملاحظة تاريخية: هذا Q&A كان يُشير في نسخة سابقة إلى أن adminOverride لا تُنشئ
+    //    سجل walletTransactions — لكن هذا الإصلاح طُبّق بالفعل في wallet.service.ts:
+    //    adminOverride الآن تُنشئ walletTransactions بنوع DEPOSIT/WITHDRAWAL مع ملاحظة
+    //    "تعديل إداري - السبب: ..." حتى يرى المستخدم التعديل في سجل معاملاته.
+    //    الـ Q&A يبقى توثيقاً للتاريخ وتذكيراً للمطورين بضرورة التزامن بين جدولَي
+    //    ledger وwalletTransactions في أي عملية مالية مستقبلية.
     const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, userId));
     if (!wallet) throw new Error("Wallet not found");
 

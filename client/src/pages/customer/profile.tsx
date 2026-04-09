@@ -30,6 +30,15 @@ import { useRef, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
+// Q: لماذا يحتوي ملف العميل الشخصي على حقل transportType (وسيلة النقل)؟
+// A: هذا يبدو تصميماً مقصوداً من فريق المنتج — العملاء يمكنهم تحديد وسيلة نقلهم
+//    المفضلة للاستخدام في توقعات التوصيل أو تصفية العروض مستقبلاً. الحقل موجود في
+//    جدول users لجميع الأدوار (وليس مقيداً بالسائقين في schema.ts). الـ PATCH
+//    /api/customer/profile في الخادم يقبله صراحةً ويحفظه في قاعدة البيانات.
+//    الخطر الحالي: القيمة الافتراضية "Walk" تُحفظ عند أول تسجيل للعميل حتى لو لم
+//    يختر شيئاً — مما قد يُلوّث الإحصاءات والفلاتر بقيم غير مقصودة. الإصلاح
+//    المستقبلي: استخدام z.string().optional() وإزالة defaultValues.transportType
+//    لإرسال undefined بدلاً من "Walk" إذا لم يختر العميل شيئاً.
 const profileSchema = z.object({
   name: z
     .string()
