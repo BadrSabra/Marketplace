@@ -1,15 +1,17 @@
 import { pool, db } from "../db";
 import { users, wallets, stores, orders, subOrders, deliveryOtps, ledger, products, orderItems, deliveryOffers } from "@shared/schema";
-import { scrypt, randomBytes } from "crypto";
-import { promisify } from "util";
 import { eq, sql } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
-const scryptAsync = promisify(scrypt);
-
-async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${buf.toString("hex")}.${salt}`;
+// Q: لماذا كانت دالة hashPassword() تستخدم scrypt بدلاً من bcrypt؟
+// A: كانت الدالة تستخدم خوارزمية scrypt وتُنتج hash بصيغة "hex.salt" المختلفة تماماً
+//    عن صيغة bcrypt التي تبدأ بـ "$2". النظام في routes.ts (ensureAdminAccount) يكتشف
+//    أن الكلمة ليست bcrypt ويُحدّثها تلقائياً عند كل تشغيل للخادم — مما يُسبب عملية
+//    write غير ضرورية لقاعدة البيانات في كل مرة. والأهم: نظام تسجيل الدخول يعتمد بشكل
+//    أساسي على bcrypt، ومسار التحقق البديل لـ scrypt قد يفشل في بيئات معينة.
+//    الإصلاح: استخدام bcrypt مباشرةً في الـ bootstrap لتوحيد آلية التشفير في كل المسارات.
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 10);
 }
 
 export async function autoVerifyDatabase() {

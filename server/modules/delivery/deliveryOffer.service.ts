@@ -250,6 +250,15 @@ export class DeliveryOfferService {
    * Customer sends a counter-offer (lower price) to a driver
    */
   async customerCounterOffer(offerId: string, customerId: string, counterFee: number) {
+    // Q: هل يكفي أن يتحقق الـ controller فقط من أن counterFee موجب؟
+    // A: لا — مبدأ Defense in Depth يقتضي التحقق على كل طبقة منفصلة.
+    //    إن استُدعيت هذه الدالة مباشرةً من كود آخر (اختبارات، migrations، سكريبتات)
+    //    دون المرور بالـ controller، لن يكون هناك أي حاجز. counterFee = 0 يُفيت
+    //    شرط `counterFee >= offeredFee` لأن 0 < أي رسوم موجبة، فيُسجَّل عرض مضاد
+    //    بقيمة صفر وهو بيانات فاسدة تُفسد نظام العروض والتسعير.
+    //    الإصلاح: إضافة فحص صريح على مستوى الـ service.
+    if (counterFee <= 0) throw new Error("COUNTER_FEE_MUST_BE_POSITIVE");
+
     return await db.transaction(async (tx) => {
       const [offer] = await tx.select().from(deliveryOffers).where(eq(deliveryOffers.id, offerId)).for("update");
       if (!offer || offer.status !== "PENDING") throw new Error("OFFER_NOT_AVAILABLE");

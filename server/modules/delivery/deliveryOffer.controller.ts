@@ -99,6 +99,9 @@ export class DeliveryOfferController {
       if (err.message === "OFFER_NOT_AVAILABLE") {
         return res.status(400).json({ error: "هذا العرض لم يعد متاحاً" });
       }
+      if (err.message === "COUNTER_FEE_MUST_BE_POSITIVE") {
+        return res.status(400).json({ error: "يجب أن تكون رسوم العرض المضاد أكبر من الصفر" });
+      }
       if (err.message === "COUNTER_MUST_BE_LOWER") {
         return res.status(400).json({ error: "يجب أن يكون العرض المضاد أقل من السعر المقترح من السائق" });
       }

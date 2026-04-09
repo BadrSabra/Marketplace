@@ -93,23 +93,22 @@ function PromoBanner() {
   );
 }
 
+// Q: هل "READY" و"PICKED_UP" موجودتان في orderStatusEnum في shared/schema.ts؟
+// A: لا — orderStatusEnum يحتوي فقط على:
+//    PENDING | ACCEPTED | IN_TRANSIT | DELIVERED | CANCELLED
+//    أما "READY" فغير موجودة في الـ schema بالإطلاق (dead code).
+//    أما "PICKED_UP" فهي من deliveryStatusEnum وليس من orderStatusEnum،
+//    وبما أن subOrder.status يتبع orderStatusEnum فلن تُطابق أي سجل أبداً.
+//    كلتاهما dead code تُشوّش الكود ولا تُضيف أي قيمة فعلية.
+//    "DELIVERED" و"CANCELLED" موجودتان في الكود أدناه بشكل صحيح ولا تحتاجان لإصلاح.
+//    الإصلاح: حذف "READY" و"PICKED_UP" لتعكس الحالات الفعلية في الـ schema فقط.
 const subOrderStatusLabels: Record<string, string> = {
   PENDING: "في انتظار قبول المتجر",
   ACCEPTED: "قبل المتجر طلبك",
-  READY: "جاهز للتوصيل",
   IN_TRANSIT: "في الطريق إليك",
-  PICKED_UP: "تم الاستلام",
   DELIVERED: "تم التوصيل",
   CANCELLED: "ملغي",
 };
-
-// Q: هل جميع قيم الحالات الممكنة موجودة في هذا الـ map؟
-// A: لا — "DELIVERED" و"CANCELLED" مفقودتان تماماً، وهما حالتان حقيقيتان موجودتان في
-//    orderStatusEnum في shared/schema.ts. عند عرض طلب بحالة DELIVERED أو CANCELLED
-//    داخل ActiveOrdersBanner، يُرجع المصطلح `subOrderStatusColors[sub.status]` قيمة
-//    undefined، فتصبح className تحتوي على النص الحرفي "undefined" مما يُفسد التصميم.
-//    كذلك "READY" لا وجود لها في orderStatusEnum — وهي dead code لن تُطابق أي سجل.
-//    الإصلاح: إضافة DELIVERED و CANCELLED وإزالة READY غير الموجودة في الـ schema.
 const subOrderStatusColors: Record<string, string> = {
   PENDING: "text-yellow-700 bg-yellow-50 border-yellow-200",
   ACCEPTED: "text-blue-700 bg-blue-50 border-blue-200",

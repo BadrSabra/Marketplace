@@ -1,7 +1,7 @@
 import webpush from "web-push";
 import { db } from "../../db";
 import { notifications, pushSubscriptions, users } from "@shared/schema";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, inArray } from "drizzle-orm";
 import type { InsertNotification } from "@shared/schema";
 import { io } from "../chat/chat.socket";
 
@@ -58,9 +58,15 @@ export class PushService {
         })
       );
 
+      // Q: هل يمكن استخدام sql`id = ANY(${failed})` لحذف subscriptions منتهية الصلاحية؟
+      // A: لا — هذا خطأ. sql template tag في Drizzle يُرسل المصفوفة كقيمة مُعامَلة واحدة،
+      //    لكن PostgreSQL يتوقع أن `ANY(...)` تستقبل type-cast array صريح. النتيجة:
+      //    استعلام SQL معطوب لا يحذف أي سجل، مما يتراكم فيه push subscriptions منتهية
+      //    الصلاحية إلى الأبد ويُسبب رسائل خطأ 410/404 متكررة مع مزود الـ web push.
+      //    الإصلاح: استخدام inArray() من Drizzle ORM وهي الطريقة الآمنة والموثوقة.
       if (failed.length > 0) {
         await db.delete(pushSubscriptions).where(
-          sql`id = ANY(${failed})`
+          inArray(pushSubscriptions.id, failed)
         );
       }
     } catch (err) {
