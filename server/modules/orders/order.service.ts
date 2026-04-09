@@ -226,12 +226,16 @@ export class OrderService {
 
     const addresses = (customer?.addresses as string[]) || [];
 
-    // Auto-heal: if all sub-orders are done but parent order still shows PENDING, fix it
+    // Auto-heal: if all sub-orders are done but parent order is not in a final status, fix it.
+    // BUG-FIX: Was only healing when overallStatus === "PENDING". If the order was in
+    // "ACCEPTED" or "IN_TRANSIT" and all sub-orders completed/cancelled, the parent order
+    // would remain stuck in a non-final status forever. Now heals for any non-final status.
     const allDone = subsWithItems.every(s => s.status === "DELIVERED" || s.status === "CANCELLED");
     const anyDelivered = subsWithItems.some(s => s.status === "DELIVERED");
     let effectiveStatus = order.overallStatus;
 
-    if (allDone && order.overallStatus === "PENDING") {
+    const isFinalStatus = order.overallStatus === "DELIVERED" || order.overallStatus === "CANCELLED";
+    if (allDone && !isFinalStatus) {
       const healedStatus = anyDelivered ? "DELIVERED" : "CANCELLED";
       try {
         await db.update(orders)
@@ -329,7 +333,11 @@ export class OrderService {
     }
 
     const result = Array.from(orderMap.values());
-    // Compute effective overall_status from sub-orders for display accuracy
+    // Compute effective overall_status from sub-orders for display accuracy.
+    // BUG-FIX: Was only healing when overall_status === "PENDING". Same bug as in
+    // getOrderWithSubOrders — if the order was "ACCEPTED" or "IN_TRANSIT" and all
+    // sub-orders completed, the displayed status remained stuck in a non-final state.
+    // Now heals for any non-final status when all sub-orders are done.
     return result.map((ord: any) => {
       const subs = ord.sub_orders || [];
       const allDone = subs.length > 0 && subs.every((s: any) => s.status === "DELIVERED" || s.status === "CANCELLED");
@@ -337,8 +345,9 @@ export class OrderService {
       const hasInTransit = subs.some((s: any) => s.status === "IN_TRANSIT");
       const hasAccepted = subs.some((s: any) => s.status === "ACCEPTED");
 
+      const isFinalStatus = ord.overall_status === "DELIVERED" || ord.overall_status === "CANCELLED";
       let effectiveStatus = ord.overall_status;
-      if (allDone && ord.overall_status === "PENDING") {
+      if (allDone && !isFinalStatus) {
         effectiveStatus = anyDelivered ? "DELIVERED" : "CANCELLED";
       } else if (!allDone && hasInTransit) {
         effectiveStatus = "IN_TRANSIT";

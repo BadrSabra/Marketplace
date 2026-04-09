@@ -57,7 +57,11 @@ export async function autoVerifyDatabase() {
       )`,
       wallets: `CREATE TABLE wallets (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID NOT NULL REFERENCES users(id),
+        -- BUG-FIX: Added UNIQUE constraint at table creation time.
+        -- Previously the UNIQUE constraint was only added via ALTER TABLE later in the script,
+        -- creating a window between CREATE TABLE and ALTER TABLE where concurrent requests
+        -- could insert duplicate wallet rows for the same user.
+        user_id UUID NOT NULL UNIQUE REFERENCES users(id),
         balance DECIMAL(12,2) DEFAULT 0,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()

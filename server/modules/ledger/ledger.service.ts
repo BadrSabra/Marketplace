@@ -13,6 +13,7 @@ export interface LedgerFilters {
   offset?: number;
   sort_by?: string;
   sort_order?: "asc" | "desc";
+  search?: string;
 }
 
 export class LedgerService {
@@ -42,6 +43,15 @@ export class LedgerService {
 
     if (filters.date_to) {
       conditions.push(lte(ledger.createdAt, new Date(filters.date_to)));
+    }
+
+    // BUG-FIX: Search was previously applied in-memory AFTER pagination in the route handler.
+    // If the first page (e.g., 50 results) didn't contain the matching order ID, the user
+    // would see empty results even though matching records existed on later pages.
+    // Now search is pushed down to the database WHERE clause so pagination is applied AFTER
+    // filtering, returning correct results regardless of how many total rows exist.
+    if (filters.search) {
+      conditions.push(sql`CAST(${ledger.referenceId} AS TEXT) ILIKE ${'%' + filters.search + '%'}`);
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;

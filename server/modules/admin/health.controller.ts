@@ -125,11 +125,15 @@ export const healthController = {
     };
 
     // Audit log (Optional requirement)
+    // BUG-FIX: entityId was the string "health" which is not a valid UUID.
+    // The audit_logs.entity_id column is defined as UUID, so inserting "health" would
+    // cause a PostgreSQL type error and throw an exception on every health check call.
+    // Now uses the requesting admin's user ID as the entity being audited.
     if ((req as any).user) {
       await auditService.logEvent({
         actionType: "SYSTEM_HEALTH_CHECK",
         entityType: "system",
-        entityId: "health",
+        entityId: (req as any).user.id,
         performedByUserId: (req as any).user.id,
         performedByRole: (req as any).user.role,
         newValue: { overallStatus }

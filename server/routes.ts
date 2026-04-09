@@ -246,8 +246,16 @@ export async function registerRoutes(
 
       const { password, ...userWithoutPassword } = user;
       res.status(200).json({ token, user: userWithoutPassword });
-    } catch (err) {
-      res.status(400).json({ message: "Invalid input" });
+    } catch (err: any) {
+      // BUG-FIX: Was catching ALL errors and returning 400 "Invalid input" — including real
+      // database errors (connection failures, query errors) which should be 500.
+      // Callers could not distinguish a bad request from a server failure.
+      // Now only ZodError returns 400; everything else returns 500 with generic message.
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      console.error("[AUTH] Login error:", err.message);
+      res.status(500).json({ message: "حدث خطأ داخلي، يرجى المحاولة لاحقاً" });
     }
   });
 
@@ -395,8 +403,16 @@ export async function registerRoutes(
   // intentionally open. This internal route now requires authentication (ADMIN sees all,
   // STORE_OWNER can access their own store data which is filtered client-side).
   app.get(api.stores.list.path, authenticate, authorizeRole(["ADMIN", "STORE_OWNER"]), async (req, res) => {
-    const stores = await storage.getStores();
-    res.json(stores);
+    const actor = (req as any).user;
+    // BUG-FIX: Was returning ALL stores to STORE_OWNERs — a store owner could see
+    // competitor stores including their owner IDs and all internal data.
+    // Now STORE_OWNERs only receive their own store(s); ADMINs still get everything.
+    if (actor.role === "STORE_OWNER") {
+      const ownerStores = await db.select().from(stores).where(eq(stores.ownerId, actor.id));
+      return res.json(ownerStores);
+    }
+    const allStores = await storage.getStores();
+    res.json(allStores);
   });
 
   app.post(api.stores.create.path, authenticate, authorizeRole(["ADMIN", "STORE_OWNER"]), async (req, res) => {
@@ -763,16 +779,10 @@ export async function registerRoutes(
         offset: offset ? parseInt(offset as string) : 0,
         sort_by: sort_by as string,
         sort_order: sort_order as ("asc" | "desc"),
+        // BUG-FIX: Search is now passed to the DB layer (not filtered in-memory after pagination)
+        search: search as string,
       });
 
-      // Filter by search (OrderId) if provided
-      if (search) {
-        const searchTerm = (search as string).toLowerCase();
-        result.transactions = result.transactions.filter(t => 
-          t.related_order_id?.toLowerCase().includes(searchTerm)
-        );
-      }
-      
       console.log(`Fetched ${result.transactions.length} transactions for user ${userId}`);
       res.json(result);
     } catch (error: any) {

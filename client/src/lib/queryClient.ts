@@ -62,8 +62,14 @@ export const queryClient = new QueryClient({
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
+      // BUG-FIX: staleTime was Infinity — data was never considered stale and never
+      // automatically re-fetched. For financial data (wallet balance, notifications,
+      // orders) this meant a user who kept the tab open would see outdated balances
+      // after an admin approved a deposit or rejected a withdrawal, until a manual
+      // page refresh. Now set to 60 seconds so data is refreshed on next mount/focus
+      // after going stale, while still being cached to prevent unnecessary requests.
+      staleTime: 60 * 1000,
+      refetchOnWindowFocus: true,
       retry: false,
     },
     mutations: {
