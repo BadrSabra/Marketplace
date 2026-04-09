@@ -235,7 +235,8 @@ export default function CustomerTransactions() {
                   data?.transactions.map((t_row) => (
                     <TableRow key={t_row.id} className="hover:bg-muted/50 transition-colors flex-row-reverse" data-testid={`row-transaction-${t_row.id}`}>
                       <TableCell className="whitespace-nowrap text-right">
-                        {format(new Date(t_row.createdAt), "MMM dd, yyyy HH:mm")}
+                        {/* BUG-FIX: "MMM dd, yyyy HH:mm" → English month name. Replaced with Arabic locale. */}
+                        {new Date(t_row.createdAt).toLocaleDateString("ar-EG", { year: "numeric", month: "2-digit", day: "2-digit" })}
                       </TableCell>
                       <TableCell className="font-medium text-right">{t(`customer.wallet.types.${t_row.type}`)}</TableCell>
                       <TableCell className="font-mono text-sm text-right">

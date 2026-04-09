@@ -24,10 +24,16 @@ export const publicStoresController = {
         .limit(limit)
         .offset(offset);
 
+      // BUG-FIX: Was returning `logoUrl` but StoreCard.tsx uses `store.imageUrl`.
+      // After bug fix #28 changed StoreCard from `store.logoUrl` to `store.imageUrl`,
+      // the API response was never updated to match — so store images were always undefined
+      // and the placeholder icon was shown for every store on the home page.
+      // Fix: return `imageUrl` (matching the DB column name) so StoreCard renders correctly.
       const formattedStores = allStores.map(s => ({
         id: s.id,
         name: s.name,
         description: s.description,
+        imageUrl: s.imageUrl || null,
         logoUrl: s.imageUrl || null,
         isOpen: true,
         createdAt: s.createdAt
@@ -47,8 +53,11 @@ export const publicStoresController = {
       if (!UUID_REGEX.test(id)) {
         return res.status(404).json({ message: "Store not found" });
       }
+      // BUG-FIX: Was including `ownerId` in the response — this exposes the internal
+      // UUID of the store owner to anonymous (unauthenticated) public visitors.
+      // Removed `ownerId` from the select so only public-safe fields are returned.
       const [store] = await db
-        .select({ id: stores.id, name: stores.name, description: stores.description, imageUrl: stores.imageUrl, createdAt: stores.createdAt, ownerId: stores.ownerId })
+        .select({ id: stores.id, name: stores.name, description: stores.description, imageUrl: stores.imageUrl, createdAt: stores.createdAt })
         .from(stores)
         .innerJoin(users, eq(stores.ownerId, users.id))
         .where(and(eq(stores.id, id), eq(users.isApproved, true)));

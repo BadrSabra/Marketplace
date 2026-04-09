@@ -327,3 +327,51 @@ Clicking a notification navigates to the relevant page based on type and user ro
 64. **🔴 Admin finance page always showed empty ledger** — `client/src/pages/admin/finance.tsx`: The `LedgerResponse` interface had `data: LedgerEntry[]` but the `/api/ledger/transactions` endpoint returns `{ transactions: [...], total, limit, offset, heldFunds }` not `{ data: [...] }`. So `data?.data ?? []` was always `undefined`, meaning the finance page always rendered "لا توجد معاملات مالية بعد." even when the platform had hundreds of transactions. **Fixed: updated `LedgerResponse` interface to `transactions: LedgerEntry[]` and `heldFunds: string`; changed `data?.data ?? []` to `data?.transactions ?? []`.**
 
 65. **🟠 Customer transactions page order ID column always showed "—"** — `client/src/pages/customer/transactions.tsx`: The `Transaction` type had a `referenceId?: string` field, and the table rendered `{t_row.referenceId || "-"}`. But the `/api/ledger/transactions` endpoint returns `related_order_id` (not `referenceId`) — the ledger service explicitly maps `ledger.referenceId` → `related_order_id`. So `t_row.referenceId` was always `undefined` and every row showed "—" in the order ID column. **Fixed: renamed field to `related_order_id` in the type definition and updated the render to show the truncated order ID.**
+
+## Bug Audit Round 10 (April 2026)
+
+### Bugs Fixed
+
+66. **🔴 Store images never displayed on the customer home page** — `server/modules/public/public.controller.ts` + `client/src/components/home/StoreCard.tsx`: `getStores()` mapped the DB `imageUrl` column to a `logoUrl` field in the API response. A previous fix (bug #28) had changed `StoreCard.tsx` from `store.logoUrl` to `store.imageUrl`, but the public API response was never updated. So `store.imageUrl` was always `undefined` when loading stores on the home page and the store image placeholder was shown for every store. **Fixed: `getStores()` now returns both `imageUrl` (matching the DB column) and `logoUrl` (kept for backward compatibility) so `StoreCard.tsx` renders images correctly.**
+
+67. **🔴 `isCredit()` in driver wallet always returns false — all transactions display as debits** — `client/src/pages/driver/wallet.tsx`: The function checked `tx.creditUserId` (camelCase) but the `/api/ledger/transactions` endpoint returns `credit_user_id` (snake_case, as explicitly aliased in `ledger.service.ts`). Since `tx.creditUserId` was always `undefined`, every single ledger entry — including driver commissions and deposits — showed as a debit (red, down-arrow icon). **Fixed: updated `isCredit()` to check both `tx.credit_user_id` (snake_case) and `tx.creditUserId` (camelCase) for compatibility.**
+
+68. **🟠 Driver wallet transaction amounts displayed without currency symbol** — `client/src/pages/driver/wallet.tsx`: The amount display was `{credit ? "+" : "-"}{parseFloat(tx.amount).toFixed(2)}` — no `ج.م` currency suffix. **Fixed: added ` ج.م` after the amount.**
+
+69. **🟠 `getStore()` publicly exposes `ownerId` to anonymous users** — `server/modules/public/public.controller.ts`: The single store endpoint at `/api/public/stores/:id` included `ownerId: stores.ownerId` in the Drizzle select, returning the internal UUID of the store owner to unauthenticated visitors. **Fixed: removed `ownerId` from the select query so only public-safe fields are returned.**
+
+70. **🟠 Admin orders page shows raw English enum values for all status columns** — `client/src/pages/admin/orders.tsx`: `overallStatus`, `deliveryStatus`, and `paymentStatus` were rendered directly as `{order.overallStatus}` etc. — displaying English enum strings like "PENDING", "IN_TRANSIT", "PAID" to Arabic-speaking admins. **Fixed: added three Arabic label maps (`ORDER_STATUS_LABELS`, `DELIVERY_STATUS_LABELS`, `PAYMENT_STATUS_LABELS`) and replaced all raw renders with translated labels.**
+
+71. **🟠 Admin orders page date format in English ("Apr 9, 03:21 AM")** — `client/src/pages/admin/orders.tsx`: Used `format(new Date(order.createdAt), "MMM d, HH:mm a")` producing English month names. **Fixed: replaced with `toLocaleDateString("ar-EG")` producing Arabic numeric date format.**
+
+72. **🟠 Admin users page shows raw English role enums** — `client/src/pages/admin/users.tsx`: Rendered `{user.role}` directly, showing "STORE_OWNER", "DRIVER", "CUSTOMER" in English. **Fixed: added `ROLE_LABELS` map translating all roles to Arabic: مشرف / صاحب متجر / سائق / عميل.**
+
+73. **🟠 Admin users page date format in English** — `client/src/pages/admin/users.tsx`: Used `format(new Date(user.createdAt), "MMM d, yyyy")` producing English. **Fixed: replaced with `toLocaleDateString("ar-EG")` Arabic locale.**
+
+74. **🟠 Admin dashboard ledger widget shows raw English type and status** — `client/src/pages/admin/dashboard.tsx`: Recent financial activity showed `{tx.type}` ("DEPOSIT", "COMMISSION") and `{tx.status}` ("COMPLETED") in English. **Fixed: added inline Arabic label maps for both type and status.**
+
+75. **🟠 Admin dashboard recent orders show raw English overallStatus** — `client/src/pages/admin/dashboard.tsx`: `{order.overallStatus}` rendered "PENDING", "DELIVERED" etc. in the order table. **Fixed: added inline `orderStatusLabels` map and replaced raw render with translated label.**
+
+76. **🟠 Driver earnings page date format in English** — `client/src/pages/driver/earnings.tsx`: `format(date, "MMM dd, yyyy HH:mm")` → English month names. **Fixed: replaced with Arabic locale `toLocaleDateString("ar-EG")`.**
+
+77. **🟠 Driver earnings page transaction status badge shows raw "COMPLETED"** — `client/src/pages/driver/earnings.tsx`: The `{tx.status}` badge showed raw English enum. **Fixed: translated to Arabic: "مكتمل" / "قيد المعالجة" / "فشل".**
+
+78. **🟠 Customer wallet page pending deposit date format in English** — `client/src/pages/customer/wallet.tsx`: `format(date, "MMM d, yyyy HH:mm")` → English. **Fixed: replaced with `toLocaleDateString("ar-EG")`.**
+
+79. **🟠 Customer wallet pending deposit status badge shows raw English** — `client/src/pages/customer/wallet.tsx`: Badge showed `{d.transaction.status}` ("PENDING", "COMPLETED") in English. **Fixed: translated to Arabic.**
+
+80. **🟠 Customer wallet transaction history status badge shows raw "COMPLETED"** — `client/src/pages/customer/wallet.tsx`: `{tx.status}` in the transaction history table badge showed English. **Fixed: translated to Arabic.**
+
+81. **🟠 Customer wallet transaction history date format in English** — `client/src/pages/customer/wallet.tsx`: `format(date, "MMM d, yyyy HH:mm")` → English. **Fixed: replaced with Arabic locale.**
+
+82. **🟠 Admin finance page date format in English** — `client/src/pages/admin/finance.tsx`: `format(date, "dd MMM yyyy، HH:mm")` produced English month names despite using an Arabic comma. **Fixed: replaced with `toLocaleDateString("ar-EG")` + `toLocaleTimeString("ar-EG")`.**
+
+83. **🟠 Admin approvals page date format in English** — `client/src/pages/admin/approvals.tsx`: `format(date, "dd MMM yyyy")` → English month names. **Fixed: replaced with Arabic locale.**
+
+84. **🟠 Store owner orders page date format in English** — `client/src/pages/customer/store/orders.tsx`: `format(sub.createdAt, "MMM d, HH:mm")` → English. **Fixed: replaced with Arabic locale `toLocaleString("ar-EG")`.**
+
+85. **🟠 Store owner earnings page date format in English** — `client/src/pages/customer/store/earnings.tsx`: `format(date, "MMM dd, yyyy HH:mm")` → English. **Fixed: replaced with Arabic locale.**
+
+86. **🟠 Store order detail page date format in English** — `client/src/pages/customer/store/order/[id].tsx`: `format(date, "MMM dd, yyyy HH:mm")` → English. **Fixed: replaced with Arabic locale.**
+
+87. **🟠 Customer transactions page date format in English** — `client/src/pages/customer/transactions.tsx`: `format(date, "MMM dd, yyyy HH:mm")` → English. **Fixed: replaced with Arabic locale.**

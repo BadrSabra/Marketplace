@@ -128,7 +128,8 @@ export default function FinancePage() {
                         {entry.referenceId ? entry.referenceId.slice(0, 8) + "..." : "—"}
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
-                        {format(new Date(entry.createdAt), "dd MMM yyyy، HH:mm")}
+                        {/* BUG-FIX: "dd MMM yyyy" → English month name. Replaced with Arabic locale. */}
+                        {new Date(entry.createdAt).toLocaleDateString("ar-EG", { year: "numeric", month: "2-digit", day: "2-digit" })} {new Date(entry.createdAt).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit", hour12: false })}
                       </td>
                     </tr>
                   );

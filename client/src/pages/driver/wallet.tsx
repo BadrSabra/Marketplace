@@ -17,8 +17,13 @@ const TX_LABELS: Record<string, string> = {
   REFUND: "استرداد",
 };
 
+// BUG-FIX: Was checking `tx.creditUserId` (camelCase) but the ledger service returns
+// `credit_user_id` (snake_case). Every transaction checked always returned undefined,
+// making `isCredit` return false for ALL transactions — every commission/earning
+// appeared as a debit (red). Now checks both field name variants for compatibility.
 function isCredit(tx: any): boolean {
-  return tx.creditUserId !== null && tx.creditUserId !== undefined;
+  const creditId = tx.credit_user_id ?? tx.creditUserId;
+  return creditId !== null && creditId !== undefined;
 }
 
 export default function DriverWalletPage() {
@@ -127,7 +132,7 @@ export default function DriverWalletPage() {
                     </div>
                   </div>
                   <div className={`text-lg font-bold ${credit ? "text-green-600" : "text-red-600"}`}>
-                    {credit ? "+" : "-"}{parseFloat(tx.amount).toFixed(2)}
+                    {credit ? "+" : "-"}{parseFloat(tx.amount).toFixed(2)} ج.م
                   </div>
                 </CardContent>
               </Card>

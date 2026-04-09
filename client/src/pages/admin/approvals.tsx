@@ -87,7 +87,8 @@ export default function ApprovalsPage() {
                         {config?.label ?? user.role}
                       </span>
                       <div className="text-xs text-muted-foreground mt-1">
-                        {format(new Date(user.createdAt), "dd MMM yyyy")}
+                        {/* BUG-FIX: "dd MMM yyyy" → English month name. Replaced with Arabic locale. */}
+                        {new Date(user.createdAt).toLocaleDateString("ar-EG", { year: "numeric", month: "2-digit", day: "2-digit" })}
                       </div>
                     </div>
 

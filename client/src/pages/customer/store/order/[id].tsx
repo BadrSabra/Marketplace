@@ -151,7 +151,8 @@ export default function StoreOrderDetails() {
               <p className="text-muted-foreground flex items-center gap-2 rtl:flex-row-reverse">
                 {t('store.order_details.order_number')} <span className="font-mono text-primary font-bold">#{id.split("-")[0]}</span>
                 <span className="text-xs">•</span>
-                <span>{format(new Date(order.createdAt || order.created_at || Date.now()), "MMM dd, yyyy HH:mm")}</span>
+                {/* BUG-FIX: "MMM dd, yyyy HH:mm" → English month name. Replaced with Arabic locale. */}
+                <span>{new Date(order.createdAt || order.created_at || Date.now()).toLocaleDateString("ar-EG", { year: "numeric", month: "2-digit", day: "2-digit" })}</span>
               </p>
             </div>
           </div>

@@ -143,7 +143,11 @@ export default function DriverEarnings() {
               ) : (
                 transactions.map((tx: any) => (
                   <TableRow key={tx.id} data-testid={`row-transaction-${tx.id}`} className="flex-row-reverse">
-                    <TableCell className="text-right">{format(new Date(tx.createdAt), "MMM d, yyyy HH:mm")}</TableCell>
+                    {/* BUG-FIX: Was format(date, "MMM d, yyyy HH:mm") → English month names.
+                        Now uses Arabic locale formatting. */}
+                    <TableCell className="text-right">
+                      {new Date(tx.createdAt).toLocaleDateString("ar-EG", { year: "numeric", month: "2-digit", day: "2-digit" })}
+                    </TableCell>
                     <TableCell className="font-medium text-right">{t(`customer.wallet.types.${tx.type}`)}</TableCell>
                     <TableCell className="text-xs font-mono text-right">{tx.related_order_id ? tx.related_order_id.slice(0, 8) : "-"}</TableCell>
                     <TableCell className={cn(
@@ -153,6 +157,8 @@ export default function DriverEarnings() {
                       {tx.type === 'DEPOSIT' || tx.type === 'COMMISSION' ? '+' : '-'}{parseFloat(tx.amount).toFixed(2)} ج.م
                     </TableCell>
                     <TableCell className="text-right">
+                      {/* BUG-FIX: Was rendering tx.status as raw English ("COMPLETED", "PENDING").
+                          Now shows Arabic labels. */}
                       <Badge variant={
                         tx.status === 'COMPLETED' ? 'outline' : 
                         tx.status === 'PENDING' ? 'secondary' : 'destructive'
@@ -160,7 +166,10 @@ export default function DriverEarnings() {
                         tx.status === 'COMPLETED' ? 'bg-green-100 text-green-800 border-green-200' :
                         tx.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : ''
                       )} data-testid={`badge-status-${tx.id}`}>
-                        {tx.status}
+                        {tx.status === 'COMPLETED' ? 'مكتمل'
+                          : tx.status === 'PENDING' ? 'قيد المعالجة'
+                          : tx.status === 'FAILED' ? 'فشل'
+                          : tx.status}
                       </Badge>
                     </TableCell>
                   </TableRow>

@@ -209,7 +209,8 @@ export default function StoreEarnings() {
                     return (
                       <TableRow key={tx.id} data-testid={`row-transaction-${tx.id}`} className="group rtl:flex-row-reverse">
                         <TableCell className="font-medium text-muted-foreground rtl:text-right">
-                          {format(new Date(tx.createdAt), "MMM dd, yyyy HH:mm")}
+                          {/* BUG-FIX: "MMM dd, yyyy HH:mm" → English month name. Replaced with Arabic locale. */}
+                          {new Date(tx.createdAt).toLocaleDateString("ar-EG", { year: "numeric", month: "2-digit", day: "2-digit" })}
                         </TableCell>
                         <TableCell className="rtl:text-right">
                           <div className="flex items-center gap-2 rtl:flex-row-reverse">

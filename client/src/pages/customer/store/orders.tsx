@@ -213,7 +213,8 @@ export default function StoreOrders() {
                         <TableCell className="rtl:text-right">
                           <div className="flex flex-col gap-1">
                             <span className="font-mono text-xs font-bold text-primary">#{sub.sub_order_id.split("-")[0]}</span>
-                            <span className="text-[10px] text-muted-foreground">{sub.createdAt ? format(new Date(sub.createdAt), "MMM d, HH:mm") : "-"}</span>
+                            {/* BUG-FIX: "MMM d, HH:mm" → English month name. Replaced with Arabic locale. */}
+                            <span className="text-[10px] text-muted-foreground">{sub.createdAt ? new Date(sub.createdAt).toLocaleString("ar-EG", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }) : "-"}</span>
                             <Link href={`/store/order/${sub.parent_id}`}>
                               <Button variant="ghost" size="sm" className="p-0 h-auto text-[11px] justify-start rtl:justify-end">{t('store.orders.view_details')}</Button>
                             </Link>

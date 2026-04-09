@@ -1,9 +1,27 @@
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { useUsers, useApproveUser } from "@/hooks/use-users";
 import { Spinner } from "@/components/ui/spinner";
-import { format } from "date-fns";
 import { Mail, Phone, Shield, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+// BUG-FIX: Was using format(date, "MMM d, yyyy") from date-fns which produces English month
+// names like "Apr 9, 2026". The entire app is Arabic-first. Replaced with Arabic locale date.
+function formatArabicDate(dateStr: string): string {
+  try {
+    return new Date(dateStr).toLocaleDateString("ar-EG", { year: "numeric", month: "2-digit", day: "2-digit" });
+  } catch {
+    return dateStr;
+  }
+}
+
+// BUG-FIX: Was rendering `user.role` raw ("STORE_OWNER", "DRIVER", "CUSTOMER" — English enums).
+// The UI is entirely Arabic; raw enum strings are unacceptable for end users.
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: "مشرف",
+  STORE_OWNER: "صاحب متجر",
+  DRIVER: "سائق",
+  CUSTOMER: "عميل",
+};
 
 export default function UsersPage() {
   const { data: users, isLoading } = useUsers();
@@ -35,7 +53,7 @@ export default function UsersPage() {
           <div className="p-12 text-center text-muted-foreground">لا يوجد مستخدمون.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
+            <table className="w-full text-sm text-left" dir="rtl">
               <thead className="bg-secondary/50 text-muted-foreground font-semibold uppercase border-b border-border/50">
                 <tr>
                   <th className="px-6 py-4">الاسم</th>
@@ -48,9 +66,9 @@ export default function UsersPage() {
               </thead>
               <tbody className="divide-y divide-border/30">
                 {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-secondary/20 transition-colors">
+                  <tr key={user.id} className="hover:bg-secondary/20 transition-colors" data-testid={`row-user-${user.id}`}>
                     <td className="px-6 py-4">
-                      <div className="font-medium text-foreground">{user.name}</div>
+                      <div className="font-medium text-foreground" data-testid={`text-user-name-${user.id}`}>{user.name}</div>
                       <div className="text-xs text-muted-foreground font-mono mt-0.5">{user.id.slice(0, 8)}...</div>
                     </td>
                     <td className="px-6 py-4 space-y-1">
@@ -64,20 +82,23 @@ export default function UsersPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary">
+                      <span
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary"
+                        data-testid={`text-user-role-${user.id}`}
+                      >
                         <Shield className="w-3 h-3" />
-                        {user.role}
+                        {ROLE_LABELS[user.role] ?? user.role}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex px-2.5 py-1 rounded-md text-xs font-medium ${
                         user.isApproved ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                      }`}>
+                      }`} data-testid={`status-user-${user.id}`}>
                         {user.isApproved ? "موافق عليه" : "في الانتظار"}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground">
-                      {format(new Date(user.createdAt), "MMM d, yyyy")}
+                    <td className="px-6 py-4 text-muted-foreground" data-testid={`text-user-date-${user.id}`}>
+                      {formatArabicDate(user.createdAt)}
                     </td>
                     <td className="px-6 py-4 text-right">
                       {!user.isApproved && ["STORE_OWNER", "DRIVER"].includes(user.role) && (

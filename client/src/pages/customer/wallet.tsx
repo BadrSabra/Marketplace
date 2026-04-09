@@ -429,11 +429,20 @@ export default function CustomerWallet() {
                 ) : (
                   pendingDeposits?.map((d: any) => (
                     <TableRow key={d.transaction.id} className="flex-row-reverse">
-                      <TableCell className="text-right">{format(new Date(d.transaction.createdAt), "MMM d, yyyy HH:mm")}</TableCell>
+                      {/* BUG-FIX: Was using format(date, "MMM d, yyyy HH:mm") which shows English
+                          month names like "Apr 9, 2026". Replaced with Arabic locale date. */}
+                      <TableCell className="text-right">
+                        {new Date(d.transaction.createdAt).toLocaleDateString("ar-EG", { year: "numeric", month: "2-digit", day: "2-digit" })}
+                      </TableCell>
                       <TableCell className="font-medium text-right">{parseFloat(d.transaction.amount).toFixed(2)} ج.م</TableCell>
                       <TableCell className="text-right">
+                        {/* BUG-FIX: Was rendering d.transaction.status raw ("PENDING" in English).
+                            Now translates to Arabic. */}
                         <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-200">
-                          {d.transaction.status}
+                          {d.transaction.status === "PENDING" ? "قيد المراجعة"
+                            : d.transaction.status === "COMPLETED" ? "مكتمل"
+                            : d.transaction.status === "REJECTED" ? "مرفوض"
+                            : d.transaction.status}
                         </Badge>
                       </TableCell>
                     </TableRow>
@@ -486,7 +495,11 @@ export default function CustomerWallet() {
               ) : (
                 transactions.map((tx: any) => (
                   <TableRow key={tx.id} data-testid={`row-transaction-${tx.id}`} className="flex-row-reverse">
-                    <TableCell className="text-right">{format(new Date(tx.createdAt), "MMM d, yyyy HH:mm")}</TableCell>
+                    {/* BUG-FIX: Was format(date, "MMM d, yyyy HH:mm") → English month names.
+                        Now uses Arabic locale date formatting. */}
+                    <TableCell className="text-right">
+                      {new Date(tx.createdAt).toLocaleDateString("ar-EG", { year: "numeric", month: "2-digit", day: "2-digit" })}
+                    </TableCell>
                     <TableCell className="font-medium text-right">
                       {t(`customer.wallet.types.${tx.type}`)}
                     </TableCell>
@@ -498,6 +511,8 @@ export default function CustomerWallet() {
                       {tx.type === 'DEPOSIT' || tx.type === 'COMMISSION' ? '+' : '-'}{parseFloat(tx.amount).toFixed(2)} ج.م
                     </TableCell>
                     <TableCell className="text-right">
+                      {/* BUG-FIX: Was rendering tx.status as raw English ("COMPLETED", "PENDING").
+                          Now translates to Arabic labels. */}
                       <Badge variant={
                         tx.status === 'COMPLETED' ? 'outline' : 
                         tx.status === 'PENDING' ? 'secondary' : 'destructive'
@@ -505,7 +520,10 @@ export default function CustomerWallet() {
                         tx.status === 'COMPLETED' ? 'bg-green-100 text-green-800 border-green-200' :
                         tx.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : ''
                       }>
-                        {tx.status}
+                        {tx.status === 'COMPLETED' ? 'مكتمل'
+                          : tx.status === 'PENDING' ? 'قيد المعالجة'
+                          : tx.status === 'FAILED' ? 'فشل'
+                          : tx.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-xs font-mono text-right">{tx.related_order_id ? tx.related_order_id.slice(0, 8) : "-"}</TableCell>

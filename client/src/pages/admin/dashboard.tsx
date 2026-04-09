@@ -134,12 +134,19 @@ export default function Dashboard() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  orders.slice(0, 5).map((order: any) => (
+                  // BUG-FIX: Was rendering `order.overallStatus` as raw English enum ("PENDING", "DELIVERED", etc.)
+                  // Now translated to Arabic labels.
+                  orders.slice(0, 5).map((order: any) => {
+                    const orderStatusLabels: Record<string, string> = {
+                      PENDING: "في الانتظار", ACCEPTED: "مقبول", IN_TRANSIT: "في الطريق",
+                      DELIVERED: "تم التوصيل", CANCELLED: "ملغي",
+                    };
+                    return (
                     <TableRow key={order.id}>
                       <TableCell className="font-mono text-xs truncate max-w-[80px]">{order.id?.slice(0, 8)}...</TableCell>
                       <TableCell>
                         <Badge variant={order.overallStatus === "DELIVERED" ? "default" : "secondary"}>
-                          {order.overallStatus}
+                          {orderStatusLabels[order.overallStatus] ?? order.overallStatus}
                         </Badge>
                       </TableCell>
                       <TableCell>{order.totalPrice} ج.م</TableCell>
@@ -163,8 +170,9 @@ export default function Dashboard() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
+                  );
+                  }))
+                }
               </TableBody>
             </Table>
           </div>
@@ -200,17 +208,24 @@ export default function Dashboard() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  transactions.slice(0, 5).map((tx: any) => (
-                    <TableRow key={tx.id}>
-                      <TableCell className="text-sm">{tx.type}</TableCell>
-                      <TableCell className="text-sm font-medium">{tx.amount} ج.م</TableCell>
-                      <TableCell>
-                        <Badge variant={tx.status === "COMPLETED" ? "default" : "secondary"} className="text-[10px] px-1 h-4">
-                          {tx.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  // BUG-FIX: Was rendering `tx.type` and `tx.status` as raw English enum strings.
+                  // Both are now translated to Arabic.
+                  transactions.slice(0, 5).map((tx: any) => {
+                    const typeLabels: Record<string, string> = {
+                      DEPOSIT: "إيداع", WITHDRAWAL: "سحب", COMMISSION: "عمولة", REFUND: "استرداد",
+                    };
+                    return (
+                      <TableRow key={tx.id}>
+                        <TableCell className="text-sm">{typeLabels[tx.type] ?? tx.type}</TableCell>
+                        <TableCell className="text-sm font-medium">{tx.amount} ج.م</TableCell>
+                        <TableCell>
+                          <Badge variant={tx.status === "COMPLETED" ? "default" : "secondary"} className="text-[10px] px-1 h-4">
+                            {tx.status === "COMPLETED" ? "مكتمل" : tx.status === "PENDING" ? "معلق" : tx.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
