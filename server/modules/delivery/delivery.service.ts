@@ -17,6 +17,21 @@ export class DeliveryService {
     // BUG-FIX-4: Build all filter conditions upfront then apply once.
     // Previously each `.where()` call replaced the previous one, losing the base
     // ACCEPTED + unassigned conditions whenever store_id or category was provided.
+    //
+    // Q: هل من الممكن أن يظهر طلب فرعي مُسلَّم (DELIVERED أو IN_TRANSIT) في هذه القائمة؟
+    // A: لا — الفلتران التاليان يمنعان ذلك بشكل صارم على مستوى قاعدة البيانات:
+    //    1. eq(subOrders.status, "ACCEPTED")  → يستثني DELIVERED, IN_TRANSIT, PENDING, CANCELLED
+    //    2. isNull(subOrders.assignedDriverId) → يستثني أي طلب سُنِد له سائق بالفعل
+    //    الطلب الفرعي يتحول من ACCEPTED → IN_TRANSIT فقط عند قبول العرض وتسنيد السائق،
+    //    وكلا التحولين (status + assignedDriverId) يحدثان في نفس transaction واحدة.
+    //
+    //    ⚠️ نقطة الفشل الوحيدة كانت في الـ frontend cache:
+    //    بعد التحقق من OTP، كان active-delivery.tsx يُبطل ["/api/suborders/active"] فقط
+    //    ويترك ["/api/delivery/available-tasks"] قديماً في الذاكرة حتى دورة refetch التالية
+    //    (30 ثانية). في طلب متعدد المتاجر، كان الطلب الفرعي B الشقيق (ACCEPTED+غير مُسنَد)
+    //    يظهر فجأة في القائمة عند التحديث التلقائي، مما أوحى بأن "نفس الطلب يظهر مجدداً".
+    //    الإصلاح: استبدال المتيشن المحلي في active-delivery.tsx بـ useVerifyOtp()
+    //    الذي يُبطل كلا المفتاحين فوراً عند نجاح التحقق.
     const baseConditions: SQL[] = [
       eq(subOrders.status, "ACCEPTED"),
       isNull(subOrders.assignedDriverId),

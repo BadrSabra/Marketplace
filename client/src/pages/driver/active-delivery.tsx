@@ -1,11 +1,8 @@
-import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Package, MapPin, Phone, Clock, CheckCircle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { t } from "@/i18n";
@@ -18,7 +15,7 @@ import { t } from "@/i18n";
 //    يتعامل معها كـ ActiveTask (كائن مفرد) → تحطم task.id و task.orderId وغيرها
 //    لأن task كانت مصفوفة وليست كائناً.
 //    الإصلاح: استخدام useDriverTasks() حصراً حتى يكون الـ cache دائماً متسقاً.
-import { useDriverTasks } from "@/hooks/use-driver";
+import { useDriverTasks, useVerifyOtp } from "@/hooks/use-driver";
 import type { ActiveDelivery as ActiveTask } from "@/lib/api/driver";
 
 const DELIVERY_WINDOW_SECONDS = 1800;
@@ -30,7 +27,6 @@ function calcTimeLeft(updatedAt: string | undefined): number {
 }
 
 export default function ActiveDelivery() {
-  const { toast } = useToast();
   const [timeLeft, setTimeLeft] = useState(DELIVERY_WINDOW_SECONDS);
   const [otpInput, setOtpInput] = useState("");
 
@@ -49,20 +45,25 @@ export default function ActiveDelivery() {
     return () => clearInterval(interval);
   }, [task?.updatedAt]);
 
-  const verifyOtpMutation = useMutation({
-    mutationFn: async ({ subOrderId, otpCode }: { subOrderId: string; otpCode: string }) => {
-      const res = await apiRequest("POST", `/api/delivery/otp/verify/${subOrderId}`, { otpCode });
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: "تم تأكيد التسليم", description: "تم التحقق من الرمز وتأكيد توصيل الطلب بنجاح." });
-      setOtpInput("");
-      queryClient.invalidateQueries({ queryKey: ["/api/suborders/active"] });
-    },
-    onError: (err: any) => {
-      toast({ title: "رمز غير صحيح", description: err.message || "الرمز الذي أدخلته غير صحيح أو منتهي الصلاحية.", variant: "destructive" });
-    },
-  });
+  // Q: لماذا نستخدم useVerifyOtp بدلاً من useMutation محلي هنا؟
+  // A: الكود السابق كان يُعرّف useMutation محلياً يُبطل cache مفتاح واحد فقط:
+  //    queryClient.invalidateQueries({ queryKey: ["/api/suborders/active"] })
+  //    وهذا يترك ["/api/delivery/available-tasks"] قديماً في الذاكرة.
+  //    في سيناريو الطلب متعدد المتاجر:
+  //      - الطلب الفرعي A يُسلَّم (OTP مُتحقق منه)
+  //      - الطلب الفرعي B (من نفس الطلب الأصلي) في حالة ACCEPTED بدون سائق
+  //      - getAvailableTasks يُعيد B للسائقين المتاحين
+  //      - بعد إبطال ["/api/suborders/active"] فقط، تبقى قائمة ["/api/delivery/available-tasks"]
+  //        قديمة حتى يُعاد جلبها تلقائياً بعد 30 ثانية (refetchInterval)
+  //      - عند التحديث التلقائي، يرى السائق "طلب توصيل جديد" لنفس الطلب الأصلي
+  //        (نفس معرّف الطلب، نفس عنوان العميل) بينما هو في الواقع طلب فرعي مختلف
+  //    الإصلاح: useVerifyOtp يُبطل كلا المفتاحين فور نجاح التحقق، مما يُعيد جلب
+  //    قائمة المهام المتاحة فوراً ويُزيل الوهم بإعادة ظهور نفس الطلب.
+  //
+  // ⚠️ ملاحظة: useVerifyOtp يُرسل toast "تم تأكيد التسليم بنجاح" تلقائياً.
+  //    الوصف الإضافي "تم التحقق من الرمز..." أُزيل لأن toast مزدوج يُربك المستخدم.
+  //    setOtpInput("") يُستدعى في onSuccess الموضعي في موقع الاستدعاء.
+  const verifyOtpMutation = useVerifyOtp();
 
 
   if (isLoading) {
@@ -183,7 +184,10 @@ export default function ActiveDelivery() {
                 <Button
                   data-testid="button-confirm-delivery"
                   className="gap-2 bg-green-600 hover:bg-green-700 shrink-0"
-                  onClick={() => verifyOtpMutation.mutate({ subOrderId: task.id, otpCode: otpInput })}
+                  onClick={() => verifyOtpMutation.mutate(
+                    { subOrderId: task.id, otpCode: otpInput },
+                    { onSuccess: () => setOtpInput("") }
+                  )}
                   disabled={otpInput.length !== 6 || verifyOtpMutation.isPending}
                 >
                   {verifyOtpMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
