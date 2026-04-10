@@ -3,8 +3,8 @@
     "login": {
       "title": "بوابة المسؤول",
       "subtitle": "تسجيل الدخول لإدارة متجرك",
-      "email_label": "البريد الإلكتروني",
-      "email_placeholder": "admin@example.com",
+      "email_label": "البريد الإلكتروني أو رقم الهاتف",
+      "email_placeholder": "أدخل بريدك الإلكتروني أو رقم هاتفك",
       "password_label": "كلمة المرور",
       "password_placeholder": "••••••••",
       "submit": "تسجيل الدخول",
