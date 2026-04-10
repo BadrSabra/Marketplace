@@ -1,7 +1,7 @@
 import { db } from "../../db";
 import { subOrders, orders, stores, users, orderItems, products, deliveryOffers } from "@shared/schema";
 import { eq, and, isNull, sql, asc, inArray, SQL } from "drizzle-orm";
-import { AvailableTaskDTO, GetAvailableTasksFilters } from "./delivery.types";
+import { AvailableTaskDTO, GetAvailableTasksFilters, OrderLevelTask } from "./delivery.types";
 
 export class DeliveryService {
   async getAvailableTasks(driverId: string, filters: GetAvailableTasksFilters): Promise<{ tasks: AvailableTaskDTO[], total: number }> {
@@ -170,6 +170,132 @@ export class DeliveryService {
     //    التحديث التلقائي كل 30 ثانية)، مما يُصعّب إيجاد الأحداث الحقيقية ويُبطئ
     //    الاستعلامات المدقّقة. الإصلاح: حذف هذا التسجيل من عملية القراءة تماماً.
     return { tasks, total };
+  }
+
+  /**
+   * Returns available tasks GROUPED BY ORDER, so that sub-orders from the same
+   * main order appear as one unified card for the driver.
+   *
+   * Q: لماذا نجمع الطلبات الفرعية على مستوى الطلب الرئيسي؟
+   * A: عندما يحتوي الطلب الرئيسي على طلبين فرعيين من متجرين مختلفين،
+   *    كان النظام السابق يعرض بطاقتين منفصلتين للسائق وقسمي عروض للعميل.
+   *    الصواب: السائق يقدّم عرضاً واحداً يغطي الطلب بالكامل (كل المتاجر)،
+   *    والعميل يرى قسماً واحداً لعروض التوصيل يضم جميع العروض المقدّمة.
+   */
+  async getAvailableOrderTasks(driverId: string): Promise<OrderLevelTask[]> {
+    const [driver] = await db.select().from(users).where(and(eq(users.id, driverId), eq(users.role, "DRIVER")));
+    if (!driver) throw new Error("UNAUTHORIZED_ROLE");
+    if (!driver.isApproved) throw new Error("DRIVER_NOT_APPROVED");
+
+    // Fetch all eligible sub-orders
+    const results = await db
+      .select({
+        sub_order_id: subOrders.id,
+        order_id: subOrders.orderId,
+        store_name: stores.name,
+        customer_name: sql<string>`CONCAT(LEFT(${users.name}, 1), '***')`,
+        customer_address: sql<string>`COALESCE((${users.addresses}->>0), 'لا يوجد عنوان محدد')`,
+        subtotal: subOrders.subtotal,
+        created_at: subOrders.createdAt,
+      })
+      .from(subOrders)
+      .innerJoin(orders, eq(subOrders.orderId, orders.id))
+      .innerJoin(stores, eq(subOrders.storeId, stores.id))
+      .innerJoin(users, eq(orders.customerId, users.id))
+      .where(and(
+        eq(subOrders.status, "ACCEPTED"),
+        isNull(subOrders.assignedDriverId)
+      ))
+      .orderBy(asc(subOrders.createdAt));
+
+    if (results.length === 0) return [];
+
+    // Batch-fetch items for all sub-orders
+    const subOrderIds = results.map(r => r.sub_order_id);
+    const allItems = await db
+      .select({
+        subOrderId: orderItems.subOrderId,
+        product_name: products.name,
+        quantity: orderItems.quantity,
+      })
+      .from(orderItems)
+      .innerJoin(products, eq(orderItems.productId, products.id))
+      .where(inArray(orderItems.subOrderId, subOrderIds));
+
+    const itemsMap: Record<string, { product_name: string; quantity: number }[]> = {};
+    for (const item of allItems) {
+      if (!itemsMap[item.subOrderId]) itemsMap[item.subOrderId] = [];
+      itemsMap[item.subOrderId].push({ product_name: item.product_name, quantity: item.quantity });
+    }
+
+    // Fetch driver's existing offers for these sub-orders
+    const driverOffers = await db
+      .select({
+        subOrderId: deliveryOffers.subOrderId,
+        status: deliveryOffers.status,
+        offeredFee: deliveryOffers.offeredFee,
+        counterOfferedFee: deliveryOffers.counterOfferedFee,
+      })
+      .from(deliveryOffers)
+      .where(and(
+        eq(deliveryOffers.driverId, driverId),
+        inArray(deliveryOffers.subOrderId, subOrderIds)
+      ));
+
+    const driverOffersMap: Record<string, { status: string; offeredFee: string; counterOfferedFee: string | null }> = {};
+    for (const offer of driverOffers) {
+      driverOffersMap[offer.subOrderId] = {
+        status: offer.status,
+        offeredFee: offer.offeredFee,
+        counterOfferedFee: offer.counterOfferedFee,
+      };
+    }
+
+    // Group by order_id
+    const orderMap: Record<string, OrderLevelTask> = {};
+    for (const row of results) {
+      if (!orderMap[row.order_id]) {
+        orderMap[row.order_id] = {
+          order_id: row.order_id,
+          customer_name: row.customer_name,
+          customer_address: row.customer_address,
+          sub_orders: [],
+          total_subtotal: 0,
+          created_at: row.created_at.toISOString(),
+          driver_offer_status: null,
+          driver_offered_fee: null,
+          driver_counter_offered_fee: null,
+        };
+      }
+
+      const task = orderMap[row.order_id];
+      const subTotal = Number(row.subtotal);
+      task.sub_orders.push({
+        sub_order_id: row.sub_order_id,
+        store_name: row.store_name,
+        items: itemsMap[row.sub_order_id] || [],
+        subtotal: subTotal,
+      });
+      task.total_subtotal += subTotal;
+
+      // Determine driver offer status for this order (COUNTERED takes priority over PENDING)
+      // Q: لماذا COUNTERED تأخذ الأولوية على PENDING في تحديد الحالة الموحدة؟
+      // A: COUNTERED يعني أن العميل تفاعل مع العرض واقترح سعراً آخر — هذا إجراء يتطلب
+      //    رداً فورياً من السائق. إظهار PENDING بدلاً من COUNTERED يُخفي هذا التفاعل
+      //    ويُسبب تأخيراً في الاستجابة. الأولوية تضمن رؤية السائق للحالة الأهم أولاً.
+      const existingOffer = driverOffersMap[row.sub_order_id];
+      if (existingOffer) {
+        if (!task.driver_offer_status ||
+          (existingOffer.status === "COUNTERED" && task.driver_offer_status !== "COUNTERED") ||
+          (existingOffer.status === "ACCEPTED" && task.driver_offer_status === null)) {
+          task.driver_offer_status = existingOffer.status;
+          task.driver_offered_fee = existingOffer.offeredFee;
+          task.driver_counter_offered_fee = existingOffer.counterOfferedFee;
+        }
+      }
+    }
+
+    return Object.values(orderMap);
   }
 }
 

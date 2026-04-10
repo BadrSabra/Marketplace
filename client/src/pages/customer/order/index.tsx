@@ -57,32 +57,38 @@ function getEffectiveStatus(order: any): string {
   return order.overallStatus || "PENDING";
 }
 
-function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; orderId: string }) {
+// Q: لماذا تغيّر DeliveryOffersSection من العمل على مستوى sub-order إلى order-level؟
+// A: المشكلة الأصلية: كل طلب فرعي كان له قسم عروض منفصل.
+//    الطلب الذي يضم متجرين كان يُظهر قسمين منفصلين — كل منهما بعروض تتكرر
+//    من نفس السائق، مما يُربك العميل ويجعله يظن أنه يجب قبول عرضين.
+//    الحل: قسم عروض واحد لكل طلب رئيسي. السائق يُقدّم عرضاً واحداً للطلب
+//    بأكمله (بما يشمل كل المتاجر)، والعميل يرى كل السائقين في مكان واحد.
+function DeliveryOffersSection({ orderId }: { orderId: string }) {
   const { toast } = useToast();
-  const [counterDialog, setCounterDialog] = useState<{ open: boolean; offerId: string; originalFee: number } | null>(null);
+  const [counterDialog, setCounterDialog] = useState<{ open: boolean; driverId: string; originalFee: number } | null>(null);
   const [counterFeeInput, setCounterFeeInput] = useState("");
 
   const { data: offers, isLoading } = useQuery<any[]>({
-    queryKey: ["/api/delivery/suborders", subOrderId, "offers"],
+    queryKey: ["/api/delivery/orders", orderId, "offers"],
     queryFn: async () => {
-      // BUG-FIX: Was using raw fetch() with manual getAuthHeaders() + silent `if (!res.ok) return []`
-      // which bypassed the 401→redirect-to-login logic in apiFetch and masked API errors as empty list.
-      // apiFetch handles auth headers, throws on non-OK, and redirects to /login on 401.
-      const res = await apiFetch(`/api/delivery/suborders/${subOrderId}/offers`);
+      const res = await apiFetch(`/api/delivery/orders/${orderId}/offers`);
       return res.json();
     },
     refetchInterval: 15000,
   });
 
   const acceptMutation = useMutation({
-    mutationFn: async (offerId: string) => {
-      const res = await apiFetch(`/api/delivery/offers/${offerId}/accept`, { method: "POST" });
+    mutationFn: async (driverId: string) => {
+      const res = await apiFetch(`/api/delivery/orders/${orderId}/offers/accept`, {
+        method: "POST",
+        body: JSON.stringify({ driverId }),
+      });
       return res.json();
     },
     onSuccess: () => {
       toast({ title: "تم قبول عرض السائق", description: "تم خصم رسوم التوصيل من محفظتك. سيبدأ السائق التوصيل قريباً." });
       queryClient.invalidateQueries({ queryKey: [`/api/orders/${orderId}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/delivery/suborders", subOrderId, "offers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/delivery/orders", orderId, "offers"] });
     },
     onError: (error: Error) => {
       toast({ title: "فشل قبول العرض", description: error.message, variant: "destructive" });
@@ -90,13 +96,16 @@ function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; or
   });
 
   const rejectMutation = useMutation({
-    mutationFn: async (offerId: string) => {
-      const res = await apiFetch(`/api/delivery/offers/${offerId}/reject`, { method: "POST" });
+    mutationFn: async (driverId: string) => {
+      const res = await apiFetch(`/api/delivery/orders/${orderId}/offers/reject`, {
+        method: "POST",
+        body: JSON.stringify({ driverId }),
+      });
       return res.json();
     },
     onSuccess: () => {
       toast({ title: "تم رفض العرض" });
-      queryClient.invalidateQueries({ queryKey: ["/api/delivery/suborders", subOrderId, "offers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/delivery/orders", orderId, "offers"] });
     },
     onError: (error: Error) => {
       toast({ title: "فشل رفض العرض", description: error.message, variant: "destructive" });
@@ -104,10 +113,10 @@ function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; or
   });
 
   const counterMutation = useMutation({
-    mutationFn: async ({ offerId, counterFee }: { offerId: string; counterFee: number }) => {
-      const res = await apiFetch(`/api/delivery/offers/${offerId}/counter`, {
+    mutationFn: async ({ driverId, counterFee }: { driverId: string; counterFee: number }) => {
+      const res = await apiFetch(`/api/delivery/orders/${orderId}/offers/counter`, {
         method: "POST",
-        body: JSON.stringify({ counterFee }),
+        body: JSON.stringify({ driverId, counterFee }),
       });
       return res.json();
     },
@@ -115,7 +124,7 @@ function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; or
       toast({ title: "تم إرسال العرض المضاد", description: "سيرى السائق اقتراحك وقد يقبل السعر الجديد." });
       setCounterDialog(null);
       setCounterFeeInput("");
-      queryClient.invalidateQueries({ queryKey: ["/api/delivery/suborders", subOrderId, "offers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/delivery/orders", orderId, "offers"] });
     },
     onError: (error: Error) => {
       toast({ title: "فشل إرسال العرض المضاد", description: error.message, variant: "destructive" });
@@ -133,7 +142,7 @@ function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; or
       toast({ title: "يجب أن يكون العرض المضاد أقل من سعر السائق", variant: "destructive" });
       return;
     }
-    counterMutation.mutate({ offerId: counterDialog.offerId, counterFee: fee });
+    counterMutation.mutate({ driverId: counterDialog.driverId, counterFee: fee });
   };
 
   if (isLoading) return null;
@@ -156,9 +165,9 @@ function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; or
             const isCountered = offer.status === "COUNTERED";
             return (
               <div
-                key={offer.id}
+                key={offer.driverId}
                 className={`p-3 border rounded-lg space-y-2 ${isCountered ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800" : "bg-muted/50"}`}
-                data-testid={`offer-row-${offer.id}`}
+                data-testid={`offer-row-${offer.driverId}`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex gap-2 flex-wrap">
@@ -167,9 +176,9 @@ function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; or
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => rejectMutation.mutate(offer.id)}
+                          onClick={() => rejectMutation.mutate(offer.driverId)}
                           disabled={isBusy}
-                          data-testid={`button-reject-offer-${offer.id}`}
+                          data-testid={`button-reject-offer-${offer.driverId}`}
                         >
                           <XCircle className="h-3 w-3 ml-1" />
                           رفض
@@ -180,19 +189,19 @@ function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; or
                           className="border-amber-400 text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:border-amber-600 dark:hover:bg-amber-950/30"
                           onClick={() => {
                             setCounterFeeInput("");
-                            setCounterDialog({ open: true, offerId: offer.id, originalFee: parseFloat(offer.offeredFee) });
+                            setCounterDialog({ open: true, driverId: offer.driverId, originalFee: parseFloat(offer.offeredFee) });
                           }}
                           disabled={isBusy}
-                          data-testid={`button-counter-offer-${offer.id}`}
+                          data-testid={`button-counter-offer-${offer.driverId}`}
                         >
                           <ArrowLeftRight className="h-3 w-3 ml-1" />
                           سعر مضاد
                         </Button>
                         <Button
                           size="sm"
-                          onClick={() => acceptMutation.mutate(offer.id)}
+                          onClick={() => acceptMutation.mutate(offer.driverId)}
                           disabled={isBusy}
-                          data-testid={`button-accept-offer-${offer.id}`}
+                          data-testid={`button-accept-offer-${offer.driverId}`}
                         >
                           {acceptMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin ml-1" /> : <CheckCircle className="h-3 w-3 ml-1" />}
                           قبول
@@ -209,8 +218,6 @@ function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; or
                   // Q: عندما يكون العرض في حالة COUNTERED، هل يجب أن يستطيع العميل رفضه؟
                   // A: نعم. الواجهة كانت تخفي جميع الأزرار للعروض في حالة COUNTERED، مما
                   //    يجعل العميل عاجزاً عن التراجع عن عرضه المضاد أو رفض السائق كلياً.
-                  //    تُكمل هذه الإصلاح إصلاح الخادم الذي يسمح الآن بـ PATCH /reject
-                  //    على العروض في حالتَي PENDING وCOUNTERED على حدٍّ سواء.
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
                       <Clock className="h-3 w-3 shrink-0" />
@@ -221,9 +228,9 @@ function DeliveryOffersSection({ subOrderId, orderId }: { subOrderId: string; or
                     <Button
                       size="sm"
                       variant="destructive"
-                      onClick={() => rejectMutation.mutate(offer.id)}
+                      onClick={() => rejectMutation.mutate(offer.driverId)}
                       disabled={isBusy}
-                      data-testid={`button-reject-countered-${offer.id}`}
+                      data-testid={`button-reject-countered-${offer.driverId}`}
                     >
                       <XCircle className="h-3 w-3 ml-1" />
                       إلغاء العرض المضاد ورفض السائق
@@ -495,12 +502,27 @@ export default function CustomerOrderDetails() {
                       </Button>
                     )}
                   </div>
-                  {sub.status === "ACCEPTED" && !sub.assignedDriverId && (
-                    <DeliveryOffersSection subOrderId={sub.id} orderId={order.id} />
-                  )}
+                  {/* Q: لماذا أُزيل DeliveryOffersSection من هنا (داخل كل sub-order)؟
+                      A: كان كل طلب فرعي يعرض قسم عروضه الخاص، مما يُكرّر نفس
+                         عروض السائق لكل متجر في الطلب. العميل كان يرى عرض السائق
+                         مرتين (مرة لكل متجر) وكان يبدو أنه يحتاج للقبول مرتين.
+                         القسم انتقل لمستوى الطلب الكامل أدناه — مرة واحدة فقط. */}
                 </CardContent>
               </Card>
             ))}
+
+            {/* Q: لماذا نعرض DeliveryOffersSection هنا بدلاً من داخل كل sub-order؟
+                A: النظام الجديد يجمع عروض التوصيل على مستوى الطلب الكامل.
+                   السائق يُقدّم عرضاً واحداً يغطي توصيل كل المتاجر في الطلب،
+                   والعميل يرى قسماً واحداً فقط بدلاً من قسم لكل متجر.
+                   الشرط: أي طلب فرعي ACCEPTED بدون سائق = الطلب ينتظر عرض توصيل. */}
+            {subOrders.some((sub: any) => sub.status === "ACCEPTED" && !sub.assignedDriverId) && (
+              <Card>
+                <CardContent className="pt-4">
+                  <DeliveryOffersSection orderId={order.id} />
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           <div className="space-y-6">

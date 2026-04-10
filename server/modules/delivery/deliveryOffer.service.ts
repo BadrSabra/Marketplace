@@ -4,7 +4,7 @@ import { deliveryOffers, subOrders, wallets, walletTransactions, orders, users, 
 // A: لا — sql دالة مساعدة ثابتة من drizzle-orm لا تتغير بين الاستدعاءات.
 //    استيرادها ديناميكياً داخل الدالة يُضيف Promise overhead في كل استدعاء
 //    دون أي فائدة تقنية. الإصلاح: إضافتها للاستيراد الثابت في بداية الملف.
-import { eq, and, ne, sql } from "drizzle-orm";
+import { eq, and, ne, sql, inArray, not, isNull } from "drizzle-orm";
 import { auditService } from "../../services/auditService";
 import { deliveryOtpService } from "./deliveryOtp.service";
 import { chatService } from "../chat/chat.service";
@@ -505,6 +505,532 @@ export class DeliveryOfferService {
       } catch {}
 
       return updatedSubOrder;
+    });
+  }
+
+  // ─── ORDER-LEVEL OFFER METHODS ────────────────────────────────────────────
+  // Q: لماذا نُنشئ methods على مستوى الطلب الرئيسي بدلاً من الطلب الفرعي؟
+  // A: عندما يحتوي الطلب الرئيسي على طلبين فرعيين، كان النظام السابق يُنشئ
+  //    عرضاً منفصلاً لكل طلب فرعي، مما يُظهر بطاقتين للسائق وقسمين للعميل.
+  //    الصواب: السائق يُقدّم عرضاً واحداً يشمل كل طلبات النظام، والعميل يرى
+  //    قسماً واحداً لعروض التوصيل. الـ methods التالية تحقق ذلك.
+
+  /**
+   * Driver submits ONE offer for ALL sub-orders of a main order.
+   * Creates one delivery_offer record per sub-order (same fee for all).
+   * The fee represents the total delivery cost for the entire order.
+   */
+  async createOrderOffer(orderId: string, driverId: string, proposedFee: number) {
+    return await db.transaction(async (tx) => {
+      // Verify driver is approved
+      const [driver] = await tx.select().from(users).where(and(eq(users.id, driverId), eq(users.role, "DRIVER")));
+      if (!driver || !driver.isApproved) throw new Error("DRIVER_NOT_APPROVED");
+
+      // Get all ACCEPTED, unassigned sub-orders for this order
+      const eligibleSubOrders = await tx
+        .select()
+        .from(subOrders)
+        .where(and(
+          eq(subOrders.orderId, orderId),
+          eq(subOrders.status, "ACCEPTED"),
+          isNull(subOrders.assignedDriverId)
+        ))
+        .for("update");
+
+      // Q: ماذا يحدث إذا لم يكن هناك طلبات فرعية مؤهلة؟
+      // A: يعني ذلك أن الطلب الرئيسي لم تقبله المتاجر بعد أو تم تعيين سائق له.
+      //    في كلا الحالتين الطلب غير متاح للتوصيل — يجب إطلاق خطأ واضح.
+      if (eligibleSubOrders.length === 0) throw new Error("NO_ELIGIBLE_SUBORDERS");
+
+      // Check for duplicate offer from this driver on any sub-order of this order
+      const existingOffers = await tx
+        .select()
+        .from(deliveryOffers)
+        .where(and(
+          eq(deliveryOffers.driverId, driverId),
+          inArray(deliveryOffers.subOrderId, eligibleSubOrders.map(s => s.id)),
+          sql`${deliveryOffers.status} IN ('PENDING', 'COUNTERED', 'ACCEPTED')`
+        ));
+
+      if (existingOffers.length > 0) throw new Error("ALREADY_SUBMITTED");
+
+      // Create one offer per sub-order (all with same fee = total order delivery cost)
+      const createdOffers = await tx.insert(deliveryOffers).values(
+        eligibleSubOrders.map(sub => ({
+          subOrderId: sub.id,
+          driverId,
+          offeredFee: proposedFee.toString(),
+          status: "PENDING" as const,
+        }))
+      ).returning();
+
+      await auditService.logEvent({
+        actionType: "DELIVERY_OFFER_SUBMITTED",
+        entityType: "delivery_offer",
+        entityId: orderId,
+        performedByUserId: driverId,
+        performedByRole: "DRIVER",
+        metadata: { orderId, proposedFee, subOrderCount: eligibleSubOrders.length }
+      });
+
+      // Notify customer
+      const [parentOrder] = await tx.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+      if (parentOrder) {
+        notifyUser(
+          parentOrder.customerId,
+          "NEW_OFFER",
+          "عرض توصيل جديد",
+          `سائق قدّم عرضاً للتوصيل بمبلغ ${proposedFee} جنيه`,
+          { orderId, proposedFee }
+        ).catch(console.error);
+      }
+
+      return createdOffers;
+    });
+  }
+
+  /**
+   * Get all actionable delivery offers for a main order, grouped by driver.
+   * Q: لماذا نجمع العروض بالسائق بدلاً من إعادتها لكل طلب فرعي؟
+   * A: السائق يُقدّم عرضاً واحداً للطلب كله (createOrderOffer).
+   *    إظهار عروض منفصلة لكل طلب فرعي يُعيد نفس المشكلة الأصلية للعميل:
+   *    سيرى عرضاً واحداً مكرراً لكل متجر بدلاً من عرض موحّد.
+   */
+  async getOffersForOrder(orderId: string, customerId: string) {
+    // Verify ownership
+    const [parentOrder] = await db.select().from(orders).where(eq(orders.id, orderId));
+    if (!parentOrder || parentOrder.customerId !== customerId) throw new Error("UNAUTHORIZED");
+
+    // Get all sub-orders for this order
+    const orderSubOrders = await db.select({ id: subOrders.id }).from(subOrders).where(eq(subOrders.orderId, orderId));
+    if (orderSubOrders.length === 0) return [];
+
+    const subOrderIds = orderSubOrders.map(s => s.id);
+
+    // Get all PENDING/COUNTERED offers for these sub-orders, with driver info
+    const rawOffers = await db
+      .select({
+        id: deliveryOffers.id,
+        subOrderId: deliveryOffers.subOrderId,
+        driverId: deliveryOffers.driverId,
+        offeredFee: deliveryOffers.offeredFee,
+        counterOfferedFee: deliveryOffers.counterOfferedFee,
+        status: deliveryOffers.status,
+        driverName: users.name,
+        driverTransportType: users.transportType,
+      })
+      .from(deliveryOffers)
+      .innerJoin(users, eq(deliveryOffers.driverId, users.id))
+      .where(and(
+        inArray(deliveryOffers.subOrderId, subOrderIds),
+        sql`${deliveryOffers.status} IN ('PENDING', 'COUNTERED')`
+      ));
+
+    // Group by driverId — each driver has one logical offer for the whole order
+    // Q: ماذا نفعل إذا كان للسائق عروض بحالات مختلفة على طلبات فرعية مختلفة؟
+    // A: هذا يحدث فقط إذا تم تقديم عروض فردية (قديمة) بدلاً من order-level.
+    //    نعطي الأولوية لـ COUNTERED على PENDING لأن العميل أبدى رأيه بالسعر.
+    const grouped: Record<string, {
+      driverId: string;
+      driverName: string;
+      driverTransportType: string | null;
+      offeredFee: string;
+      counterOfferedFee: string | null;
+      status: 'PENDING' | 'COUNTERED';
+    }> = {};
+
+    for (const offer of rawOffers) {
+      const key = offer.driverId;
+      if (!grouped[key]) {
+        grouped[key] = {
+          driverId: offer.driverId,
+          driverName: offer.driverName,
+          driverTransportType: offer.driverTransportType,
+          offeredFee: offer.offeredFee,
+          counterOfferedFee: offer.counterOfferedFee,
+          status: offer.status as 'PENDING' | 'COUNTERED',
+        };
+      } else {
+        // COUNTERED takes priority over PENDING
+        if (offer.status === "COUNTERED" && grouped[key].status !== "COUNTERED") {
+          grouped[key].status = "COUNTERED";
+          grouped[key].counterOfferedFee = offer.counterOfferedFee;
+        }
+      }
+    }
+
+    return Object.values(grouped);
+  }
+
+  /**
+   * Customer accepts a driver's offer for ALL sub-orders of an order.
+   * Deducts the delivery fee ONCE (it covers the whole order).
+   * Sets all eligible sub-orders to IN_TRANSIT.
+   */
+  async customerAcceptOrderOffer(orderId: string, driverId: string, customerId: string) {
+    return await db.transaction(async (tx) => {
+      const [parentOrder] = await tx.select().from(orders).where(eq(orders.id, orderId)).for("update");
+      if (!parentOrder || parentOrder.customerId !== customerId) throw new Error("UNAUTHORIZED");
+
+      // Lock all eligible sub-orders of this order
+      const orderSubOrders = await tx
+        .select()
+        .from(subOrders)
+        .where(and(
+          eq(subOrders.orderId, orderId),
+          eq(subOrders.status, "ACCEPTED"),
+          isNull(subOrders.assignedDriverId)
+        ))
+        .for("update");
+
+      if (orderSubOrders.length === 0) throw new Error("NO_SUBORDERS_AVAILABLE");
+
+      const subOrderIds = orderSubOrders.map(s => s.id);
+
+      // Get driver's offers for these sub-orders
+      const driverOffers = await tx
+        .select()
+        .from(deliveryOffers)
+        .where(and(
+          eq(deliveryOffers.driverId, driverId),
+          inArray(deliveryOffers.subOrderId, subOrderIds),
+          sql`${deliveryOffers.status} IN ('PENDING', 'COUNTERED')`
+        ))
+        .for("update");
+
+      if (driverOffers.length === 0) throw new Error("OFFER_NOT_AVAILABLE");
+
+      // The fee is the same across all offers (one fee for the whole order)
+      // Q: لماذا نأخذ السعر من العرض الأول فقط دون جمع الأسعار؟
+      // A: عند إنشاء العرض (createOrderOffer)، يُخزَّن نفس السعر الإجمالي في كل
+      //    عرض فرعي. السعر لا يمثّل سعر طلب فرعي واحد بل سعر الطلب كاملاً.
+      //    جمع الأسعار سيُضاعف المبلغ المخصوم من محفظة العميل بشكل خاطئ.
+      const representativeOffer = driverOffers[0];
+      const feeStr = representativeOffer.status === "COUNTERED" && representativeOffer.counterOfferedFee
+        ? representativeOffer.counterOfferedFee.toString()
+        : representativeOffer.offeredFee.toString();
+      const deliveryFee = money.format(feeStr);
+
+      // Deduct fee ONCE from customer wallet
+      const [customerWallet] = await tx
+        .select()
+        .from(wallets)
+        .where(eq(wallets.userId, customerId))
+        .for("update");
+
+      if (!customerWallet) throw new Error("WALLET_NOT_FOUND");
+      if (money.isLessThan(customerWallet.balance, feeStr)) throw new Error("INSUFFICIENT_BALANCE");
+
+      const newBalance = money.subtract(customerWallet.balance, feeStr);
+      await tx.update(wallets).set({ balance: newBalance, updatedAt: new Date() }).where(eq(wallets.id, customerWallet.id));
+
+      await tx.insert(walletTransactions).values({
+        walletId: customerWallet.id,
+        type: "WITHDRAWAL",
+        amount: feeStr,
+        relatedOrderId: orderId,
+        status: "COMPLETED",
+        notes: `رسوم توصيل للطلب #${orderId.slice(0, 8)}`,
+      });
+
+      await tx.insert(ledger).values({
+        referenceId: orderId,
+        debitUserId: customerId,
+        creditUserId: null,
+        amount: feeStr,
+        type: "WITHDRAWAL",
+      });
+
+      // Assign driver to ALL sub-orders
+      // Q: لماذا نضع رسوم التوصيل على الطلب الفرعي الأول فقط (وصفر على الباقي)؟
+      // A: في ملخص الدفع، يتم جمع expectedDeliveryFee من كل الطلبات الفرعية.
+      //    إذا وضعنا نفس الرسوم الكلية على كل طلب فرعي، سيُجمَع المبلغ مرتين أو أكثر.
+      //    الحل: الطلب الفرعي الأول يحمل الرسوم الكاملة، والباقي بصفر. المجموع صحيح.
+      for (let i = 0; i < orderSubOrders.length; i++) {
+        const sub = orderSubOrders[i];
+        const feeForThisSub = i === 0 ? deliveryFee : "0.00";
+        await tx.update(subOrders).set({
+          assignedDriverId: driverId,
+          expectedDeliveryFee: feeForThisSub,
+          status: "IN_TRANSIT",
+          updatedAt: new Date(),
+        }).where(eq(subOrders.id, sub.id));
+      }
+
+      // Accept driver's offers, reject all others for all sub-orders
+      const driverOfferIds = driverOffers.map(o => o.id);
+      await tx.update(deliveryOffers).set({ status: "ACCEPTED", updatedAt: new Date() })
+        .where(inArray(deliveryOffers.id, driverOfferIds));
+
+      await tx.update(deliveryOffers).set({ status: "REJECTED", updatedAt: new Date() })
+        .where(and(
+          inArray(deliveryOffers.subOrderId, subOrderIds),
+          not(inArray(deliveryOffers.id, driverOfferIds))
+        ));
+
+      await auditService.logEvent({
+        actionType: "DELIVERY_OFFER_ACCEPTED_BY_CUSTOMER",
+        entityType: "delivery_offer",
+        entityId: orderId,
+        performedByUserId: customerId,
+        performedByRole: "CUSTOMER",
+        newValue: { status: "ACCEPTED", assignedDriverId: driverId, deliveryFee }
+      });
+
+      notifyUser(
+        driverId,
+        "OFFER_ACCEPTED",
+        "تم قبول عرضك",
+        `تم قبول عرضك للتوصيل بمبلغ ${deliveryFee} جنيه`,
+        { orderId, deliveryFee }
+      ).catch(console.error);
+
+      return { success: true, subOrderIds, deliveryFee };
+    }).then(async (result) => {
+      // Generate OTP for all sub-orders after transaction commits
+      for (const subOrderId of result.subOrderIds) {
+        await deliveryOtpService.generateOtp(orderId, subOrderId).catch(console.error);
+      }
+
+      // Create chat room between customer and driver
+      try {
+        const [parentOrder] = await db.select().from(orders).where(eq(orders.id, orderId));
+        if (parentOrder) {
+          const primarySubOrderId = result.subOrderIds[0];
+          const existingRoom = await chatService.findRoomByReference("ORDER_DRIVER", primarySubOrderId);
+          if (!existingRoom) {
+            await chatService.createRoom("ORDER_DRIVER", [parentOrder.customerId, driverId], {
+              referenceId: primarySubOrderId,
+              title: "تنسيق التوصيل",
+            });
+          }
+        }
+      } catch {}
+
+      return result;
+    });
+  }
+
+  /**
+   * Customer rejects a driver's offer for ALL sub-orders of an order.
+   */
+  async customerRejectOrderOffer(orderId: string, driverId: string, customerId: string) {
+    return await db.transaction(async (tx) => {
+      const [parentOrder] = await tx.select().from(orders).where(eq(orders.id, orderId));
+      if (!parentOrder || parentOrder.customerId !== customerId) throw new Error("UNAUTHORIZED");
+
+      const orderSubOrders = await tx.select({ id: subOrders.id }).from(subOrders).where(eq(subOrders.orderId, orderId));
+      const subOrderIds = orderSubOrders.map(s => s.id);
+
+      const driverOffers = await tx
+        .select()
+        .from(deliveryOffers)
+        .where(and(
+          eq(deliveryOffers.driverId, driverId),
+          inArray(deliveryOffers.subOrderId, subOrderIds),
+          sql`${deliveryOffers.status} IN ('PENDING', 'COUNTERED')`
+        ))
+        .for("update");
+
+      if (driverOffers.length === 0) throw new Error("OFFER_NOT_AVAILABLE");
+
+      await tx.update(deliveryOffers)
+        .set({ status: "REJECTED", updatedAt: new Date() })
+        .where(inArray(deliveryOffers.id, driverOffers.map(o => o.id)));
+
+      notifyUser(
+        driverId,
+        "OFFER_REJECTED",
+        "تم رفض عرضك",
+        "تم رفض عرضك للتوصيل من قِبل العميل",
+        { orderId }
+      ).catch(console.error);
+
+      return { success: true };
+    });
+  }
+
+  /**
+   * Customer counters a driver's offer for ALL sub-orders of an order.
+   */
+  async customerCounterOrderOffer(orderId: string, driverId: string, customerId: string, counterFee: number) {
+    if (counterFee <= 0) throw new Error("COUNTER_FEE_MUST_BE_POSITIVE");
+
+    return await db.transaction(async (tx) => {
+      const [parentOrder] = await tx.select().from(orders).where(eq(orders.id, orderId));
+      if (!parentOrder || parentOrder.customerId !== customerId) throw new Error("UNAUTHORIZED");
+
+      const orderSubOrders = await tx.select({ id: subOrders.id }).from(subOrders).where(eq(subOrders.orderId, orderId));
+      const subOrderIds = orderSubOrders.map(s => s.id);
+
+      const driverOffers = await tx
+        .select()
+        .from(deliveryOffers)
+        .where(and(
+          eq(deliveryOffers.driverId, driverId),
+          inArray(deliveryOffers.subOrderId, subOrderIds),
+          eq(deliveryOffers.status, "PENDING")
+        ))
+        .for("update");
+
+      if (driverOffers.length === 0) throw new Error("OFFER_NOT_AVAILABLE");
+
+      // Validate counter fee against the representative offer
+      if (!money.isLessThan(counterFee, driverOffers[0].offeredFee)) throw new Error("COUNTER_MUST_BE_LOWER");
+
+      await tx.update(deliveryOffers)
+        .set({ status: "COUNTERED", counterOfferedFee: counterFee.toFixed(2), updatedAt: new Date() })
+        .where(inArray(deliveryOffers.id, driverOffers.map(o => o.id)));
+
+      await auditService.logEvent({
+        actionType: "DELIVERY_OFFER_COUNTERED",
+        entityType: "delivery_offer",
+        entityId: orderId,
+        performedByUserId: customerId,
+        performedByRole: "CUSTOMER",
+        newValue: { counterFee, originalFee: driverOffers[0].offeredFee }
+      });
+
+      notifyUser(
+        driverId,
+        "OFFER_COUNTERED",
+        "عرض مضاد",
+        `قدّم العميل عرضاً مضاداً بمبلغ ${counterFee} جنيه`,
+        { orderId, counterFee, originalFee: driverOffers[0].offeredFee }
+      ).catch(console.error);
+
+      return { success: true };
+    });
+  }
+
+  /**
+   * Driver accepts the customer's counter-offer for ALL sub-orders of an order.
+   */
+  async driverAcceptOrderCounterOffer(orderId: string, driverId: string) {
+    return await db.transaction(async (tx) => {
+      const [parentOrder] = await tx.select().from(orders).where(eq(orders.id, orderId)).for("update");
+      if (!parentOrder) throw new Error("ORDER_NOT_FOUND");
+
+      const orderSubOrders = await tx
+        .select()
+        .from(subOrders)
+        .where(and(
+          eq(subOrders.orderId, orderId),
+          eq(subOrders.status, "ACCEPTED"),
+          isNull(subOrders.assignedDriverId)
+        ))
+        .for("update");
+
+      if (orderSubOrders.length === 0) throw new Error("SUBORDER_NOT_AVAILABLE");
+
+      const subOrderIds = orderSubOrders.map(s => s.id);
+
+      const driverOffers = await tx
+        .select()
+        .from(deliveryOffers)
+        .where(and(
+          eq(deliveryOffers.driverId, driverId),
+          inArray(deliveryOffers.subOrderId, subOrderIds),
+          eq(deliveryOffers.status, "COUNTERED")
+        ))
+        .for("update");
+
+      if (driverOffers.length === 0) throw new Error("OFFER_NOT_COUNTERED");
+
+      const counterFeeStr = driverOffers[0].counterOfferedFee;
+      if (!counterFeeStr) throw new Error("COUNTER_FEE_MISSING");
+      const agreedFee = money.format(counterFeeStr);
+
+      // Deduct counter fee from customer wallet
+      const [customerWallet] = await tx
+        .select()
+        .from(wallets)
+        .where(eq(wallets.userId, parentOrder.customerId))
+        .for("update");
+
+      if (!customerWallet) throw new Error("WALLET_NOT_FOUND");
+      if (money.isLessThan(customerWallet.balance, counterFeeStr)) throw new Error("INSUFFICIENT_BALANCE");
+
+      const newBalance = money.subtract(customerWallet.balance, counterFeeStr);
+      await tx.update(wallets).set({ balance: newBalance, updatedAt: new Date() }).where(eq(wallets.id, customerWallet.id));
+
+      await tx.insert(walletTransactions).values({
+        walletId: customerWallet.id,
+        type: "WITHDRAWAL",
+        amount: counterFeeStr,
+        relatedOrderId: orderId,
+        status: "COMPLETED",
+        notes: `رسوم توصيل (عرض مضاد مقبول) للطلب #${orderId.slice(0, 8)}`,
+      });
+
+      await tx.insert(ledger).values({
+        referenceId: orderId,
+        debitUserId: parentOrder.customerId,
+        creditUserId: null,
+        amount: counterFeeStr,
+        type: "WITHDRAWAL",
+      });
+
+      // Assign driver to all sub-orders
+      for (let i = 0; i < orderSubOrders.length; i++) {
+        const sub = orderSubOrders[i];
+        const feeForThisSub = i === 0 ? agreedFee : "0.00";
+        await tx.update(subOrders).set({
+          assignedDriverId: driverId,
+          expectedDeliveryFee: feeForThisSub,
+          status: "IN_TRANSIT",
+          updatedAt: new Date(),
+        }).where(eq(subOrders.id, sub.id));
+      }
+
+      const driverOfferIds = driverOffers.map(o => o.id);
+      await tx.update(deliveryOffers).set({ status: "ACCEPTED", updatedAt: new Date() })
+        .where(inArray(deliveryOffers.id, driverOfferIds));
+
+      await tx.update(deliveryOffers).set({ status: "REJECTED", updatedAt: new Date() })
+        .where(and(
+          inArray(deliveryOffers.subOrderId, subOrderIds),
+          not(inArray(deliveryOffers.id, driverOfferIds))
+        ));
+
+      await auditService.logEvent({
+        actionType: "DELIVERY_OFFER_COUNTER_ACCEPTED_BY_DRIVER",
+        entityType: "delivery_offer",
+        entityId: orderId,
+        performedByUserId: driverId,
+        performedByRole: "DRIVER",
+        newValue: { status: "ACCEPTED", agreedFee, orderId }
+      });
+
+      notifyUser(
+        parentOrder.customerId,
+        "OFFER_ACCEPTED",
+        "السائق قبل عرضك المضاد",
+        `وافق السائق على رسوم التوصيل بمبلغ ${agreedFee} جنيه وسيتوجه إليك الآن`,
+        { orderId, agreedFee }
+      ).catch(console.error);
+
+      return { success: true, subOrderIds, agreedFee };
+    }).then(async (result) => {
+      for (const subOrderId of result.subOrderIds) {
+        await deliveryOtpService.generateOtp(orderId, subOrderId).catch(console.error);
+      }
+
+      try {
+        const [parentOrder] = await db.select().from(orders).where(eq(orders.id, orderId));
+        if (parentOrder) {
+          const primarySubOrderId = result.subOrderIds[0];
+          const existingRoom = await chatService.findRoomByReference("ORDER_DRIVER", primarySubOrderId);
+          if (!existingRoom) {
+            await chatService.createRoom("ORDER_DRIVER", [parentOrder.customerId, driverId], {
+              referenceId: primarySubOrderId,
+              title: "تنسيق التوصيل",
+            });
+          }
+        }
+      } catch {}
+
+      return result;
     });
   }
 

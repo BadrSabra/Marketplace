@@ -23,12 +23,36 @@ export function useAvailableOffers() {
   });
 }
 
+// Q: لماذا نُنشئ useAvailableOrderTasks بدلاً من تعديل useAvailableOffers؟
+// A: useAvailableOffers تعيد AvailableTask[] (بطاقة لكل sub-order) — استبدالها يكسر
+//    أي مكون يستخدمها. useAvailableOrderTasks تعيد OrderLevelTask[] حيث كل عنصر
+//    يمثّل طلباً رئيسياً كاملاً بجميع متاجره — هذا هو السلوك المطلوب الجديد.
+export function useAvailableOrderTasks() {
+  return useQuery({
+    queryKey: ["/api/delivery/available-order-tasks"],
+    queryFn: () => driverApi.getAvailableOrderTasks(),
+    staleTime: 30_000,
+    retry: 1,
+    refetchInterval: 30_000,
+  });
+}
+
 export function useSubmitOffer() {
   return useMutation({
     mutationFn: ({ subOrderId, proposedFee }: { subOrderId: string; proposedFee: number }) =>
       driverApi.submitOffer(subOrderId, proposedFee),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/delivery/available-tasks"] });
+    },
+  });
+}
+
+export function useSubmitOrderOffer() {
+  return useMutation({
+    mutationFn: ({ orderId, proposedFee }: { orderId: string; proposedFee: number }) =>
+      driverApi.submitOrderOffer(orderId, proposedFee),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/delivery/available-order-tasks"] });
     },
   });
 }
@@ -44,6 +68,21 @@ export function useAcceptCounterOffer() {
     onSuccess: () => {
       toast({ title: "تم قبول العرض المضاد بنجاح", description: "سيتم تحديث حالة الطلب قريبًا." });
       queryClient.invalidateQueries({ queryKey: ["/api/delivery/available-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/suborders/active"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "فشل قبول العرض المضاد", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useAcceptOrderCounterOffer() {
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: (orderId: string) => driverApi.acceptOrderCounterOffer(orderId),
+    onSuccess: () => {
+      toast({ title: "تم قبول العرض المضاد بنجاح", description: "سيتم تحديث حالة الطلب قريبًا." });
+      queryClient.invalidateQueries({ queryKey: ["/api/delivery/available-order-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/suborders/active"] });
     },
     onError: (error: Error) => {

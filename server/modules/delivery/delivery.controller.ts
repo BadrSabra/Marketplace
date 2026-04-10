@@ -43,6 +43,25 @@ export class DeliveryController {
       res.status(500).json({ error: "Internal server error" });
     }
   }
+  async getAvailableOrderTasks(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      if (!user || user.role !== "DRIVER") {
+        return res.status(403).json({ error: "Unauthorized: Driver role required" });
+      }
+      const tasks = await deliveryService.getAvailableOrderTasks(user.id);
+      res.json(tasks);
+    } catch (err: any) {
+      if (err.message === "DRIVER_NOT_APPROVED") {
+        return res.status(403).json({ error: "Driver account not approved" });
+      }
+      if (err.message === "UNAUTHORIZED_ROLE") {
+        return res.status(403).json({ error: "Unauthorized role" });
+      }
+      console.error("[DeliveryController] Error fetching order tasks:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
 }
 
 export const deliveryController = new DeliveryController();

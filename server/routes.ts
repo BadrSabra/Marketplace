@@ -71,10 +71,23 @@ export async function registerRoutes(
   
     // Delivery
     app.get("/api/delivery/available-tasks", authenticate, authorizeRole(["DRIVER"]), deliveryController.getAvailableTasks);
+    // Q: لماذا نُضيف /api/delivery/available-order-tasks بدلاً من تعديل /api/delivery/available-tasks؟
+    // A: /api/delivery/available-tasks موجود في الكود القديم — تعديله قد يُكسر أجزاء أخرى.
+    //    الـ endpoint الجديد يُعيد المهام مُجمَّعة على مستوى الطلب الرئيسي (order-level)
+    //    بحيث يظهر الطلب الذي له طلبان فرعيان كبطاقة واحدة للسائق.
+    app.get("/api/delivery/available-order-tasks", authenticate, authorizeRole(["DRIVER"]), deliveryController.getAvailableOrderTasks.bind(deliveryController));
     app.get("/api/suborders/active", authenticate, authorizeRole(["DRIVER"]), subOrderController.getActiveDelivery);
     app.post("/api/delivery/otp/generate/:id", authenticate, authorizeRole(["DRIVER"]), deliveryOtpController.generateOtp.bind(deliveryOtpController));
     app.post("/api/delivery/otp/verify/:id", authenticate, authorizeRole(["DRIVER"]), otpLimiter, deliveryOtpController.verify.bind(deliveryOtpController));
   app.post("/api/delivery/suborders/:id/offer", authenticate, authorizeRole(["DRIVER"]), deliveryOfferController.submitOffer);
+  // Order-level offer routes (driver submits one offer for the whole order)
+  app.post("/api/delivery/orders/:orderId/offer", authenticate, authorizeRole(["DRIVER"]), deliveryOfferController.submitOrderOffer.bind(deliveryOfferController));
+  app.post("/api/delivery/orders/:orderId/offers/accept-counter", authenticate, authorizeRole(["DRIVER"]), deliveryOfferController.driverAcceptOrderCounterOffer.bind(deliveryOfferController));
+  // Customer: view and act on order-level delivery offers
+  app.get("/api/delivery/orders/:orderId/offers", authenticate, authorizeRole(["CUSTOMER"]), deliveryOfferController.getOffersForOrder.bind(deliveryOfferController));
+  app.post("/api/delivery/orders/:orderId/offers/accept", authenticate, authorizeRole(["CUSTOMER"]), deliveryOfferController.customerAcceptOrderOffer.bind(deliveryOfferController));
+  app.post("/api/delivery/orders/:orderId/offers/reject", authenticate, authorizeRole(["CUSTOMER"]), deliveryOfferController.customerRejectOrderOffer.bind(deliveryOfferController));
+  app.post("/api/delivery/orders/:orderId/offers/counter", authenticate, authorizeRole(["CUSTOMER"]), deliveryOfferController.customerCounterOrderOffer.bind(deliveryOfferController));
   // Q: هل يجب إبقاء مسار acceptTask القديم (PATCH /api/delivery/suborders/:id/accept) فعّالاً؟
   // A: لا — هذا المسار يتحايل على نظام رسوم التوصيل الكامل:
   //    1. لا يخصم رسوم التوصيل من محفظة العميل

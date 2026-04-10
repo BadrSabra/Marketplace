@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useDriverTasks, useAvailableOffers, useSubmitOffer, useAcceptCounterOffer, useVerifyOtp } from "@/hooks/use-driver";
+import { useDriverTasks, useAvailableOrderTasks, useSubmitOrderOffer, useAcceptOrderCounterOffer, useVerifyOtp } from "@/hooks/use-driver";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import { Loader2, Store, MapPin, Package, Tag, CheckCircle2, Clock } from "lucid
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { ActiveDelivery, AvailableTask } from "@/lib/api/driver";
+import type { ActiveDelivery, OrderLevelTask } from "@/lib/api/driver";
 
 export default function DriverTasksPage() {
   // Q: لماذا نستخدم refetch بدلاً من window.location.reload() في تطبيق React؟
@@ -20,18 +20,22 @@ export default function DriverTasksPage() {
   //    3. استهلاك غير ضروري لـ JavaScript bundle
   //    refetch() من TanStack Query تُعيد جلب البيانات فقط دون إعادة تحميل الصفحة.
   const { data: tasks, isLoading: tasksLoading, error: tasksError, refetch: refetchTasks } = useDriverTasks();
-  const { data: offers, isLoading: offersLoading, error: offersError, refetch: refetchOffers } = useAvailableOffers();
+  // Q: لماذا نستخدم useAvailableOrderTasks بدلاً من useAvailableOffers هنا؟
+  // A: useAvailableOffers تُعيد بطاقة لكل sub-order — فإذا كان الطلب له متجران،
+  //    يرى السائق بطاقتين منفصلتين، كل منهما بزر "تقديم عرض سعر" خاص بها.
+  //    useAvailableOrderTasks تُعيد بطاقة واحدة لكل طلب رئيسي تضم جميع متاجره.
+  const { data: orders, isLoading: ordersLoading, error: ordersError, refetch: refetchOrders } = useAvailableOrderTasks();
 
   const handleRetry = () => {
     refetchTasks();
-    refetchOffers();
+    refetchOrders();
   };
 
-  if (tasksLoading || offersLoading) {
+  if (tasksLoading || ordersLoading) {
     return <TasksSkeleton />;
   }
 
-  if (tasksError || offersError) {
+  if (tasksError || ordersError) {
     return (
       <div className="container mx-auto p-4 space-y-8">
         <Card className="bg-destructive/10 text-destructive p-6 border-destructive text-center">
@@ -54,7 +58,7 @@ export default function DriverTasksPage() {
               Now shows a single accurate "active delivery" count. */}
           <div className="flex gap-2 mt-2">
             <Badge variant="outline">قيد التوصيل: {tasks?.filter(t => t.status === 'IN_TRANSIT').length || 0}</Badge>
-            <Badge variant="outline">المتاح: {offers?.length || 0}</Badge>
+            <Badge variant="outline">المتاح: {orders?.length || 0}</Badge>
           </div>
         </div>
       </header>
@@ -74,15 +78,20 @@ export default function DriverTasksPage() {
 
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-right">الطلبات المتاحة للتوصيل</h2>
+        {/* Q: لماذا تغيّرت الرسالة التوضيحية من "لكل طلب" إلى "لكل طلب كامل"؟
+            A: النظام القديم كان يطلب من السائق تقديم عرض لكل طلب فرعي على حدة،
+               حتى لو كانت الطلبات الفرعية تنتمي لنفس الطلب الرئيسي.
+               النظام الجديد يجمع كل الطلبات الفرعية في بطاقة واحدة، وعرض سعر
+               واحد يغطي التوصيل لجميع المتاجر في الطلب. */}
         <p className="text-sm text-muted-foreground text-right">قدّم عرض سعرك لكل طلب وسيختار العميل أفضل عرض</p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {!offers || offers.length === 0 ? (
+          {!orders || orders.length === 0 ? (
             <Card className="col-span-full p-8 text-center text-muted-foreground">
               لا توجد طلبات متاحة حالياً
-              <Button variant="ghost" onClick={() => refetchOffers()}>التحديث</Button>
+              <Button variant="ghost" onClick={() => refetchOrders()}>التحديث</Button>
             </Card>
           ) : (
-            offers.map(offer => <OfferCard key={offer.sub_order_id} offer={offer} />)
+            orders.map(order => <OrderOfferCard key={order.order_id} order={order} />)
           )}
         </div>
       </section>
@@ -142,9 +151,14 @@ function TaskCard({ task }: { task: ActiveDelivery }) {
   );
 }
 
-function OfferCard({ offer }: { offer: AvailableTask }) {
-  const submitOfferMutation = useSubmitOffer();
-  const acceptCounterMutation = useAcceptCounterOffer();
+// Q: لماذا استُبدل OfferCard بـ OrderOfferCard؟
+// A: OfferCard كانت تعمل على مستوى sub-order واحد — زر "تقديم عرض سعر" واحد لكل متجر.
+//    عندما يكون للطلب الرئيسي متجران، كانت تظهر بطاقتان منفصلتان.
+//    OrderOfferCard تعمل على مستوى الطلب الكامل — بطاقة واحدة تُظهر كل المتاجر
+//    وزر "تقديم عرض سعر" واحد يُرسل عرضاً يشمل توصيل الطلب بأكمله.
+function OrderOfferCard({ order }: { order: OrderLevelTask }) {
+  const submitOrderOfferMutation = useSubmitOrderOffer();
+  const acceptOrderCounterMutation = useAcceptOrderCounterOffer();
   const { toast } = useToast();
   const [isOfferOpen, setIsOfferOpen] = useState(false);
   const [feeInput, setFeeInput] = useState("");
@@ -154,9 +168,9 @@ function OfferCard({ offer }: { offer: AvailableTask }) {
   //    قَبِل فيه العميل عرضه (status=ACCEPTED) قبل أن تتحدث قائمة العروض.
   //    في هذه الحالة كان يظهر زر "تقديم عرض" بينما العرض قُبل بالفعل،
   //    فإذا ضغط السائق يحصل على خطأ محيّر. الإصلاح: شمل ACCEPTED أيضاً.
-  const alreadyOffered = offer.driver_offer_status === "PENDING" || offer.driver_offer_status === "ACCEPTED";
-  const offerRejected = offer.driver_offer_status === "REJECTED";
-  const offerCountered = offer.driver_offer_status === "COUNTERED";
+  const alreadyOffered = order.driver_offer_status === "PENDING" || order.driver_offer_status === "ACCEPTED";
+  const offerRejected = order.driver_offer_status === "REJECTED";
+  const offerCountered = order.driver_offer_status === "COUNTERED";
 
   const handleSubmitOffer = () => {
     const fee = parseFloat(feeInput);
@@ -164,7 +178,7 @@ function OfferCard({ offer }: { offer: AvailableTask }) {
       toast({ title: "يرجى إدخال سعر صحيح", variant: "destructive" });
       return;
     }
-    submitOfferMutation.mutate({ subOrderId: offer.sub_order_id, proposedFee: fee }, {
+    submitOrderOfferMutation.mutate({ orderId: order.order_id, proposedFee: fee }, {
       onSuccess: () => {
         setIsOfferOpen(false);
         setFeeInput("");
@@ -177,54 +191,77 @@ function OfferCard({ offer }: { offer: AvailableTask }) {
   };
 
   const handleAcceptCounter = () => {
-    if (!offer.driver_offer_id) {
-      toast({ title: "خطأ", description: "لا يمكن العثور على رقم العرض", variant: "destructive" });
-      return;
-    }
-    acceptCounterMutation.mutate(offer.driver_offer_id);
+    acceptOrderCounterMutation.mutate(order.order_id, {
+      onError: (error: Error) => {
+        toast({ title: "فشل قبول العرض المضاد", description: error.message, variant: "destructive" });
+      }
+    });
   };
+
+  const totalSubtotal = order.total_subtotal;
 
   return (
     <>
-      <Card className="flex flex-col h-full" data-testid={`card-offer-${offer.sub_order_id}`}>
+      <Card className="flex flex-col h-full" data-testid={`card-order-offer-${order.order_id}`}>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">{offer.store_name}</CardTitle>
-            <span className="font-bold text-primary">{offer.subtotal} ج.م</span>
+            <div className="flex-1">
+              {/* Q: لماذا نعرض جميع المتاجر بدلاً من متجر واحد؟
+                  A: الطلب الرئيسي قد يشمل متاجر متعددة — عرض متجر واحد فقط يُخفي
+                     هذه المعلومات عن السائق ويمنعه من تقدير مسار التوصيل بدقة. */}
+              <CardTitle className="text-base">
+                {order.sub_orders.map(s => s.store_name).join(" • ")}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                {order.sub_orders.length > 1
+                  ? `${order.sub_orders.length} متاجر — توصيل واحد`
+                  : "متجر واحد"}
+              </p>
+            </div>
+            <span className="font-bold text-primary text-lg">{totalSubtotal.toFixed(2)} ج.م</span>
           </div>
         </CardHeader>
-        <CardContent className="flex-1 space-y-2 text-sm">
+        <CardContent className="flex-1 space-y-3 text-sm">
           <div className="flex items-start gap-2">
             <MapPin className="w-4 h-4 mt-1 shrink-0 text-muted-foreground" />
-            <span>{offer.customer_address || "عنوان المتجر"}</span>
+            <span>{order.customer_address || "عنوان العميل"}</span>
           </div>
-          <div className="flex items-start gap-2">
-            <Package className="w-4 h-4 mt-1 shrink-0 text-muted-foreground" />
-            <span>{offer.items.map(i => `${i.product_name} (${i.quantity})`).join(", ")}</span>
-          </div>
-          {offer.created_at && (
+
+          {/* Show items per sub-order (store) */}
+          {order.sub_orders.map((sub, idx) => (
+            <div key={sub.sub_order_id} className="flex items-start gap-2">
+              <Package className="w-4 h-4 mt-1 shrink-0 text-muted-foreground" />
+              <span>
+                <span className="font-medium">{sub.store_name}:</span>{" "}
+                {sub.items.map(i => `${i.product_name} (${i.quantity})`).join(", ")}
+              </span>
+            </div>
+          ))}
+
+          {order.created_at && (
             <div className="text-muted-foreground text-xs">
-              {new Date(offer.created_at).toLocaleString("ar-EG")}
+              {new Date(order.created_at).toLocaleString("ar-EG")}
             </div>
           )}
+
           {alreadyOffered && (
             <div className="flex items-center gap-2 mt-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-blue-700 dark:text-blue-300">
               <Clock className="w-4 h-4 shrink-0" />
               <span className="text-xs font-medium">
-                عرضك: {offer.driver_offered_fee} ج.م — في انتظار موافقة العميل
+                عرضك: {order.driver_offered_fee} ج.م — في انتظار موافقة العميل
               </span>
             </div>
           )}
           {offerCountered && (
             <div className="flex flex-col gap-1 mt-2 p-2 bg-amber-50 dark:bg-amber-950/30 rounded-lg text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
               <span className="text-xs font-bold">العميل يقترح سعراً مضاداً:</span>
-              <span className="text-sm font-black">{offer.driver_counter_offered_fee} ج.م</span>
-              <span className="text-xs text-muted-foreground">عرضك الأصلي: {offer.driver_offered_fee} ج.م</span>
+              <span className="text-sm font-black">{order.driver_counter_offered_fee} ج.م</span>
+              <span className="text-xs text-muted-foreground">عرضك الأصلي: {order.driver_offered_fee} ج.م</span>
             </div>
           )}
           {offerRejected && (
             <div className="flex items-center gap-2 mt-2 p-2 bg-red-50 dark:bg-red-950/30 rounded-lg text-red-700 dark:text-red-300">
-              <span className="text-xs font-medium">تم رفض عرضك السابق ({offer.driver_offered_fee} ج.م)</span>
+              <span className="text-xs font-medium">تم رفض عرضك السابق ({order.driver_offered_fee} ج.م)</span>
             </div>
           )}
         </CardContent>
@@ -234,7 +271,7 @@ function OfferCard({ offer }: { offer: AvailableTask }) {
               className="w-full"
               variant="outline"
               disabled
-              data-testid={`button-offer-pending-${offer.sub_order_id}`}
+              data-testid={`button-offer-pending-${order.order_id}`}
             >
               <CheckCircle2 className="w-4 h-4 ml-2 text-blue-500" />
               تم تقديم العرض — في انتظار العميل
@@ -243,17 +280,17 @@ function OfferCard({ offer }: { offer: AvailableTask }) {
             <Button
               className="w-full bg-amber-500 hover:bg-amber-600 text-white"
               onClick={handleAcceptCounter}
-              disabled={acceptCounterMutation.isPending}
-              data-testid={`button-accept-counter-${offer.sub_order_id}`}
+              disabled={acceptOrderCounterMutation.isPending}
+              data-testid={`button-accept-counter-${order.order_id}`}
             >
-              {acceptCounterMutation.isPending ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <Tag className="w-4 h-4 ml-2" />}
-              قبول اقتراح العميل ({offer.driver_counter_offered_fee} ج.م)
+              {acceptOrderCounterMutation.isPending ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <Tag className="w-4 h-4 ml-2" />}
+              قبول اقتراح العميل ({order.driver_counter_offered_fee} ج.م)
             </Button>
           ) : (
             <Button
               className="w-full"
               onClick={() => setIsOfferOpen(true)}
-              data-testid={`button-submit-offer-${offer.sub_order_id}`}
+              data-testid={`button-submit-order-offer-${order.order_id}`}
             >
               <Tag className="w-4 h-4 ml-2" />
               {offerRejected ? "تقديم عرض جديد" : "تقديم عرض سعر"}
@@ -267,17 +304,29 @@ function OfferCard({ offer }: { offer: AvailableTask }) {
           <DialogHeader>
             <DialogTitle className="text-right">تقديم عرض سعر للتوصيل</DialogTitle>
             <DialogDescription className="text-right">
-              حدد سعر التوصيل الذي تقترحه. سيراجع العميل جميع العروض ويختار الأنسب.
+              حدد سعر التوصيل الذي تقترحه للطلب كاملاً. سيراجع العميل جميع العروض ويختار الأنسب.
             </DialogDescription>
           </DialogHeader>
           <div className="py-3 space-y-4">
-            <div className="p-3 bg-muted rounded-lg text-sm text-right space-y-1">
-              <p className="font-medium">{offer.store_name}</p>
-              <p className="text-muted-foreground">إجمالي الطلب: {offer.subtotal} ج.م</p>
+            <div className="p-3 bg-muted rounded-lg text-sm text-right space-y-2">
+              {/* Q: لماذا نعرض تفاصيل كل المتاجر في نافذة التأكيد؟
+                  A: السائق يجب أن يرى ما يلتزم بتوصيله قبل تقديم سعره.
+                     إذا كان الطلب يضم متجرين، يعلم السائق أنه سيزور موقعين
+                     قبل تسليم الطلب للعميل، فيُسعّر وفقاً لذلك. */}
+              {order.sub_orders.map(sub => (
+                <div key={sub.sub_order_id} className="border-b last:border-b-0 pb-2 last:pb-0">
+                  <p className="font-medium">{sub.store_name}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {sub.items.map(i => `${i.product_name} (${i.quantity})`).join(", ")}
+                    {" — "}{sub.subtotal.toFixed(2)} ج.م
+                  </p>
+                </div>
+              ))}
+              <p className="font-bold pt-1">إجمالي قيمة الطلب: {totalSubtotal.toFixed(2)} ج.م</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="fee-input" className="text-right block">
-                رسوم التوصيل المقترحة (جنيه)
+                رسوم التوصيل المقترحة للطلب كاملاً (جنيه)
               </Label>
               <Input
                 id="fee-input"
@@ -295,10 +344,10 @@ function OfferCard({ offer }: { offer: AvailableTask }) {
             </Button>
             <Button
               onClick={handleSubmitOffer}
-              disabled={submitOfferMutation.isPending}
+              disabled={submitOrderOfferMutation.isPending}
               data-testid="button-confirm-offer"
             >
-              {submitOfferMutation.isPending && <Loader2 className="animate-spin ml-2" />}
+              {submitOrderOfferMutation.isPending && <Loader2 className="animate-spin ml-2" />}
               تقديم العرض
             </Button>
           </DialogFooter>
