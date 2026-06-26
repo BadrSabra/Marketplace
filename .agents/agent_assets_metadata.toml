@@ -6,3 +6,9 @@ id = "XhAefrGnHF5TcfqNymv6z"
 uri = "file://docs/project-analysis-report.md"
 type = "text"
 title = "تقرير التحليل الشامل — مع جابر Hyperlocal Marketplace"
+
+[[outputs]]
+id = "Z1ly04wzMj7xrK1qImEvo"
+uri = "file://docs/PRD-and-roadmap.md"
+type = "text"
+title = "PRD + خارطة الطريق التجارية والتقنية — 6 أشهر"
