@@ -1,0 +1,569 @@
+# Engineering Constitution
+
+## الدور
+
+أنت الآن كبير مهندسي المشروع (Chief Software Architect).
+
+لقد تم الانتهاء من:
+
+* تحليل المشروع بالكامل.
+* إنشاء PRD.
+* إنشاء Roadmap.
+* إنشاء Product Backlog.
+* إنشاء خطة التنفيذ.
+
+المطلوب الآن هو إنشاء دستور هندسي دائم للمشروع.
+
+هذا الدستور سيكون المرجع الوحيد لأي مطور أو وكيل ذكاء اصطناعي يعمل على المشروع مستقبلاً.
+
+لا تكتب أي كود.
+
+قم فقط بإنشاء وثائق داخل:
+
+docs/engineering/
+
+---
+
+# 01 Engineering Principles
+
+أنشئ المبادئ الأساسية للمشروع.
+
+مثل:
+
+* البساطة أولاً.
+* قابلية التوسع.
+* سهولة الصيانة.
+* الأمان افتراضياً.
+* الأداء قبل إضافة التعقيد.
+* عدم تكرار الكود.
+* كل Feature يجب أن تكون قابلة للاختبار.
+* كل تعديل يجب أن يكون موثقاً.
+
+---
+
+# 02 Architecture Rules
+
+حدد قواعد المعمارية.
+
+مثل:
+
+* يمنع وضع Business Logic داخل UI.
+* يمنع الوصول المباشر لقاعدة البيانات من الواجهة.
+* جميع العمليات تمر عبر Services.
+* جميع Services مستقلة.
+* جميع APIs موحدة.
+* يمنع إنشاء Circular Dependency.
+* يمنع استدعاء الطبقات بطريقة غير صحيحة.
+
+---
+
+# 03 Folder Structure Rules
+
+اشرح:
+
+هيكل المشروع بالكامل.
+
+ولكل مجلد:
+
+* لماذا موجود؟
+* ماذا يحتوي؟
+* ماذا يمنع وضعه داخله؟
+
+---
+
+# 04 Module Design Rules
+
+اشرح كيفية إنشاء أي Module جديد.
+
+مثل:
+
+Controllers
+
+Services
+
+Repositories
+
+Models
+
+Validators
+
+DTOs
+
+Interfaces
+
+Tests
+
+Documentation
+
+---
+
+# 05 Database Rules
+
+حدد قواعد قاعدة البيانات.
+
+مثل:
+
+Naming
+
+Indexes
+
+Constraints
+
+Foreign Keys
+
+Soft Delete
+
+Audit
+
+Migrations
+
+Rollback
+
+Normalization
+
+---
+
+# 06 API Rules
+
+حدد:
+
+REST Standards
+
+Versioning
+
+Response Format
+
+Error Format
+
+Pagination
+
+Filtering
+
+Sorting
+
+Authentication
+
+Rate Limiting
+
+Documentation
+
+---
+
+# 07 Frontend Rules
+
+حدد:
+
+Components
+
+Reusable Components
+
+State Management
+
+Routing
+
+Theming
+
+Localization
+
+Accessibility
+
+Performance
+
+Lazy Loading
+
+---
+
+# 08 Mobile Rules
+
+حدد:
+
+Navigation
+
+Offline Mode
+
+Caching
+
+Push Notifications
+
+Permissions
+
+Background Tasks
+
+Deep Links
+
+---
+
+# 09 Security Rules
+
+حدد:
+
+Authentication
+
+Authorization
+
+RBAC
+
+Encryption
+
+Secrets
+
+Validation
+
+CSRF
+
+XSS
+
+SQL Injection
+
+Audit Logs
+
+Security Headers
+
+Password Policies
+
+---
+
+# 10 Performance Rules
+
+حدد:
+
+Caching
+
+Queues
+
+Indexes
+
+Pagination
+
+Compression
+
+Image Optimization
+
+Lazy Loading
+
+Virtualization
+
+Background Jobs
+
+---
+
+# 11 Logging Rules
+
+حدد:
+
+ما الذي يجب تسجيله؟
+
+وما الذي يمنع تسجيله؟
+
+---
+
+# 12 Error Handling Rules
+
+اشرح:
+
+كيف يتم التعامل مع الأخطاء؟
+
+كيف يتم تسجيلها؟
+
+كيف تظهر للمستخدم؟
+
+---
+
+# 13 Testing Constitution
+
+حدد:
+
+Unit Tests
+
+Integration Tests
+
+E2E
+
+Performance
+
+Regression
+
+Coverage
+
+Mocking
+
+Fixtures
+
+---
+
+# 14 Documentation Rules
+
+حدد:
+
+كل Feature جديدة يجب أن تحتوي على:
+
+Documentation
+
+Examples
+
+Screenshots
+
+API
+
+Tests
+
+Migration Notes
+
+Release Notes
+
+---
+
+# 15 Git Constitution
+
+حدد:
+
+Commit Messages
+
+Branch Naming
+
+Merge Rules
+
+Review Rules
+
+Release Rules
+
+Hotfix Rules
+
+---
+
+# 16 Code Review Checklist
+
+أنشئ Checklist إلزامية.
+
+قبل قبول أي Pull Request.
+
+---
+
+# 17 AI Development Rules
+
+هذه أهم نقطة.
+
+إذا كان التطوير يتم بواسطة وكيل ذكاء اصطناعي.
+
+فيجب عليه قبل أي تعديل:
+
+* قراءة PRD.
+* قراءة Roadmap.
+* قراءة Engineering Constitution.
+* مراجعة Backlog.
+* مراجعة آخر Sprint.
+* تحليل التأثير.
+* عدم إنشاء كود مكرر.
+* البحث أولاً عن كود مشابه لإعادة استخدامه.
+* تحديث الوثائق بعد التنفيذ.
+* إضافة الاختبارات عند الحاجة.
+* عدم حذف أي جزء إلا بعد تحليل الاعتماديات.
+
+---
+
+# 18 Feature Development Workflow
+
+عند طلب أي ميزة جديدة.
+
+يجب تنفيذ الخطوات التالية:
+
+1
+
+تحليل الطلب.
+
+2
+
+تحليل التأثير.
+
+3
+
+تحليل قاعدة البيانات.
+
+4
+
+تحليل الـ APIs.
+
+5
+
+تحليل الواجهات.
+
+6
+
+تقدير الوقت.
+
+7
+
+تقدير المخاطر.
+
+8
+
+اقتراح التنفيذ.
+
+9
+
+الحصول على الموافقة إذا كانت هناك تغييرات جوهرية.
+
+10
+
+التنفيذ.
+
+11
+
+الاختبارات.
+
+12
+
+التوثيق.
+
+13
+
+تحديث الـ Backlog.
+
+14
+
+تحديث Roadmap.
+
+---
+
+# 19 Refactoring Rules
+
+لا يسمح بإعادة كتابة أي جزء.
+
+إلا إذا:
+
+* أصبح غير قابل للصيانة.
+* يسبب مشاكل أداء.
+* يسبب مشاكل أمنية.
+* يمنع التوسع.
+* توجد بدائل أفضل موثقة.
+
+---
+
+# 20 Quality Gates
+
+قبل اعتبار أي Feature مكتملة.
+
+تحقق من:
+
+✔ الكود يعمل.
+
+✔ جميع الاختبارات ناجحة.
+
+✔ لا توجد أخطاء Build.
+
+✔ لا توجد أخطاء Lint.
+
+✔ التوثيق مكتمل.
+
+✔ الـ API موثقة.
+
+✔ قاعدة البيانات محدثة.
+
+✔ الأداء لم يتراجع.
+
+✔ الأمان لم يتأثر.
+
+✔ تم تحديث Roadmap.
+
+✔ تم تحديث Backlog.
+
+---
+
+# 21 Decision Log
+
+أنشئ ملفاً يسجل جميع القرارات الهندسية.
+
+لكل قرار:
+
+التاريخ
+
+السبب
+
+البدائل
+
+القرار النهائي
+
+التأثير
+
+---
+
+# 22 Knowledge Base
+
+أنشئ قاعدة معرفة للمشروع.
+
+تحتوي على:
+
+Architecture
+
+Business Rules
+
+Technical Notes
+
+Common Problems
+
+Solutions
+
+Deployment
+
+Testing
+
+Troubleshooting
+
+FAQ
+
+---
+
+# 23 Engineering Dashboard
+
+أنشئ لوحة متابعة تحتوي على:
+
+عدد Features
+
+عدد Bugs
+
+عدد Tests
+
+Coverage
+
+Technical Debt
+
+Performance Score
+
+Security Score
+
+Documentation Score
+
+Maintainability Score
+
+Scalability Score
+
+---
+
+# 24 Continuous Improvement
+
+بعد كل Sprint.
+
+يجب إنشاء تقرير.
+
+يتضمن:
+
+ما الذي نجح؟
+
+ما الذي فشل؟
+
+ما الذي يمكن تحسينه؟
+
+ما الذي يجب التوقف عنه؟
+
+ما الذي يجب البدء فيه؟
+
+---
+
+# 25 القواعد النهائية
+
+اعتباراً من الآن:
+
+* لا يتم تنفيذ أي تعديل بدون الرجوع إلى هذا الدستور.
+* إذا تعارض طلب جديد مع الدستور، قم بشرح التعارض واقترح بديلاً.
+* إذا احتاج الدستور إلى تحديث، أنشئ اقتراح تعديل أولاً ثم انتظر الموافقة قبل اعتماده.
+* الهدف هو الحفاظ على جودة المشروع واستمرارية التطوير حتى مع تغير المطورين أو وكلاء الذكاء الاصطناعي.
