@@ -1,0 +1,589 @@
+# الدور
+
+أنت Chief Product Officer + Chief Software Architect + SaaS Business Consultant + CTO.
+
+لقد قمت سابقًا بتحليل المشروع بالكامل، وأصبح لديك معرفة كاملة بجميع الملفات، وهيكل المشروع، وقاعدة البيانات، والواجهات، والخصائص الحالية.
+
+اعتمد فقط على المعلومات التي استخرجتها بالفعل من المشروع.
+
+لا تفترض وجود أي ميزة غير موجودة.
+
+إذا كانت هناك معلومة ناقصة فاذكر أنها غير متوفرة.
+
+---
+
+# الهدف
+
+تحويل هذا المشروع إلى منتج تجاري عالمي قابل للبيع كنظام SaaS و White Label و Multi-Tenant مع الحفاظ على إمكانية استخدامه كنظام مستقل.
+
+أريد إنشاء وثيقة Product Requirements Document (PRD) احترافية بالإضافة إلى خارطة طريق كاملة لتطوير المشروع لمدة 6 أشهر.
+
+لا تقم بتعديل أي كود.
+
+لا تقم بإنشاء أي ملفات تنفيذية.
+
+قم فقط بإعداد وثائق وتحليلات وخطط احترافية.
+
+---
+
+# المرحلة الأولى
+
+## Executive Product Vision
+
+اشرح:
+
+* ما هو المنتج الحالي؟
+* ما هي المشكلة التي يحلها؟
+* من هم العملاء؟
+* ما القيمة التي يقدمها؟
+* لماذا قد يشتريه العميل؟
+
+---
+
+## Vision Statement
+
+أنشئ رؤية احترافية للمنتج.
+
+---
+
+## Mission Statement
+
+أنشئ رسالة المنتج.
+
+---
+
+## Product Positioning
+
+حدد مكان المنتج داخل السوق.
+
+---
+
+## المنافسون
+
+قارن المشروع مع:
+
+* Talabat
+* Jahez
+* HungerStation
+* Mrsool
+* Foodics
+* Zid
+* Salla
+* Shopify
+* GloriaFood
+* Odoo
+* Loyverse POS
+
+لكل منافس وضح:
+
+* نقاط القوة
+* نقاط الضعف
+* ماذا يقدم مشروعنا أفضل؟
+* ماذا ينقص مشروعنا؟
+
+---
+
+## SWOT Analysis
+
+أنشئ تحليل SWOT كامل.
+
+---
+
+## Business Model
+
+اقترح أفضل نموذج عمل.
+
+مثلاً:
+
+* SaaS
+* White Label
+* Marketplace
+* Enterprise
+* Hybrid
+
+واشرح سبب الاختيار.
+
+---
+
+## Revenue Streams
+
+اقترح جميع مصادر الدخل الممكنة.
+
+مثلاً:
+
+* اشتراك شهري
+* اشتراك سنوي
+* عمولة على الطلبات
+* رسوم إعداد
+* تطبيقات إضافية
+* خدمات مدفوعة
+* API مدفوع
+* إعلانات
+* دعم فني
+* استضافة
+* تقارير احترافية
+* Marketplace Add-ons
+
+---
+
+## Pricing Strategy
+
+أنشئ أكثر من نموذج تسعير.
+
+مثلاً:
+
+Starter
+
+Professional
+
+Business
+
+Enterprise
+
+مع شرح ما يحتويه كل باقة.
+
+---
+
+# المرحلة الثانية
+
+## Product Roadmap
+
+أنشئ Roadmap لمدة 6 أشهر.
+
+قسمها إلى:
+
+Month 1
+
+Month 2
+
+Month 3
+
+Month 4
+
+Month 5
+
+Month 6
+
+لكل شهر وضح:
+
+* Features
+* Improvements
+* Refactoring
+* Testing
+* Security
+* Performance
+* Documentation
+
+---
+
+## Priority Matrix
+
+قسم جميع المهام إلى:
+
+Critical
+
+High
+
+Medium
+
+Low
+
+---
+
+## MVP النهائي
+
+حدد:
+
+ما الذي يجب أن يكون موجوداً حتى يصبح المنتج جاهزاً للبيع.
+
+---
+
+## Enterprise Features
+
+حدد جميع المزايا المطلوبة للشركات الكبيرة.
+
+---
+
+## SaaS Features
+
+حدد جميع المزايا المطلوبة لمنصة SaaS مثل:
+
+Multi Tenant
+
+Tenant Isolation
+
+Subscription Billing
+
+Usage Tracking
+
+Tenant Settings
+
+Branding
+
+Custom Domains
+
+Feature Flags
+
+License Management
+
+Plans
+
+Invoices
+
+Usage Limits
+
+Storage Limits
+
+Admin Console
+
+System Monitoring
+
+Tenant Analytics
+
+---
+
+## White Label Features
+
+اشرح جميع الخصائص المطلوبة مثل:
+
+Logo
+
+Colors
+
+Splash Screen
+
+Domain
+
+Emails
+
+Notifications
+
+Brand Name
+
+Mobile App Branding
+
+App Store Branding
+
+Play Store Branding
+
+Customer Portal
+
+---
+
+## Marketplace Features
+
+إذا كان المشروع مناسباً ليصبح Marketplace فاشرح:
+
+ما الذي يحتاجه؟
+
+---
+
+# المرحلة الثالثة
+
+## Technical Roadmap
+
+أنشئ خطة هندسية كاملة.
+
+تشمل:
+
+Architecture
+
+Backend
+
+Frontend
+
+Database
+
+API
+
+Caching
+
+Queues
+
+Background Jobs
+
+Storage
+
+Search
+
+Notifications
+
+Monitoring
+
+CI/CD
+
+Testing
+
+Logging
+
+Observability
+
+Security
+
+Scalability
+
+---
+
+## Refactoring Plan
+
+حدد:
+
+* الملفات التي تحتاج إعادة تنظيم
+* الملفات التي تحتاج تقسيم
+* الخدمات التي يجب فصلها
+* الأكواد المكررة
+* الوحدات التي يجب تحويلها إلى Modules
+
+---
+
+## Database Improvements
+
+اقترح تحسينات قاعدة البيانات.
+
+---
+
+## Performance Improvements
+
+حدد:
+
+* مشاكل الأداء
+* حلولها
+* الأولوية
+
+---
+
+## Security Roadmap
+
+اشرح بالتفصيل:
+
+Authentication
+
+Authorization
+
+RBAC
+
+Encryption
+
+Secrets
+
+Rate Limiting
+
+Audit Logs
+
+Backup
+
+Disaster Recovery
+
+OWASP Recommendations
+
+---
+
+# المرحلة الرابعة
+
+## Product Documentation
+
+أنشئ قائمة كاملة بالوثائق المطلوبة.
+
+مثلاً:
+
+README
+
+Installation Guide
+
+Architecture Guide
+
+Deployment Guide
+
+API Documentation
+
+Developer Guide
+
+Admin Guide
+
+User Guide
+
+Driver Guide
+
+Store Guide
+
+Support Guide
+
+Security Guide
+
+Release Notes
+
+Change Log
+
+Contribution Guide
+
+---
+
+## Testing Strategy
+
+اشرح:
+
+Unit Tests
+
+Integration Tests
+
+E2E Tests
+
+Performance Tests
+
+Security Tests
+
+Load Tests
+
+Regression Tests
+
+---
+
+## DevOps Plan
+
+اشرح:
+
+Docker
+
+Containers
+
+CI/CD
+
+Git Strategy
+
+Branching
+
+Release Strategy
+
+Rollback
+
+Monitoring
+
+Alerts
+
+Scaling
+
+---
+
+# المرحلة الخامسة
+
+## Commercial Readiness
+
+قيّم جاهزية المشروع للبيع من 100.
+
+ثم اشرح:
+
+ما الذي يمنع البيع الآن؟
+
+وما الذي يجب إنجازه أولاً؟
+
+---
+
+## 90-Day Business Launch Plan
+
+أنشئ خطة إطلاق تجارية لمدة 90 يوماً.
+
+تشمل:
+
+الأسبوع الأول
+
+الأسبوع الثاني
+
+...
+
+الأسبوع الثاني عشر
+
+ولكل أسبوع وضح:
+
+* التطوير
+* الاختبارات
+* التسويق
+* المبيعات
+* التوثيق
+* دعم العملاء
+* جمع الملاحظات
+
+---
+
+## Sales Strategy
+
+اشرح:
+
+من هم العملاء المستهدفون؟
+
+كيف يتم الوصول إليهم؟
+
+كيف يتم إغلاق الصفقات؟
+
+كيف يتم تحويل العميل إلى اشتراك شهري؟
+
+---
+
+## KPI Dashboard
+
+حدد مؤشرات الأداء التي يجب متابعتها.
+
+مثل:
+
+MRR
+
+ARR
+
+CAC
+
+LTV
+
+Retention
+
+Churn
+
+Orders
+
+Stores
+
+Drivers
+
+Revenue
+
+Active Users
+
+Conversion Rate
+
+---
+
+## Final Report
+
+أنشئ تقريراً احترافياً يتضمن:
+
+1- تقييم المشروع الحالي
+
+2- تقييم قابلية البيع
+
+3- تقييم قابلية التحول إلى SaaS
+
+4- تقييم قابلية التحول إلى White Label
+
+5- تقييم قابلية التحول إلى Marketplace
+
+6- أهم 20 ميزة يجب تنفيذها أولاً
+
+7- أهم 20 تحسيناً هندسياً
+
+8- أهم 20 تحسيناً تجارياً
+
+9- أهم 20 مخاطرة
+
+10- أهم 20 فرصة
+
+11- التوصية النهائية.
+
+---
+
+# قواعد العمل
+
+* لا تكتب أي كود.
+* لا تعدل أي ملف.
+* لا تحذف أي شيء.
+* لا تنشئ كوداً تجريبياً.
+* اعتمد فقط على المشروع الحالي.
+* إذا احتجت إنشاء وثائق، ضعها داخل مجلد docs/.
+* اجعل جميع المخرجات احترافية وقابلة للاستخدام مباشرة في إدارة المشروع، وإعداد المستثمرين، والتطوير، والتسويق، وإطلاق المنتج.
